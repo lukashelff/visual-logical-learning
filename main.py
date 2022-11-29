@@ -1,7 +1,7 @@
 import argparse
 import sys
-
 import torch
+
 
 
 def main():
@@ -29,21 +29,28 @@ def main():
         show_masked_im(full_ds)
 
     if command == 'ct':
-        from TrainGenerator.concept_tester import eval_rule
+        from raw.concept_tester import eval_rule
         eval_rule()
 
     if command == 'ilp':
-        from popper.loop import learn_solution
-        from popper.util import Settings, print_prog_score
-        from ilp.setup import create_bk
-        ds_size = 10000
-        noise = 0.0
-        create_bk(ds_size, noise)
-        path = 'ilp/popper/gt'
-        prog, score, stats = learn_solution(
-            Settings(path, debug=True, show_stats=True))
-        if prog is not None:
-            print_prog_score(prog, score)
+        from ilp.trainer import Ilp_trainer
+        trainer = Ilp_trainer()
+        # trainer.cross_val(raw_trains, folds=5, models=['popper'], train_count=[100])
+        # trainer.plot_ilp_crossval()
+
+        train_size, val_size = 1000, 2000
+        model = 'popper'
+        trainer.train(model, raw_trains, class_rule, train_size, val_size)
+
+
+        # import subprocess
+        # subprocess.Popen(cmd, shell=True, cwd=p, stdout=subprocess.PIPE)
+        # Popper
+        # popper_path = f'{out_path}/popper/gt1'
+        # prog, score, stats = learn_solution(
+        #     Settings(popper_path, debug=True, show_stats=True))
+        # if prog is not None:
+        #     print_prog_score(prog, score)
 
     if command == 'cnn':
         from models.trainer import Trainer
@@ -53,7 +60,7 @@ def main():
         rules = ['theoryx', 'numerical', 'complex']
         rules = ['complex']
         if model_name == 'EfficientNet':
-            batch_size = 50
+            batch_size = 25
         elif model_name == 'VisionTransformer':
             resize = True
             lr = 0.00001
@@ -64,14 +71,12 @@ def main():
         trainer.cross_val_train(train_size, replace=True)
 
     if command == 'compare_models':
-        from visualization.vis_model_comparison import model_scene_imcount_comparison
         model_names = ['resnet18', 'VisionTransformer', 'EfficientNet']
         # model_names = ['resnet18', 'EfficientNet']
         out_path = 'output/model_comparison/'
         class_rules = ['numerical', 'theoryx', 'complex']
         from visualization.vis_model_comparison import rule_comparison
         rule_comparison(model_names, out_path)
-
 
 
 def parse():

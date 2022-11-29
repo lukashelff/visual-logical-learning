@@ -4,51 +4,34 @@ from pathlib import Path
 import random
 import numpy as np
 import torch
+from sklearn.model_selection import StratifiedShuffleSplit
 
 from raw.gen_raw_trains import read_trains
 
 
-def create_bk(ds_size=None, noise=0):
-    train_raw = 'MichalskiTrains'
-    train_vis = 'SimpleObjects'
-    y_val = 'direction'
-    X_val = 'gt_attributes'
-
+def create_bk(ds_path, out_path, ds_size=None, noise=0):
     train_c = 0
-    path = './ilp/popper/gt'
-    path_2 = './ilp/popper/gt2'
-    path_3 = './ilp/popper/gt3'
-    path_dilp = './ilp/dilp/gt'
-    path_aleph = './ilp/aleph/trains2'
-    os.makedirs(path, exist_ok=True)
-    os.makedirs(path_dilp, exist_ok=True)
-    try:
-        os.remove(path + '/bk.pl')
-    except OSError:
-        pass
-    try:
-        os.remove(path_2 + '/bk.pl')
-    except OSError:
-        pass
-    try:
-        os.remove(path_3 + '/bk.pl')
-    except OSError:
-        pass
-    try:
-        os.remove(path + '/exs.pl')
-    except OSError:
-        pass
-    try:
-        os.remove(path_aleph + '/train.n')
-    except OSError:
-        pass
-    try:
-        os.remove(path_aleph + '/train.f')
-    except OSError:
-        pass
-    trains = read_trains(f'raw/datasets/{train_raw}.txt', toSimpleObjs=train_vis == 'SimpleObjects')
-    trains = random.sample(trains, ds_size)
-    with open(path + '/exs.pl', 'w+') as exs_file, open(path + '/bk.pl', 'w+') as bk_file, \
+    path_1 = f'{out_path}/popper/gt1'
+    path_2 = f'{out_path}/popper/gt2'
+    path_3 = f'{out_path}/popper/gt3'
+    path_dilp = f'{out_path}/dilp/gt'
+    path_aleph = f'{out_path}/aleph/trains2'
+    paths = [path_1, path_2, path_3, path_aleph, path_dilp]
+    for path in paths:
+        os.makedirs(path, exist_ok=True)
+        for file in [path + '/bk.pl', path + '/exs.pl']:
+            try:
+                os.remove(file)
+            except OSError:
+                pass
+    for file in [path_aleph + '/train.n', path_aleph + '/train.f']:
+        try:
+            os.remove(file)
+        except OSError:
+            pass
+
+    trains = read_trains(ds_path)
+    with open(path_1 + '/exs.pl', 'w+') as exs_file, open(path_1 + '/bk.pl', 'w+') as bk_file, \
             open(path_2 + '/bk.pl', 'w+') as bk2_file, open(path_3 + '/bk.pl', 'w+') as bk3_file, open(
         path_dilp + '/positive.dilp', 'w+') as pos, open(path_dilp + '/negative.dilp', 'w+') as neg, open(
         path_aleph + '/train.f', 'w+') as aleph_pos, open(path_aleph + '/train.n', 'w+') as aleph_neg:
@@ -159,7 +142,7 @@ def create_bk(ds_size=None, noise=0):
                         bk_file.write(f'{payload}(t{train_c}_c{car_number}_l{p_c}).\n')
                         bk_file.write(f'has_payload(t{train_c}_c{car_number},t{train_c}_c{car_number}_l{p_c}).\n')
 
-    file = Path(path + '/bk.pl')
+    file = Path(path_1 + '/bk.pl')
     file.write_text(
         "\n".join(
             sorted(
@@ -183,7 +166,7 @@ def create_bk(ds_size=None, noise=0):
             )
         )
     )
-    file = Path(path + '/exs.pl')
+    file = Path(path_1 + '/exs.pl')
     file.write_text(
         "\n".join(
             sorted(
@@ -195,11 +178,15 @@ def create_bk(ds_size=None, noise=0):
         os.remove(path_aleph + '/train.b')
     except OSError:
         pass
-    with open(path_aleph + '/bias2', 'r') as bias, open(path_3 + '/bk.pl', 'r') as bk, open(path_aleph + '/train.b',
+    with open('ilp/aleph/trains2/bias2', 'r') as bias, open(path_3 + '/bk.pl', 'r') as bk, open(path_aleph + '/train.b',
                                                                                             'w+') as comb:
         comb.write(bias.read() + '\n')
         comb.write(bk.read())
+    shutil.copy('ilp/popper/gt1/bias.pl', path_1 + '/bias.pl')
+    shutil.copy('ilp/popper/gt2/bias.pl', path_2 + '/bias.pl')
+    shutil.copy('ilp/popper/gt3/bias.pl', path_3 + '/bias.pl')
 
-    shutil.copy(path + '/bk.pl', path_dilp + '/facts.dilp')
-    shutil.copy(path + '/exs.pl', path_2 + '/exs.pl')
-    shutil.copy(path + '/exs.pl', path_3 + '/exs.pl')
+
+    shutil.copy(path_1 + '/bk.pl', path_dilp + '/facts.dilp')
+    shutil.copy(path_1 + '/exs.pl', path_2 + '/exs.pl')
+    shutil.copy(path_1 + '/exs.pl', path_3 + '/exs.pl')
