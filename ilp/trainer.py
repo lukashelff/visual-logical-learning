@@ -4,7 +4,7 @@ import re
 
 import pyswip
 import seaborn as sns
-
+import multiprocessing as mp
 import numpy as np
 
 import pandas as pd
@@ -41,12 +41,7 @@ class Ilp_trainer():
         for model in models:
             for class_rule in rules:
                 ds_path = f'TrainGenerator/output/image_generator/dataset_descriptions/{raw_trains}_{class_rule}.txt'
-                out_path = f'output/ilp/datasets/{raw_trains}_{class_rule}'
-                os.makedirs(out_path, exist_ok=True)
-                popper_path = f'{out_path}/popper/gt1'
-                aleph_path = f"{out_path}/aleph"
-                train_path = f'{out_path}/train_samples.txt'
-                val_path = f'{out_path}/val_samples.txt'
+
                 # ds_size = 10
                 noise = 0.0
                 for train_size in train_count:
@@ -57,38 +52,43 @@ class Ilp_trainer():
                         y = [l[0] for l in all_data]
                         sss = StratifiedShuffleSplit(n_splits=folds, train_size=train_size, test_size=2000,
                                                      random_state=0)
-                        li = []
+                        inputs = []
                         for fold, (tr_idx, val_idx) in enumerate(sss.split(np.zeros(len(y)), y)):
+                            out_path = f'output/ilp/datasets/{raw_trains}_{class_rule}/cv_{fold}'
+                            os.makedirs(out_path, exist_ok=True)
+                            train_path = f'{out_path}/train_samples.txt'
+                            val_path = f'{out_path}/val_samples.txt'
                             train_samples = map(all_data.__getitem__, tr_idx)
                             val_samples = map(all_data.__getitem__, val_idx)
+                            for ds in [train_path, val_path]:
+                                try:
+                                    os.remove(ds)
+                                except OSError:
+                                    pass
                             with open(train_path, 'w+') as train, open(val_path, 'w+') as val:
                                 train.writelines(train_samples)
                                 val.writelines(val_samples)
                             create_bk(train_path, out_path, train_size, noise)
+                            inputs.append(out_path)
 
-                            if model == 'popper':
-                                theory = self.popper_train(popper_path, print_stats=True)
-                            elif model == 'aleph':
-                                theory = self.aleph_train(aleph_path)
-                            else:
-                                raise ValueError(f'model: {model} not supported')
-
-                            # print(theory)
-                            if theory is not None:
-                                TP_train, FN_train, TN_train, FP_train = eval_rule(theory=theory, ds=train_path,
-                                                                                   dir='TrainGenerator/',
-                                                                                   print_stats=False)
-                                TP, FN, TN, FP = eval_rule(theory=theory, ds=val_path, dir='TrainGenerator/',
-                                                           print_stats=True)
-                            else:
-                                TP, FN, TN, FP, TP_train, FN_train, TN_train, FP_train = [1] * 8
-                            li.append([model, train_size, class_rule, fold,
-                                       (TP + TN) / (TP + FN + TN + FP),
-                                       (TP_train + TN_train) / (TP_train + FN_train + TN_train + FP_train), theory])
-                        _df = pd.DataFrame(li, columns=['Methods', 'training samples', 'rule', 'cv iteration',
-                                                        'Validation acc', 'Train acc', 'theory'])
-                        data = pd.concat([data, _df], ignore_index=True)
-
+                    if model == 'popper':
+                        with mp.Pool(5) as p:
+                            out = p.map(self.popper_train, inputs)
+                            print(out)
+                    elif model == 'aleph':
+                        with mp.Pool(5) as p:
+                            out = p.map(self.aleph_train, inputs)
+                    else:
+                        raise ValueError(f'model: {model} not supported')
+                    li = []
+                    for o in out:
+                        theory, TP, FN, TN, FP, TP_train, FN_train, TN_train, FP_train = o
+                        li.append([model, train_size, class_rule, fold,
+                                   (TP + TN) / (TP + FN + TN + FP),
+                                   (TP_train + TN_train) / (TP_train + FN_train + TN_train + FP_train), theory])
+                    _df = pd.DataFrame(li, columns=['Methods', 'training samples', 'rule', 'cv iteration',
+                                                    'Validation acc', 'Train acc', 'theory'])
+                    data = pd.concat([data, _df], ignore_index=True)
         data.to_csv(ilp_stats_path + '/ilp_stats.csv')
 
     def train(self, model, raw_trains, class_rule, train_size, val_size):
@@ -113,29 +113,38 @@ class Ilp_trainer():
             create_bk(train_path, out_path, train_size, noise)
 
             if model == 'popper':
-                theory = self.popper_train(popper_path, print_stats=True)
+                out = self.popper_train(out_path, print_stats=True)
             elif model == 'aleph':
-                theory = self.aleph_train(aleph_path, print_stats=True)
+                out = self.aleph_train(out_path, print_stats=True)
             else:
                 raise ValueError(f'model: {model} not supported')
 
-            TP_train, FN_train, TN_train, FP_train = eval_rule(theory=theory, ds=train_path,
-                                                               dir='TrainGenerator/', clean_up=False)
-            TP_train, FN_train, TN_train, FP_train = eval_rule(theory=theory, ds=val_path,
-                                                               dir='TrainGenerator/', clean_up=False)
-
-    def popper_train(self, popper_data, print_stats=False):
+    def popper_train(self, path, print_stats=True):
         import popper
-        popper = reload(popper)
+        # popper = reload(popper)
         # reload(popper.loop.learn_solution)
-        prog, score, stats = popper.loop.learn_solution(
-            Settings(popper_data, debug=False, show_stats=False, quiet=True))
+        popper_data = f'{path}/popper/gt1'
+        train_path = f'{path}/train_samples.txt'
+        val_path = f'{path}/val_samples.txt'
+
+        settings = Settings(popper_data, debug=True, show_stats=False, quiet=True)
+        prog, score, stats = learn_solution(settings)
         theory = None if prog is None else format_prog(order_prog(prog))
         if prog is not None and print_stats:
-             print_prog_score(prog, score)
-        return theory
+            print_prog_score(prog, score)
+        if theory is not None:
+            TP_train, FN_train, TN_train, FP_train = eval_rule(theory=theory, ds=train_path, dir='TrainGenerator/',
+                                                               print_stats=False)
+            TP, FN, TN, FP = eval_rule(theory=theory, ds=val_path, dir='TrainGenerator/', print_stats=True)
+        else:
+            TP, FN, TN, FP, TP_train, FN_train, TN_train, FP_train = [1] * 8
 
-    def aleph_train(self, aleph_path, print_stats=False):
+        return theory, TP, FN, TN, FP, TP_train, FN_train, TN_train, FP_train
+
+    def aleph_train(self, path, print_stats=False):
+        aleph_path = f"{path}/aleph"
+        train_path = f'{path}/train_samples.txt'
+        val_path = f'{path}/val_samples.txt'
         aleph = Aleph()
         aleph.settingsAsFacts(
             'set(i,2), set(clauselength,10), set(minacc,0.6), set(minscore,3), set(minpos,3),'
@@ -150,18 +159,27 @@ class Ilp_trainer():
         if print_stats:
             print(theory)
             print(features)
-        return theory
+        if theory is not None:
+            TP_train, FN_train, TN_train, FP_train = eval_rule(theory=theory, ds=train_path, dir='TrainGenerator/',
+                                                               print_stats=False)
+            TP, FN, TN, FP = eval_rule(theory=theory, ds=val_path, dir='TrainGenerator/', print_stats=True)
+        else:
+            TP, FN, TN, FP, TP_train, FN_train, TN_train, FP_train = [1] * 8
+
+        return theory, TP, FN, TN, FP, TP_train, FN_train, TN_train, FP_train
 
     def plot_ilp_crossval(self):
         ilp_stats_path = f'output/ilp/stats'
         ilp_vis_path = f'output/ilp/vis'
         with open(ilp_stats_path + '/ilp_stats.csv', 'r') as f:
             data = pd.read_csv(f)
+        rules = data['rule'].unique()
 
         model_names = data['Methods'].unique()
+        print(tabulate(data))
 
         fig = plt.figure()
-        gs = fig.add_gridspec(len(model_names), hspace=0)
+        gs = fig.add_gridspec(len(rules), hspace=0)
         axes = gs.subplots(sharex=True, sharey=True)
         axes = axes if isinstance(axes, np.ndarray) else [axes]
         im_count = sorted(data['training samples'].unique())
@@ -173,7 +191,6 @@ class Ilp_trainer():
         #     1000: colors_s[1],
         #     100: colors_s[0]
         # }
-        rules = data['rule'].unique()
         for rule, ax in zip(rules, axes):
             ax.grid(axis='x', linestyle='solid', color='gray')
             ax.tick_params(bottom=False, left=False)
@@ -186,18 +203,14 @@ class Ilp_trainer():
             #                )
             for count in im_count:
                 data_tmp = data_t.loc[data_t['training samples'] == count]
-                # for count in im_count:
-                #     data_tmp = data_t.loc[data_t['number of images'] == count]
-                #     print(tabulate(data_tmp == data.loc[data['epoch'] == 24].loc[data['Methods'] == 'resnet18'].loc[data['visualization'] == vis].loc[data['number of images'] == count].loc[data['epoch'] == 24], headers='keys', tablefmt='psql'))
-                # Show each observation with a scatterplot
-                tabulate(data_tmp)
-                sns.stripplot(x='Validation acc', y='Methods',
+               # Show each observation with a scatterplot
+                sns.stripplot(x='Validation acc', y='Methods', hue='training samples',
                               data=data_tmp,
                               dodge=True,
                               alpha=.25,
                               zorder=1,
                               jitter=False,
-                              palette=[colors[count], colors[count]],
+                              palette=[colors[count]],
                               ax=ax
                               )
 
@@ -222,7 +235,7 @@ class Ilp_trainer():
         # simple = mlines.Line2D([], [], color='grey', marker='X', linestyle='None', markersize=5)
         # simple_lab = 'Simple'
         trains = mlines.Line2D([], [], color='grey', marker='o', linestyle='None', markersize=5)
-        trains_lab = 'Train acc'
+        trains_lab = 'Val acc'
         mean = mlines.Line2D([], [], color='grey', marker='d', linestyle='None', markersize=5)
         mean_lab = 'Mean'
         color_markers = [mlines.Line2D([], [], color=colors[c], marker='d', linestyle='None', markersize=5) for c in
@@ -230,11 +243,10 @@ class Ilp_trainer():
         for c, ax in enumerate(axes):
             ax.get_legend().remove()
             ax.set_xlim([0.5, 1])
-            ax.set_ylabel(model_names[c])
             ax.set_ylabel(rules[c])
 
-        axes[-1].legend([trains, mean] + color_markers,
-                        [trains_lab, mean_lab] + [str(i) for i in im_count], title="Training samples",
+        axes[-1].legend(color_markers+ [trains, mean],
+                        [str(i) for i in im_count] + [trains_lab, mean_lab], title="Training samples",
                         loc='lower center', bbox_to_anchor=(1.2, 0), frameon=False,
                         handletextpad=0, ncol=2)
 

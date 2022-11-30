@@ -3,7 +3,6 @@ import sys
 import torch
 
 
-
 def main():
     args = parse()
 
@@ -35,13 +34,15 @@ def main():
     if command == 'ilp':
         from ilp.trainer import Ilp_trainer
         trainer = Ilp_trainer()
-        # trainer.cross_val(raw_trains, folds=5, models=['popper'], train_count=[100])
-        # trainer.plot_ilp_crossval()
+        rules = ['theoryx', 'numerical', 'complex']
+        models = ['popper', 'aleph'][:1]
+        train_count = [1000, 100, 10000]
+        # trainer.cross_val(raw_trains, folds=5, rules=rules, models=models, train_count=train_count)
+        trainer.plot_ilp_crossval()
 
-        train_size, val_size = 1000, 2000
-        model = 'popper'
-        trainer.train(model, raw_trains, class_rule, train_size, val_size)
-
+        # train_size, val_size = 1000, 2000
+        # model = 'popper'
+        # trainer.train(model, raw_trains, class_rule, train_size, val_size)
 
         # import subprocess
         # subprocess.Popen(cmd, shell=True, cwd=p, stdout=subprocess.PIPE)
