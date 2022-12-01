@@ -30,7 +30,7 @@ class Regression:
         if y_val == 'direction' and train_col == 'RandomTrains':
             raise AssertionError(f'There is no direction label for a {train_col}. Use MichalskiTrain DS.')
 
-        # ds setup
+        # ds_val setup
         self.base_scene, self.train_col, self.device = base_scene, train_col, device
         self.X_val, self.y_val = X_val, y_val
         self.pretrained = pretrained

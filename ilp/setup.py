@@ -57,7 +57,7 @@ def create_bk(ds_path, out_path, ds_size=None, noise=0):
             for car in train.get_cars():
 
                 # add car to bk if car color is not none
-                # car_label_names = np.array(ds.attribute_classes)[car.to(dtype=torch.int32).tolist()]
+                # car_label_names = np.array(ds_val.attribute_classes)[car.to(dtype=torch.int32).tolist()]
                 # color, length, walls, roofs, wheel_count, load_obj1, load_obj2, load_obj3 = car_label_names
                 if ns < noise:
                     car_number = car.get_car_number()
@@ -178,7 +178,7 @@ def create_bk(ds_path, out_path, ds_size=None, noise=0):
         os.remove(path_aleph + '/train.b')
     except OSError:
         pass
-    with open('ilp/aleph/trains2/bias2', 'r') as bias, open(path_3 + '/bk.pl', 'r') as bk, open(path_aleph + '/train.b',
+    with open('ilp/aleph/trains2/bias3', 'r') as bias, open(path_3 + '/bk.pl', 'r') as bk, open(path_aleph + '/train.b',
                                                                                             'w+') as comb:
         comb.write(bias.read() + '\n')
         comb.write(bk.read())

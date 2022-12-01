@@ -217,7 +217,7 @@ def visualize_model(model, class_names, device, dataloaders, num_images=6):
 def vis_confusion_matrix(train_col, base_scene, out_path, model_name, model, dl, device):
     print('evaluate model validation performance and create confusion matrix')
     num_epoch = 1
-    # model, _, _, _, dl, ds, _, _ = train_setup(backbone, model_name, base_scene, train_col,
+    # model, _, _, _, dl, ds_val, _, _ = train_setup(backbone, model_name, base_scene, train_col,
     #                                            y_val, device,
     #                                            num_epoch, out_path, resume=True, batch_size=20,
     #                                            image_count=image_count, )

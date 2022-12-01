@@ -22,11 +22,11 @@ def plot_masked_im(im, label):
 # show an image from the michalski train dataset
 def show_im(train_ds):
     ds = train_ds.dataset
-    # im, label = ds.__getitem__(0)
+    # im, label = ds_val.__getitem__(0)
     # im = torch2numpy(im)
     # fig, ax = plt.subplots()
     # ax.imshow(im)
-    # train = ds.get_m_train(0)
+    # train = ds_val.get_m_train(0)
     # plt.title(f'michalski train image with label {label.numpy()}')
     # ax.set_axis_off()
     # plt.show()

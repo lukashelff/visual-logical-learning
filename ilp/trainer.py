@@ -33,7 +33,7 @@ class Ilp_trainer():
 
     # cmd = f"echo \"read_all(trains2/train). induce.\" | yap -s5000 -h20000 -l aleph.pl > log.txt 2>&1"
     def cross_val(self, raw_trains, rules=['numerical', 'theoryx', 'complex'], models=['aleph', 'popper'], folds=5,
-                  train_count=[100, 1000, 10000], ds_size=12000):
+                  train_count=[100, 1000, 10000], ds_size=12000, noise=0):
         data = pd.DataFrame(
             columns=['Methods', 'training samples', 'rule', 'cv iteration', 'Validation acc', 'theory'])
         ilp_stats_path = f'output/ilp/stats/'
@@ -41,9 +41,6 @@ class Ilp_trainer():
         for model in models:
             for class_rule in rules:
                 ds_path = f'TrainGenerator/output/image_generator/dataset_descriptions/{raw_trains}_{class_rule}.txt'
-
-                # ds_size = 10
-                noise = 0.0
                 for train_size in train_count:
                     with open(ds_path, "r") as file:
                         all_data = file.readlines()
@@ -74,10 +71,12 @@ class Ilp_trainer():
                     if model == 'popper':
                         with mp.Pool(5) as p:
                             out = p.map(self.popper_train, inputs)
-                            print(out)
                     elif model == 'aleph':
-                        with mp.Pool(5) as p:
-                            out = p.map(self.aleph_train, inputs)
+                        out = []
+                        for input in inputs:
+                            out.append(self.aleph_train(input, print_stats=True))
+                        # with mp.Pool(1) as p:
+                        #     out = p.map(self.aleph_train, inputs)
                     else:
                         raise ValueError(f'model: {model} not supported')
                     li = []
@@ -95,8 +94,6 @@ class Ilp_trainer():
         ds_path = f'TrainGenerator/output/image_generator/dataset_descriptions/{raw_trains}_{class_rule}.txt'
         out_path = f'output/ilp/datasets/{raw_trains}_{class_rule}'
         os.makedirs(out_path, exist_ok=True)
-        popper_path = f'{out_path}/popper/gt1'
-        aleph_path = f"{out_path}/aleph"
         train_path = f'{out_path}/train_samples.txt'
         val_path = f'{out_path}/val_samples.txt'
         # ds_size = 10
@@ -133,9 +130,9 @@ class Ilp_trainer():
         if prog is not None and print_stats:
             print_prog_score(prog, score)
         if theory is not None:
-            TP_train, FN_train, TN_train, FP_train = eval_rule(theory=theory, ds=train_path, dir='TrainGenerator/',
-                                                               print_stats=False)
-            TP, FN, TN, FP = eval_rule(theory=theory, ds=val_path, dir='TrainGenerator/', print_stats=True)
+            stats = eval_rule(theory=theory, ds_train=train_path, ds_val=val_path, dir='TrainGenerator/',
+                              print_stats=print_stats)
+            TP, FN, TN, FP, TP_train, FN_train, TN_train, FP_train = stats
         else:
             TP, FN, TN, FP, TP_train, FN_train, TN_train, FP_train = [1] * 8
 
@@ -158,11 +155,11 @@ class Ilp_trainer():
         theory = "\n".join([el + '.' for el in t if 'eastbound' in el])
         if print_stats:
             print(theory)
-            print(features)
+            # print(features)
         if theory is not None:
-            TP_train, FN_train, TN_train, FP_train = eval_rule(theory=theory, ds=train_path, dir='TrainGenerator/',
-                                                               print_stats=False)
-            TP, FN, TN, FP = eval_rule(theory=theory, ds=val_path, dir='TrainGenerator/', print_stats=True)
+            stats = eval_rule(theory=theory, ds_train=train_path, ds_val=val_path, dir='TrainGenerator/',
+                              print_stats=print_stats)
+            TP, FN, TN, FP, TP_train, FN_train, TN_train, FP_train = stats
         else:
             TP, FN, TN, FP, TP_train, FN_train, TN_train, FP_train = [1] * 8
 
@@ -176,7 +173,7 @@ class Ilp_trainer():
         rules = data['rule'].unique()
 
         model_names = data['Methods'].unique()
-        print(tabulate(data))
+        # print(tabulate(data))
 
         fig = plt.figure()
         gs = fig.add_gridspec(len(rules), hspace=0)
@@ -203,7 +200,7 @@ class Ilp_trainer():
             #                )
             for count in im_count:
                 data_tmp = data_t.loc[data_t['training samples'] == count]
-               # Show each observation with a scatterplot
+                # Show each observation with a scatterplot
                 sns.stripplot(x='Validation acc', y='Methods', hue='training samples',
                               data=data_tmp,
                               dodge=True,
@@ -227,13 +224,7 @@ class Ilp_trainer():
                           errorbar=None,
                           ax=ax
                           )
-        # plt.title('Comparison of Supervised learning methods')
         # Improve the legend
-        handles, labels = axes[-1].get_legend_handles_labels()
-        length = len(handles) // 2
-        # length = 0
-        # simple = mlines.Line2D([], [], color='grey', marker='X', linestyle='None', markersize=5)
-        # simple_lab = 'Simple'
         trains = mlines.Line2D([], [], color='grey', marker='o', linestyle='None', markersize=5)
         trains_lab = 'Val acc'
         mean = mlines.Line2D([], [], color='grey', marker='d', linestyle='None', markersize=5)
@@ -245,7 +236,7 @@ class Ilp_trainer():
             ax.set_xlim([0.5, 1])
             ax.set_ylabel(rules[c])
 
-        axes[-1].legend(color_markers+ [trains, mean],
+        axes[-1].legend(color_markers + [trains, mean],
                         [str(i) for i in im_count] + [trains_lab, mean_lab], title="Training samples",
                         loc='lower center', bbox_to_anchor=(1.2, 0), frameon=False,
                         handletextpad=0, ncol=2)

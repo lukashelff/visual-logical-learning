@@ -39,7 +39,7 @@ class Trainer:
         if y_val == 'direction' and train_col == 'RandomTrains':
             raise AssertionError(f'There is no direction label for a {train_col}. Use MichalskiTrain DS.')
 
-        # ds setup
+        # ds_val setup
         self.base_scene, self.train_col, self.train_vis, self.class_rule = base_scene, train_col, train_vis, class_rule
         self.ds_path = ds_path
         self.device = device

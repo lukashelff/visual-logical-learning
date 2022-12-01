@@ -35,13 +35,13 @@ def main():
         from ilp.trainer import Ilp_trainer
         trainer = Ilp_trainer()
         rules = ['theoryx', 'numerical', 'complex']
-        models = ['popper', 'aleph'][:1]
-        train_count = [1000, 100, 10000]
-        # trainer.cross_val(raw_trains, folds=5, rules=rules, models=models, train_count=train_count)
+        models = ['popper', 'aleph'][1:]
+        train_count = [100, 1000, 10000][:2]
+        trainer.cross_val(raw_trains, folds=5, rules=rules, models=models, train_count=train_count)
         trainer.plot_ilp_crossval()
 
         # train_size, val_size = 1000, 2000
-        # model = 'popper'
+        # model = 'aleph'
         # trainer.train(model, raw_trains, class_rule, train_size, val_size)
 
         # import subprocess
