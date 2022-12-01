@@ -51,7 +51,7 @@ class Ilp_trainer():
                                                      random_state=0)
                         inputs = []
                         for fold, (tr_idx, val_idx) in enumerate(sss.split(np.zeros(len(y)), y)):
-                            out_path = f'output/ilp/datasets/{raw_trains}_{class_rule}/cv_{fold}'
+                            out_path = f'output/ilp/datasets/{raw_trains}_{class_rule}_{train_size}/cv_{fold}'
                             os.makedirs(out_path, exist_ok=True)
                             train_path = f'{out_path}/train_samples.txt'
                             val_path = f'{out_path}/val_samples.txt'
@@ -73,10 +73,11 @@ class Ilp_trainer():
                             out = p.map(self.popper_train, inputs)
                     elif model == 'aleph':
                         out = []
-                        for input in inputs:
+                        for c, input in enumerate(inputs):
                             out.append(self.aleph_train(input, print_stats=True))
-                        # with mp.Pool(1) as p:
-                        #     out = p.map(self.aleph_train, inputs)
+
+                        with mp.Pool(1) as p:
+                            out = p.map(self.aleph_train, inputs)
                     else:
                         raise ValueError(f'model: {model} not supported')
                     li = []
@@ -127,18 +128,31 @@ class Ilp_trainer():
         settings = Settings(popper_data, debug=True, show_stats=False, quiet=True)
         prog, score, stats = learn_solution(settings)
         theory = None if prog is None else format_prog(order_prog(prog))
-        if prog is not None and print_stats:
-            print_prog_score(prog, score)
+
         if theory is not None:
             stats = eval_rule(theory=theory, ds_train=train_path, ds_val=val_path, dir='TrainGenerator/',
                               print_stats=print_stats)
             TP, FN, TN, FP, TP_train, FN_train, TN_train, FP_train = stats
         else:
             TP, FN, TN, FP, TP_train, FN_train, TN_train, FP_train = [1] * 8
-
+        if print_stats:
+            print(f'Popper, train samples: {path.split("/")[-2].split("_")[-1]},'
+                  f' decision rule: {path.split("/")[-2].split("_")[-2]}, cv it: {path.split("/")[-1][-1]}')
+            print(theory)
+            print(f'training: ACC:{(TP_train + TN_train) / (FN_train + TN_train + TP_train + FP_train)}, '
+                  f'Precision:{(TP_train / (TP_train + FP_train)) if (TP_train + FP_train) > 0 else 0}, '
+                  f'Recall:{(TP_train / (TP_train + FN_train)) if (TP_train + FN_train) > 0 else 0}, '
+                  f'TP:{TP_train}, FN:{FN_train}, TN:{TN_train}, FP:{FP_train}')
+            print(f'Validation: ACC:{(TP + TN) / (FN + TN + TP + FP)}, '
+                  f'Precision:{(TP / (TP + FP)) if (TP + FP) > 0 else 0}, '
+                  f'Recall:{(TP / (TP + FN)) if (TP + FN) > 0 else 0}, '
+                  f'TP:{TP}, FN:{FN}, TN:{TN}, FP:{FP}')
+            print(f'#################################################')
+        # if prog is not None and print_stats:
+        #     print_prog_score(prog, score)
         return theory, TP, FN, TN, FP, TP_train, FN_train, TN_train, FP_train
 
-    def aleph_train(self, path, print_stats=False):
+    def aleph_train(self, path, print_stats=True):
         aleph_path = f"{path}/aleph"
         train_path = f'{path}/train_samples.txt'
         val_path = f'{path}/val_samples.txt'
@@ -153,15 +167,29 @@ class Ilp_trainer():
 
         t = re.split('\s|@', theory)
         theory = "\n".join([el + '.' for el in t if 'eastbound' in el])
-        if print_stats:
-            print(theory)
-            # print(features)
         if theory is not None:
             stats = eval_rule(theory=theory, ds_train=train_path, ds_val=val_path, dir='TrainGenerator/',
-                              print_stats=print_stats)
+                              print_stats=False)
             TP, FN, TN, FP, TP_train, FN_train, TN_train, FP_train = stats
         else:
             TP, FN, TN, FP, TP_train, FN_train, TN_train, FP_train = [1] * 8
+
+        if print_stats:
+            print(f'Aleph, train samples: {path.split("/")[-2].split("_")[-1]},'
+                  f' decision rule: {path.split("/")[-2].split("_")[-2]}, cv it: {path.split("/")[-1][-1]}')
+            print(theory)
+            print(f'training: ACC:{(TP_train + TN_train) / (FN_train + TN_train + TP_train + FP_train)}, '
+                  f'Precision:{(TP_train / (TP_train + FP_train)) if (TP_train + FP_train) > 0 else 0}, '
+                  f'Recall:{(TP_train / (TP_train + FN_train)) if (TP_train + FN_train) > 0 else 0}, '
+                  f'TP:{TP_train}, FN:{FN_train}, TN:{TN_train}, FP:{FP_train}')
+            print(f'Validation: ACC:{(TP + TN) / (FN + TN + TP + FP)}, '
+                  f'Precision:{(TP / (TP + FP)) if (TP + FP) > 0 else 0}, '
+                  f'Recall:{(TP / (TP + FN)) if (TP + FN) > 0 else 0}, '
+                  f'TP:{TP}, FN:{FN}, TN:{TN}, FP:{FP}')
+            print(f'#################################################')
+
+            # print(features)
+
 
         return theory, TP, FN, TN, FP, TP_train, FN_train, TN_train, FP_train
 
