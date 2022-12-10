@@ -7,12 +7,15 @@ opencv_python
 pandas
 Pillow
 pycocotools
-pyswip
 rtpt
 scikit_learn
 seaborn
 tabulate
 timm
-popper-ilp
-detectron2 @ git+https://github.com/facebookresearch/detectron2.git@710e7795d0eeadf9def0e7ef957eea13532e34cf
 opencv-python
+#detectron2 @ git+https://github.com/facebookresearch/detectron2.git
+pyswip @ git+https://github.com/yuce/pyswip@master#egg=pyswip
+popper-ilp @ git+https://github.com/logic-and-learning-lab/Popper@v2.0.0
+orange3
+clingo
+#python-rdm @ git+https://github.com/xflows/rdm.git

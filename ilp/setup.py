@@ -95,8 +95,8 @@ def create_bk(ds_path, out_path, ds_size=None, noise=0):
                 #     bk_file.write(f'behind(t{train_c}_c{car_c},t{train_c}_c{i}).' + '\n')
                 # color
                 bk_file.write(f'{color}(t{train_c}_c{car_number}).' + '\n')
-                bk2_file.write(f'{color}(t{train_c}_c{car_number}_color).' + '\n')
-                bk2_file.write(f'car_color(t{train_c}_c{car_number},t{train_c}_c{car_number}_color).' + '\n')
+                bk2_file.write(f'{color}3(t{train_c}_c{car_number}_color).' + '\n')
+                bk2_file.write(f'car_color3(t{train_c}_c{car_number},t{train_c}_c{car_number}_color).' + '\n')
                 bk3_file.write(f'car_color(t{train_c}_c{car_number},{color}).' + '\n')
                 # length
                 bk_file.write(f'{length}(t{train_c}_c{car_number}).' + '\n')
@@ -110,17 +110,16 @@ def create_bk(ds_path, out_path, ds_size=None, noise=0):
                 if roofs != 'none':
                     #     bk_file.write(f'roof_closed(t{train_c}_c{car_number}).' + '\n')
                     bk_file.write(f'{roofs}(t{train_c}_c{car_number}).' + '\n')
-                    bk2_file.write(f'{roofs}(t{train_c}_c{car_number}_roof).' + '\n')
+                    bk2_file.write(f'{roofs}3(t{train_c}_c{car_number}_roof).' + '\n')
                 else:
                     bk_file.write(f'roof_open(t{train_c}_c{car_number}).' + '\n')
-                    bk2_file.write(f'roof_open(t{train_c}_c{car_number}_roof).' + '\n')
+                    bk2_file.write(f'roof_open3(t{train_c}_c{car_number}_roof).' + '\n')
 
-                bk2_file.write(f'has_roof2(t{train_c}_c{car_number},t{train_c}_c{car_number}_roof).' + '\n')
+                bk2_file.write(f'has_roof3(t{train_c}_c{car_number},t{train_c}_c{car_number}_roof).' + '\n')
                 bk3_file.write(f'has_roof2(t{train_c}_c{car_number},{roofs}).' + '\n')
 
                 # wheel_count
                 wheel_num = ['two', 'three'][int(wheel_count[0]) - 2]
-                # bk_file.write(f'{wheel_num}{wheel_count[1:]}(t{train_c}_c{car_number}).' + '\n')
                 bk_file.write(f'has_wheel0(t{train_c}_c{car_number},{wheel_count[0]}).' + '\n')
                 bk2_file.write(f'has_wheel0(t{train_c}_c{car_number},{wheel_count[0]}).' + '\n')
                 bk3_file.write(f'has_wheel0(t{train_c}_c{car_number},{wheel_count[0]}).' + '\n')
@@ -128,19 +127,18 @@ def create_bk(ds_path, out_path, ds_size=None, noise=0):
                 # payload
                 payload_num = 3 - [load_obj1, load_obj2, load_obj3].count('none')
                 payload_n = ['zero', 'one', 'two', 'three'][payload_num]
-                # bk_file.write(f'{payload_n}_load(t{train_c}_c{car_number}).\n')
                 bk_file.write(f'load_num(t{train_c}_c{car_number},{l_num}).\n')
                 bk2_file.write(f'load_num(t{train_c}_c{car_number},{l_num}).\n')
                 bk3_file.write(f'load_num(t{train_c}_c{car_number},{l_num}).\n')
 
                 if l_num > 0:
-                    bk2_file.write(f'{l_shape}(t{train_c}_c{car_number}_payload).\n')
-                    bk2_file.write(f'has_payload(t{train_c}_c{car_number},t{train_c}_c{car_number}_payload).\n')
+                    bk2_file.write(f'{l_shape}3(t{train_c}_c{car_number}_payload).\n')
+                    bk2_file.write(f'has_payload3(t{train_c}_c{car_number},t{train_c}_c{car_number}_payload).\n')
                 bk3_file.write(f'has_payload(t{train_c}_c{car_number},{l_shape}).\n')
                 for p_c, payload in enumerate([load_obj1, load_obj2, load_obj3]):
                     if payload != 'none':
-                        bk_file.write(f'{payload}(t{train_c}_c{car_number}_l{p_c}).\n')
-                        bk_file.write(f'has_payload(t{train_c}_c{car_number},t{train_c}_c{car_number}_l{p_c}).\n')
+                        bk_file.write(f'{payload}(t{train_c}_c{car_number}).\n')
+                        # bk_file.write(f'has_payload3(t{train_c}_c{car_number},t{train_c}_c{car_number}_l{p_c}).\n')
 
     file = Path(path_1 + '/bk.pl')
     file.write_text(

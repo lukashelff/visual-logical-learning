@@ -1,4 +1,4 @@
-
+%% Maximum expressiveness of the predicates
 max_clauses(2).
 max_vars(6).
 max_body(6).
