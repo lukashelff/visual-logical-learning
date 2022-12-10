@@ -38,15 +38,15 @@ def main():
         trainer = Ilp_trainer()
         rules = ['theoryx', 'numerical', 'complex']
         models = ['popper', 'aleph'][:1]
-        train_count = [100, 1000, 10000][1:2]
-        # trainer.cross_val(raw_trains, folds=5, rules=rules, models=models, train_count=train_count, noise=0.3)
+        train_count = [100, 1000, 10000][:2]
+        trainer.cross_val(raw_trains, folds=5, rules=rules, models=models, train_count=train_count, noise=0.3)
         # trainer.plot_ilp_crossval()
         # trainer.plot_noise_robustness()
 
         train_size, val_size = 100, 2000
-        model = 'popper'
+        model = 'aleph'
         class_rule = 'theoryx'
-        trainer.train(model, raw_trains, class_rule, train_size, val_size)
+        # trainer.train(model, raw_trains, class_rule, train_size, val_size)
 
     if command == 'split_ds':
         from michalski_trains.m_train_dataset import get_datasets

@@ -41,6 +41,7 @@ class Ilp_trainer():
             for class_rule in rules:
                 ds_path = f'TrainGenerator/output/image_generator/dataset_descriptions/{raw_trains}_{class_rule}.txt'
                 for train_size in train_count:
+                    print(f'{model} learning {class_rule}: Cross-Validation with {train_size} data samples')
                     data = pd.DataFrame(
                         columns=['Methods', 'training samples', 'rule', 'cv iteration', 'Validation acc', 'theory',
                                  'noise'])
@@ -135,7 +136,7 @@ class Ilp_trainer():
         popper_data = f'{path}/popper/gt1'
         train_path = f'{path}/train_samples.txt'
         val_path = f'{path}/val_samples.txt'
-        settings = Settings(popper_data, debug=True, show_stats=True, quiet=False)
+        settings = Settings(popper_data, debug=False, show_stats=False, quiet=True)
         prog, score, stats = learn_solution(settings)
         prolog = Prolog()
         list(prolog.query(f'unload_file(\'{os.path.abspath(popper_data)}/bk.pl\').'))
@@ -148,6 +149,7 @@ class Ilp_trainer():
             TP, FN, TN, FP, TP_train, FN_train, TN_train, FP_train = stats
         else:
             TP, FN, TN, FP, TP_train, FN_train, TN_train, FP_train = [1] * 8
+            raise Warning('Popper run aborted. No valid theory returned.')
         if print_stats:
             log_stats(stats, path, theory)
         # if prog is not None and print_stats:
@@ -173,7 +175,7 @@ class Ilp_trainer():
             theory, features = aleph.induce('induce', pos.read(), negative.read(),
                                             background.read(), printOutput=False)
 
-        # t = re.split('\s|@', theory)
+        theory = theory.replace('\n','').replace('.', '.\n')
         # theory = "\n".join([el + '.' for el in t if 'eastbound' in el])
         if theory is not None:
             stats = eval_rule(theory=theory, ds_train=train_path, ds_val=val_path, dir='TrainGenerator/',
