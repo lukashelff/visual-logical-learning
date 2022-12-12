@@ -34,53 +34,50 @@ class Ilp_trainer():
     # cmd = f"echo \"read_all(trains2/train). induce.\" | yap -s5000 -h20000 -l aleph.pl > log.txt 2>&1"
     def cross_val(self, train_description, rules=['numerical', 'theoryx', 'complex'], models=['aleph', 'popper'],
                   folds=5, train_count=[100, 1000, 10000], ds_size=12000, noise=0, complete_run=True):
-
-        create_datasets(rules, train_count, train_description, folds, ds_size, [noise], replace_old=False)
+        noise_vals = noise if type(noise) is list else [noise]
+        create_datasets(rules, train_count, train_description, folds, ds_size, noise_vals, replace_old=False)
         ilp_stats_path = f'output/ilp/stats/'
         os.makedirs(ilp_stats_path, exist_ok=True)
-        for model in models:
-            for train_size in train_count:
-                for class_rule in rules:
-                    print(f'{model} learning {class_rule} rule: Cross-Validation with {train_size} training samples'
-                          f' with {noise * 100}% noise')
-                    data = pd.DataFrame(
-                        columns=['Methods', 'training samples', 'rule', 'cv iteration', 'Validation acc', 'theory',
-                                 'noise'])
-                    csv = f'{ilp_stats_path}/{model}_{class_rule}_{train_size}smpl_{noise}noise.csv' if noise > 0 else\
-                        f'/{model}_{class_rule}_{train_size}smpl.csv'
-                    if complete_run and os.path.exists(csv):
-                        inputs = []
-                        print('found training results of previous run, skipping training')
-                    else:
-                        inputs = [
-                            f'output/ilp/datasets/{class_rule}/{train_description}{train_size}_{noise}noise/cv_{fold}'
-                            for fold in range(folds)]
-                    # self.popper_train(out_path)
-                    if model == 'popper':
-                        # out = []
-                        # for c, input in enumerate(inputs):
-                        #     print('nn')
-                        #     out.append(self.popper_train(input, print_stats=True))
-                        with mp.Pool(5) as p:
-                            out = p.map(self.popper_train, inputs)
-                    elif model == 'aleph':
-                        out = []
-                        # for c, input in enumerate(inputs):
-                        #     out.append(self.aleph_train(input, print_stats=True))
-                        with mp.Pool(5) as p:
-                            inputs = [(i, noise * train_size) for i in inputs]
-                            out = p.starmap(self.aleph_train, inputs)
-                    else:
-                        raise ValueError(f'model: {model} not supported')
-                    li = []
-                    for c, o in enumerate(out):
-                        theory, TP, FN, TN, FP, TP_train, FN_train, TN_train, FP_train = o
-                        li.append([model, train_size, class_rule, c, (TP + TN) / (TP + FN + TN + FP),
-                                   (TP_train + TN_train) / (TP_train + FN_train + TN_train + FP_train), theory, noise])
-                    _df = pd.DataFrame(li, columns=['Methods', 'training samples', 'rule', 'cv iteration',
-                                                    'Validation acc', 'Train acc', 'theory', 'noise'])
-                    data = pd.concat([data, _df], ignore_index=True)
-                    data.to_csv(csv)
+        for model, num_tsamples, rule, noise in product(models, train_count, rules, noise_vals):
+            print(f'{model} learning {rule} rule: {folds}-fold Cross-Validation'
+                  f' with {num_tsamples} training samples with {noise * 100}% noise')
+            data = pd.DataFrame(
+                columns=['Methods', 'training samples', 'rule', 'cv iteration', 'Validation acc', 'theory', 'noise'])
+            csv = f'{ilp_stats_path}/{model}_{rule}_{num_tsamples}smpl_{noise}noise.csv' if noise > 0 else \
+                f'/{model}_{rule}_{num_tsamples}smpl.csv'
+            if complete_run and os.path.exists(csv):
+                inputs = []
+                print('found training results of previous run, skipping training')
+            else:
+                inputs = [
+                    f'output/ilp/datasets/{rule}/{train_description}{num_tsamples}_{noise}noise/cv_{fold}'
+                    for fold in range(folds)]
+            # self.popper_train(out_path)
+            if model == 'popper':
+                # out = []
+                # for c, input in enumerate(inputs):
+                #     print('nn')
+                #     out.append(self.popper_train(input, print_stats=True))
+                with mp.Pool(5) as p:
+                    out = p.map(self.popper_train, inputs)
+            elif model == 'aleph':
+                out = []
+                # for c, input in enumerate(inputs):
+                #     out.append(self.aleph_train(input, print_stats=True))
+                with mp.Pool(5) as p:
+                    inputs = [(i, noise * num_tsamples) for i in inputs]
+                    out = p.starmap(self.aleph_train, inputs)
+            else:
+                raise ValueError(f'model: {model} not supported')
+            li = []
+            for c, o in enumerate(out):
+                theory, TP, FN, TN, FP, TP_train, FN_train, TN_train, FP_train = o
+                li.append([model, num_tsamples, rule, c, (TP + TN) / (TP + FN + TN + FP),
+                           (TP_train + TN_train) / (TP_train + FN_train + TN_train + FP_train), theory, noise])
+            _df = pd.DataFrame(li, columns=['Methods', 'training samples', 'rule', 'cv iteration',
+                                            'Validation acc', 'Train acc', 'theory', 'noise'])
+            data = pd.concat([data, _df], ignore_index=True)
+            data.to_csv(csv)
 
     def train(self, model, raw_trains, class_rule, train_size, val_size):
         ds_path = f'TrainGenerator/output/image_generator/dataset_descriptions/{raw_trains}_{class_rule}.txt'
