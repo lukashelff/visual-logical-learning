@@ -9,6 +9,45 @@ from sklearn.model_selection import StratifiedShuffleSplit
 from raw.gen_raw_trains import read_trains
 
 
+def create_datasets(rules, num_samples, train_description, folds, ds_total_size, noise_vals, replace_old=True):
+    print(f'preparing {folds} fold cross-val {train_description} datasets for {rules} rules '
+          f'with sample sizes of {num_samples} and noises of {noise_vals}')
+    for noise in noise_vals:
+        for class_rule in rules:
+            ds_path = f'TrainGenerator/output/image_generator/dataset_descriptions/{train_description}_{class_rule}.txt'
+            for train_size in num_samples:
+                with open(ds_path, "r") as file:
+                    all_data = file.readlines()
+                    if len(all_data) != ds_total_size:
+                        raise f'datasets of size {ds_total_size} however only {len(all_data)} datasamples were generated'
+                    y = [l[0] for l in all_data]
+                    sss = StratifiedShuffleSplit(n_splits=folds, train_size=train_size, test_size=2000,
+                                                 random_state=0)
+                    for fold, (tr_idx, val_idx) in enumerate(sss.split(np.zeros(len(y)), y)):
+                        out_path = f'output/ilp/datasets/{class_rule}/{train_description}{train_size}_{noise}noise/cv_{fold}'
+                        os.makedirs(out_path, exist_ok=True)
+                        train_path = f'{out_path}/train_samples.txt'
+                        val_path = f'{out_path}/val_samples.txt'
+                        train_samples = map(all_data.__getitem__, tr_idx)
+                        val_samples = map(all_data.__getitem__, val_idx)
+                        for ds in [train_path, val_path]:
+                            try:
+                                os.remove(ds)
+                            except OSError:
+                                pass
+                        with open(train_path, 'w+') as train, open(val_path, 'w+') as val:
+                            train.writelines(train_samples)
+                            val.writelines(val_samples)
+                        if not (not replace_old
+                                and os.path.exists(f'{out_path}/aleph/trains2/train.b')
+                                and os.path.exists(f'{out_path}/aleph/trains2/train.f')
+                                and os.path.exists(f'{out_path}/aleph/trains2/train.n')
+                                and os.path.exists(f'{out_path}/popper/gt1/bias.pl')
+                                and os.path.exists(f'{out_path}/popper/gt1/bk.pl')
+                                and os.path.exists(f'{out_path}/popper/gt1/exs.pl')):
+                            create_bk(train_path, out_path, train_size, noise)
+
+
 def create_bk(ds_path, out_path, ds_size=None, noise=0):
     train_c = 0
     path_1 = f'{out_path}/popper/gt1'
@@ -177,13 +216,12 @@ def create_bk(ds_path, out_path, ds_size=None, noise=0):
     except OSError:
         pass
     with open('ilp/aleph/trains2/bias3', 'r') as bias, open(path_3 + '/bk.pl', 'r') as bk, open(path_aleph + '/train.b',
-                                                                                            'w+') as comb:
+                                                                                                'w+') as comb:
         comb.write(bias.read() + '\n')
         comb.write(bk.read())
     shutil.copy('ilp/popper/gt1/bias.pl', path_1 + '/bias.pl')
     shutil.copy('ilp/popper/gt2/bias.pl', path_2 + '/bias.pl')
     shutil.copy('ilp/popper/gt3/bias.pl', path_3 + '/bias.pl')
-
 
     shutil.copy(path_1 + '/bk.pl', path_dilp + '/facts.dilp')
     shutil.copy(path_1 + '/exs.pl', path_2 + '/exs.pl')

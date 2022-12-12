@@ -38,13 +38,14 @@ def main():
         trainer = Ilp_trainer()
         rules = ['theoryx', 'numerical', 'complex']
         models = ['popper', 'aleph'][:1]
-        train_count = [100, 1000, 10000][:2]
-        trainer.cross_val(raw_trains, folds=5, rules=rules, models=models, train_count=train_count, noise=0.3)
+        train_count = [100, 1000, 10000]
+        # trainer.cross_val(raw_trains, folds=5, rules=rules, models=models, train_count=train_count, noise=0.3)
+        trainer.cross_val(raw_trains, folds=5, rules=rules, models=models, train_count=train_count, noise=0.1)
         # trainer.plot_ilp_crossval()
         # trainer.plot_noise_robustness()
 
         train_size, val_size = 100, 2000
-        model = 'aleph'
+        model = 'popper'
         class_rule = 'theoryx'
         # trainer.train(model, raw_trains, class_rule, train_size, val_size)
 

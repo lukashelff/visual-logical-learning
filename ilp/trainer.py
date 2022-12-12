@@ -17,7 +17,7 @@ from pyswip import Prolog
 from tabulate import tabulate
 
 from ilp import visualization
-from ilp.setup import create_bk
+from ilp.setup import create_bk, create_datasets
 
 from sklearn.model_selection import StratifiedShuffleSplit
 
@@ -32,48 +32,34 @@ class Ilp_trainer():
         self.method = method
 
     # cmd = f"echo \"read_all(trains2/train). induce.\" | yap -s5000 -h20000 -l aleph.pl > log.txt 2>&1"
-    def cross_val(self, raw_trains, rules=['numerical', 'theoryx', 'complex'], models=['aleph', 'popper'], folds=5,
-                  train_count=[100, 1000, 10000], ds_size=12000, noise=0):
+    def cross_val(self, train_description, rules=['numerical', 'theoryx', 'complex'], models=['aleph', 'popper'],
+                  folds=5, train_count=[100, 1000, 10000], ds_size=12000, noise=0, complete_run=True):
 
+        create_datasets(rules, train_count, train_description, folds, ds_size, [noise], replace_old=False)
         ilp_stats_path = f'output/ilp/stats/'
         os.makedirs(ilp_stats_path, exist_ok=True)
         for model in models:
-            for class_rule in rules:
-                ds_path = f'TrainGenerator/output/image_generator/dataset_descriptions/{raw_trains}_{class_rule}.txt'
-                for train_size in train_count:
-                    print(f'{model} learning {class_rule}: Cross-Validation with {train_size} data samples')
+            for train_size in train_count:
+                for class_rule in rules:
+                    print(f'{model} learning {class_rule} rule: Cross-Validation with {train_size} training samples'
+                          f' with {noise * 100}% noise')
                     data = pd.DataFrame(
                         columns=['Methods', 'training samples', 'rule', 'cv iteration', 'Validation acc', 'theory',
                                  'noise'])
-                    with open(ds_path, "r") as file:
-                        all_data = file.readlines()
-                        if len(all_data) != ds_size:
-                            raise f'datasets of size {ds_size} however only {len(all_data)} datasamples were generated'
-                        y = [l[0] for l in all_data]
-                        sss = StratifiedShuffleSplit(n_splits=folds, train_size=train_size, test_size=2000,
-                                                     random_state=0)
+                    csv = f'{ilp_stats_path}/{model}_{class_rule}_{train_size}smpl_{noise}noise.csv' if noise > 0 else\
+                        f'/{model}_{class_rule}_{train_size}smpl.csv'
+                    if complete_run and os.path.exists(csv):
                         inputs = []
-                        for fold, (tr_idx, val_idx) in enumerate(sss.split(np.zeros(len(y)), y)):
-                            out_path = f'output/ilp/datasets/{raw_trains}_{class_rule}_{train_size}/cv_{fold}'
-                            os.makedirs(out_path, exist_ok=True)
-                            train_path = f'{out_path}/train_samples.txt'
-                            val_path = f'{out_path}/val_samples.txt'
-                            train_samples = map(all_data.__getitem__, tr_idx)
-                            val_samples = map(all_data.__getitem__, val_idx)
-                            for ds in [train_path, val_path]:
-                                try:
-                                    os.remove(ds)
-                                except OSError:
-                                    pass
-                            with open(train_path, 'w+') as train, open(val_path, 'w+') as val:
-                                train.writelines(train_samples)
-                                val.writelines(val_samples)
-                            create_bk(train_path, out_path, train_size, noise)
-                            inputs.append(out_path)
-
+                        print('found training results of previous run, skipping training')
+                    else:
+                        inputs = [
+                            f'output/ilp/datasets/{class_rule}/{train_description}{train_size}_{noise}noise/cv_{fold}'
+                            for fold in range(folds)]
+                    # self.popper_train(out_path)
                     if model == 'popper':
-                        out = []
+                        # out = []
                         # for c, input in enumerate(inputs):
+                        #     print('nn')
                         #     out.append(self.popper_train(input, print_stats=True))
                         with mp.Pool(5) as p:
                             out = p.map(self.popper_train, inputs)
@@ -82,29 +68,23 @@ class Ilp_trainer():
                         # for c, input in enumerate(inputs):
                         #     out.append(self.aleph_train(input, print_stats=True))
                         with mp.Pool(5) as p:
-                            if noise > 0:
-                                inputs = [(i, noise * train_size) for i in inputs]
-                                out = p.starmap(self.aleph_train, inputs)
-                            else:
-                                out = p.map(self.aleph_train, inputs)
+                            inputs = [(i, noise * train_size) for i in inputs]
+                            out = p.starmap(self.aleph_train, inputs)
                     else:
                         raise ValueError(f'model: {model} not supported')
                     li = []
-                    for o in out:
+                    for c, o in enumerate(out):
                         theory, TP, FN, TN, FP, TP_train, FN_train, TN_train, FP_train = o
-                        li.append([model, train_size, class_rule, fold,
-                                   (TP + TN) / (TP + FN + TN + FP),
+                        li.append([model, train_size, class_rule, c, (TP + TN) / (TP + FN + TN + FP),
                                    (TP_train + TN_train) / (TP_train + FN_train + TN_train + FP_train), theory, noise])
                     _df = pd.DataFrame(li, columns=['Methods', 'training samples', 'rule', 'cv iteration',
                                                     'Validation acc', 'Train acc', 'theory', 'noise'])
                     data = pd.concat([data, _df], ignore_index=True)
-
-                    csv = f'/{model}_{class_rule}_{train_size}smpl_{noise}noise.csv' if noise > 0 else f'/{model}_{class_rule}_{train_size}smpl.csv'
-                    data.to_csv(ilp_stats_path + csv)
+                    data.to_csv(csv)
 
     def train(self, model, raw_trains, class_rule, train_size, val_size):
         ds_path = f'TrainGenerator/output/image_generator/dataset_descriptions/{raw_trains}_{class_rule}.txt'
-        out_path = f'output/ilp/datasets/{raw_trains}_{class_rule}_{train_size}/cv_-1'
+        out_path = f'output/ilp/datasets/{raw_trains}_{class_rule}_{train_size}/train'
         os.makedirs(out_path, exist_ok=True)
         train_path = f'{out_path}/train_samples.txt'
         val_path = f'{out_path}/val_samples.txt'
@@ -136,7 +116,8 @@ class Ilp_trainer():
         popper_data = f'{path}/popper/gt1'
         train_path = f'{path}/train_samples.txt'
         val_path = f'{path}/val_samples.txt'
-        settings = Settings(popper_data, debug=False, show_stats=False, quiet=True)
+        # settings = Settings(popper_data)
+        settings = Settings(popper_data, debug=False, show_stats=False, quiet=True, timeout=1000)
         prog, score, stats = learn_solution(settings)
         prolog = Prolog()
         list(prolog.query(f'unload_file(\'{os.path.abspath(popper_data)}/bk.pl\').'))
@@ -175,7 +156,7 @@ class Ilp_trainer():
             theory, features = aleph.induce('induce', pos.read(), negative.read(),
                                             background.read(), printOutput=False)
 
-        theory = theory.replace('\n','').replace('.', '.\n')
+        theory = theory.replace('\n', '').replace('.', '.\n')
         # theory = "\n".join([el + '.' for el in t if 'eastbound' in el])
         if theory is not None:
             stats = eval_rule(theory=theory, ds_train=train_path, ds_val=val_path, dir='TrainGenerator/',
@@ -201,8 +182,11 @@ class Ilp_trainer():
 
 def log_stats(stats, path, theory):
     TP, FN, TN, FP, TP_train, FN_train, TN_train, FP_train = stats
-    print(f'Aleph, train samples: {path.split("/")[-2].split("_")[-1]},'
-          f' decision rule: {path.split("/")[-2].split("_")[-2]}, cv it: {path.split("/")[-1][-1]}')
+    print(f'train samples: {path.split("/")[-2].split("_")[-2]}, '
+          f'decision rule: {path.split("/")[-3]} rule, '
+          f'{path.split("/")[-2].split("_")[-1]}, '
+          f'cv it: {path.split("/")[-1][-1]}'
+          )
     print(theory)
     # print(features)
     print(f'training: ACC:{(TP_train + TN_train) / (FN_train + TN_train + TP_train + FP_train)}, '
