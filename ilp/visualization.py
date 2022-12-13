@@ -111,7 +111,11 @@ def plot_noise_robustness():
     data = []
     for dir in dirs:
         with open(dir, 'r') as f:
-            data.append(pd.read_csv(f))
+            tmp = pd.read_csv(f)
+            if tmp.empty:
+                os.remove(dir)
+            else:
+                data.append(tmp)
 
     data = pd.concat(data, ignore_index=True)
     # data = (data.loc[data['rule'] == 'numerical']).loc[data['Methods'] == 'popper']
@@ -146,31 +150,32 @@ def plot_noise_robustness():
         for count in im_count:
             data_tmp = data_t.loc[data_t['training samples'] == count]
             # Show each observation with a scatterplot
-            sns.stripplot(x='Validation acc', y='noise', hue='training samples',
-                          # y_axis=['10%', '0%'],
-                          data=data_tmp,
-                          dodge=True,
-                          alpha=.25,
-                          zorder=1,
-                          jitter=False,
-                          palette=[colors[count]],
-                          ax=ax
-                          )
+            if len(data_tmp) != 0:
+                sns.stripplot(x='Validation acc', y='noise', hue='training samples',
+                              # y_axis=['10%', '0%'],
+                              data=data_tmp,
+                              dodge=True,
+                              alpha=.25,
+                              zorder=1,
+                              jitter=False,
+                              palette=[colors[count]],
+                              ax=ax
+                              )
 
         # Show the conditional means, aligning each pointplot in the
         # center of the strips by adjusting the width allotted to each
         # category (.8 by default) by the number of hue levels
-
-        sns.pointplot(x='Validation acc', y='noise', hue='training samples', data=data_t,
-                      # y_axis=['10%', '0%'],
-                      dodge=False,
-                      join=False,
-                      # palette="dark",
-                      markers="d",
-                      scale=.75,
-                      errorbar=None,
-                      ax=ax
-                      )
+        if len(data_t) != 0:
+            sns.pointplot(x='Validation acc', y='noise', hue='training samples', data=data_t,
+                          # y_axis=['10%', '0%'],
+                          dodge=False,
+                          join=False,
+                          # palette="dark",
+                          markers="d",
+                          scale=.75,
+                          errorbar=None,
+                          ax=ax
+                          )
     # Improve the legend
     trains = mlines.Line2D([], [], color='grey', marker='o', linestyle='None', markersize=5)
     trains_lab = 'Val acc'

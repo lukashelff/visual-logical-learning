@@ -2,7 +2,7 @@
 max_vars(6).
 max_body(6).
 max_rules(10).
-%% enable_pi.
+%%enable_pi.
 
 %% general
 head_pred(eastbound,1).
