@@ -10,7 +10,7 @@ from sklearn.model_selection import StratifiedShuffleSplit
 from raw.gen_raw_trains import read_trains
 
 
-def create_datasets(rules, num_samples, train_description, folds, ds_total_size, noise_vals, replace_old=True):
+def create_datasets(rules, num_samples, train_description, folds, ds_total_size, noise_vals, replace_existing=True):
     print(f'preparing {folds} fold cross-val {train_description} datasets for {rules} rules '
           f'with sample sizes of {num_samples} and noises of {noise_vals}')
     gen_ds = 0
@@ -38,7 +38,7 @@ def create_datasets(rules, num_samples, train_description, folds, ds_total_size,
                 with open(train_path, 'w+') as train, open(val_path, 'w+') as val:
                     train.writelines(train_samples)
                     val.writelines(val_samples)
-                if not (not replace_old
+                if not (not replace_existing
                         and os.path.exists(f'{out_path}/aleph/trains2/train.b')
                         and os.path.exists(f'{out_path}/aleph/trains2/train.f')
                         and os.path.exists(f'{out_path}/aleph/trains2/train.n')
@@ -47,8 +47,8 @@ def create_datasets(rules, num_samples, train_description, folds, ds_total_size,
                         and os.path.exists(f'{out_path}/popper/gt1/exs.pl')):
                     create_bk(train_path, out_path, num_tsamples, noise)
                     gen_ds += 1
-    n_ds = len(num_samples)*len(rules)*len(noise_vals)*folds
-    print(f'total of {n_ds} ds: found {n_ds-gen_ds} existing ds, generated {gen_ds} remaining ds')
+    n_ds = len(num_samples) * len(rules) * len(noise_vals) * folds
+    print(f'total of {n_ds} ds: found {n_ds - gen_ds} existing ds, generated {gen_ds} remaining ds')
 
 
 def create_bk(ds_path, out_path, ds_size=None, noise=0):
@@ -61,35 +61,40 @@ def create_bk(ds_path, out_path, ds_size=None, noise=0):
     paths = [path_1, path_2, path_3, path_aleph, path_dilp]
     for path in paths:
         os.makedirs(path, exist_ok=True)
-        for file in [path + '/bk.pl', path + '/exs.pl']:
+        if 'aleph' in path:
+            dirs = ['/train.n', '/train.f', '/train.b']
+        elif 'popper' in path:
+            dirs = ['/bk.pl', '/exs.pl', 'bias.pl']
+        elif 'dilp' in path:
+            dirs = ['/facts.dilp', '/negative.dilp', '/positive.dilp']
+        for file in dirs:
             try:
-                os.remove(file)
+                open(path + file, 'w').close()
             except OSError:
                 pass
-    for file in [path_aleph + '/train.n', path_aleph + '/train.f']:
-        try:
-            os.remove(file)
-        except OSError:
-            pass
 
     trains = read_trains(ds_path)
-    with open(path_1 + '/exs.pl', 'w+') as exs_file, open(path_1 + '/bk.pl', 'w+') as bk_file, \
-            open(path_2 + '/bk.pl', 'w+') as bk2_file, open(path_3 + '/bk.pl', 'w+') as bk3_file, open(
+    with open(path_1 + '/exs.pl', 'w+') as exs_file, open(path_1 + '/bk.pl', 'w+') as popper_bk, \
+            open(path_2 + '/bk.pl', 'w+') as popper_bk2, open(path_3 + '/bk.pl', 'w+') as popper_bk3, open(
         path_dilp + '/positive.dilp', 'w+') as pos, open(path_dilp + '/negative.dilp', 'w+') as neg, open(
-        path_aleph + '/train.f', 'w+') as aleph_pos, open(path_aleph + '/train.n', 'w+') as aleph_neg:
+        path_aleph + '/train.f', 'w+') as aleph_pos, open(path_aleph + '/train.n', 'w+') as aleph_neg, open(
+        path_aleph + '/train.b', 'w+') as aleph_bk, open('ilp/aleph/trains2/bias2', 'r') as aleph_bias:
         ds_size = len(trains) if ds_size is None else ds_size
+        aleph_bk.write(aleph_bias.read() + '\n')
         if len(trains) < ds_size:
             raise AssertionError(f'not enough trains in DS {len(trains)} to create a bk of size {ds_size}')
         for train in trains[:ds_size]:
             ns = random.random()
             label = train.get_label()
             train_c += 1
-            bk_file.write(f'train(t{train_c}).\n')
-            bk2_file.write(f'train(t{train_c}).\n')
-            bk3_file.write(f'train(t{train_c}).\n')
+            popper_bk.write(f'train(t{train_c}).\n')
+            popper_bk2.write(f'train(t{train_c}).\n')
+            popper_bk3.write(f'train(t{train_c}).\n')
             label = 'pos' if label == 'east' else 'neg'
-            # if train_c < 10:
+            if ns < noise:
+                label = 'pos' if label == 'neg' else 'neg'
             exs_file.write(f'{label}(eastbound(t{train_c})).\n')
+
             if label == 'pos':
                 pos.write(f'target(t{train_c}).\n')
                 aleph_pos.write(f'eastbound(t{train_c}).\n')
@@ -101,127 +106,114 @@ def create_bk(ds_path, out_path, ds_size=None, noise=0):
                 # add car to bk if car color is not none
                 # car_label_names = np.array(ds_val.attribute_classes)[car.to(dtype=torch.int32).tolist()]
                 # color, length, walls, roofs, wheel_count, load_obj1, load_obj2, load_obj3 = car_label_names
-                if ns < noise:
-                    car_number = car.get_car_number()
+                # if ns < noise:
+                #     car_number = car.get_car_number()
+                #
+                #     color = ['yellow', 'green', 'grey', 'red', 'blue'][np.random.randint(5)]
+                #     length = ['short', 'long'][np.random.randint(2)]
+                #     walls = ["braced_wall", 'solid_wall'][np.random.randint(2)]
+                #     roofs = ["roof_foundation", 'solid_roof', 'braced_roof', 'peaked_roof'][np.random.randint(4)]
+                #     wheel_count = ['2_wheels', '3_wheels'][np.random.randint(2)]
+                #     l_shape = ["box", "golden_vase", 'barrel', 'diamond', 'metal_pot', 'oval_vase'][
+                #         np.random.randint(6)]
+                #     l_num = np.random.randint(4)
+                #     load_obj1, load_obj2, load_obj3 = [l_shape] * l_num + ['none'] * (3 - l_num)
+                # else:
+                color = car.get_blender_car_color()
+                length = car.get_car_length()
+                walls = car.get_blender_wall()
+                roofs = car.get_blender_roof()
+                wheel_count = car.get_car_wheels()
+                l_shape = car.get_blender_payload()
+                l_num = car.get_load_number()
+                load_obj1, load_obj2, load_obj3 = [l_shape] * l_num + ['none'] * (3 - l_num)
+                car_number = car.get_car_number()
 
-                    color = ['yellow', 'green', 'grey', 'red', 'blue'][np.random.randint(5)]
-                    length = ['short', 'long'][np.random.randint(2)]
-                    walls = ["braced_wall", 'solid_wall'][np.random.randint(2)]
-                    roofs = ["roof_foundation", 'solid_roof', 'braced_roof', 'peaked_roof'][np.random.randint(4)]
-                    wheel_count = ['2_wheels', '3_wheels'][np.random.randint(2)]
-                    l_shape = ["box", "golden_vase", 'barrel', 'diamond', 'metal_pot', 'oval_vase'][
-                        np.random.randint(6)]
-                    l_num = np.random.randint(4)
-                    load_obj1, load_obj2, load_obj3 = [l_shape] * l_num + ['none'] * (3 - l_num)
-                else:
-                    color = car.get_blender_car_color()
-                    length = car.get_car_length()
-                    walls = car.get_blender_wall()
-                    roofs = car.get_blender_roof()
-                    wheel_count = car.get_car_wheels()
-                    l_shape = car.get_blender_payload()
-                    l_num = car.get_load_number()
-                    load_obj1, load_obj2, load_obj3 = [l_shape] * l_num + ['none'] * (3 - l_num)
-                    car_number = car.get_car_number()
+                payload_num = 3 - [load_obj1, load_obj2, load_obj3].count('none')
+                payload_n = ['zero', 'one', 'two', 'three'][payload_num]
+                wheel_num = ['two', 'three'][int(wheel_count[0]) - 2]
 
-                bk_file.write(f'has_car(t{train_c},t{train_c}_c{car_number}).' + '\n')
-                bk_file.write(f'car_num(t{train_c}_c{car_number},{car_number}).' + '\n')
-                bk2_file.write(f'has_car(t{train_c},t{train_c}_c{car_number}).' + '\n')
-                bk2_file.write(f'car_num(t{train_c}_c{car_number},{car_number}).' + '\n')
-                bk3_file.write(f'has_car(t{train_c},t{train_c}_c{car_number}).' + '\n')
-                bk3_file.write(f'car_num(t{train_c}_c{car_number},{car_number}).' + '\n')
-                position = ['first', 'second', 'third', 'fourth']
-                # bk_file.write(f'{position[car_number - 1]}_car(t{train_c}_c{car_number}).' + '\n')
-                # # behind
-                # for i in range(1, car_c):
-                #     bk_file.write(f'behind(t{train_c}_c{car_c},t{train_c}_c{i}).' + '\n')
+
+                popper_bk.write(f'has_car(t{train_c},t{train_c}_c{car_number}).' + '\n')
+                popper_bk.write(f'car_num(t{train_c}_c{car_number},{car_number}).' + '\n')
+                popper_bk2.write(f'has_car(t{train_c},t{train_c}_c{car_number}).' + '\n')
+                popper_bk2.write(f'car_num(t{train_c}_c{car_number},{car_number}).' + '\n')
+                popper_bk3.write(f'has_car(t{train_c},t{train_c}_c{car_number}).' + '\n')
+                popper_bk3.write(f'car_num(t{train_c}_c{car_number},{car_number}).' + '\n')
+                aleph_bk.write(f'has_car(t{train_c},t{train_c}_c{car_number}).' + '\n')
+                aleph_bk.write(f'car_num(t{train_c}_c{car_number},{car_number}).' + '\n')
+
                 # color
-                bk_file.write(f'{color}(t{train_c}_c{car_number}).' + '\n')
-                bk2_file.write(f'{color}3(t{train_c}_c{car_number}_color).' + '\n')
-                bk2_file.write(f'car_color3(t{train_c}_c{car_number},t{train_c}_c{car_number}_color).' + '\n')
-                bk3_file.write(f'car_color(t{train_c}_c{car_number},{color}).' + '\n')
+                popper_bk.write(f'{color}(t{train_c}_c{car_number}).' + '\n')
+                popper_bk2.write(f'{color}3(t{train_c}_c{car_number}_color).' + '\n')
+                popper_bk2.write(f'car_color3(t{train_c}_c{car_number},t{train_c}_c{car_number}_color).' + '\n')
+                popper_bk3.write(f'{color}(t{train_c}_c{car_number}).' + '\n')
+                aleph_bk.write(f'car_color(t{train_c}_c{car_number},{color}).' + '\n')
+
                 # length
-                bk_file.write(f'{length}(t{train_c}_c{car_number}).' + '\n')
-                bk2_file.write(f'{length}(t{train_c}_c{car_number}).' + '\n')
-                bk3_file.write(f'{length}(t{train_c}_c{car_number}).' + '\n')
+                popper_bk.write(f'{length}(t{train_c}_c{car_number}).' + '\n')
+                popper_bk2.write(f'{length}(t{train_c}_c{car_number}).' + '\n')
+                popper_bk3.write(f'{length}(t{train_c}_c{car_number}).' + '\n')
+                aleph_bk.write(f'{length}(t{train_c}_c{car_number}).' + '\n')
+
                 # walls
-                bk_file.write(f'{walls}(t{train_c}_c{car_number}).' + '\n')
-                bk2_file.write(f'{walls}(t{train_c}_c{car_number}).' + '\n')
-                bk3_file.write(f'{walls}(t{train_c}_c{car_number}).' + '\n')
+                popper_bk.write(f'{walls}(t{train_c}_c{car_number}).' + '\n')
+                popper_bk2.write(f'{walls}(t{train_c}_c{car_number}).' + '\n')
+                popper_bk3.write(f'{walls}(t{train_c}_c{car_number}).' + '\n')
+                aleph_bk.write(f'{walls}(t{train_c}_c{car_number}).' + '\n')
+
                 # roofs
                 if roofs != 'none':
                     #     bk_file.write(f'roof_closed(t{train_c}_c{car_number}).' + '\n')
-                    bk_file.write(f'{roofs}(t{train_c}_c{car_number}).' + '\n')
-                    bk2_file.write(f'{roofs}3(t{train_c}_c{car_number}_roof).' + '\n')
+                    popper_bk.write(f'{roofs}(t{train_c}_c{car_number}).' + '\n')
+                    popper_bk2.write(f'{roofs}3(t{train_c}_c{car_number}_roof).' + '\n')
+                    popper_bk3.write(f'{roofs}(t{train_c}_c{car_number}).' + '\n')
                 else:
-                    bk_file.write(f'roof_open(t{train_c}_c{car_number}).' + '\n')
-                    bk2_file.write(f'roof_open3(t{train_c}_c{car_number}_roof).' + '\n')
-
-                bk2_file.write(f'has_roof3(t{train_c}_c{car_number},t{train_c}_c{car_number}_roof).' + '\n')
-                bk3_file.write(f'has_roof2(t{train_c}_c{car_number},{roofs}).' + '\n')
+                    popper_bk.write(f'roof_open(t{train_c}_c{car_number}).' + '\n')
+                    popper_bk2.write(f'roof_open3(t{train_c}_c{car_number}_roof).' + '\n')
+                    popper_bk3.write(f'roof_open(t{train_c}_c{car_number}).' + '\n')
+                popper_bk2.write(f'has_roof3(t{train_c}_c{car_number},t{train_c}_c{car_number}_roof).' + '\n')
+                aleph_bk.write(f'has_roof2(t{train_c}_c{car_number},{roofs}).' + '\n')
 
                 # wheel_count
-                wheel_num = ['two', 'three'][int(wheel_count[0]) - 2]
-                bk_file.write(f'has_wheel0(t{train_c}_c{car_number},{wheel_count[0]}).' + '\n')
-                bk2_file.write(f'has_wheel0(t{train_c}_c{car_number},{wheel_count[0]}).' + '\n')
-                bk3_file.write(f'has_wheel0(t{train_c}_c{car_number},{wheel_count[0]}).' + '\n')
+                popper_bk.write(f'has_wheel0(t{train_c}_c{car_number},{wheel_count[0]}).' + '\n')
+                popper_bk2.write(f'has_wheel0(t{train_c}_c{car_number},{wheel_count[0]}).' + '\n')
+                popper_bk3.write(f'has_wheel0(t{train_c}_c{car_number},{wheel_count[0]}).' + '\n')
+                aleph_bk.write(f'has_wheel0(t{train_c}_c{car_number},{wheel_count[0]}).' + '\n')
+
+                # payload number
+                popper_bk.write(f'load_num(t{train_c}_c{car_number},{l_num}).\n')
+                popper_bk2.write(f'load_num(t{train_c}_c{car_number},{l_num}).\n')
+                popper_bk3.write(f'load_num(t{train_c}_c{car_number},{l_num}).\n')
+                aleph_bk.write(f'load_num(t{train_c}_c{car_number},{l_num}).\n')
 
                 # payload
-                payload_num = 3 - [load_obj1, load_obj2, load_obj3].count('none')
-                payload_n = ['zero', 'one', 'two', 'three'][payload_num]
-                bk_file.write(f'load_num(t{train_c}_c{car_number},{l_num}).\n')
-                bk2_file.write(f'load_num(t{train_c}_c{car_number},{l_num}).\n')
-                bk3_file.write(f'load_num(t{train_c}_c{car_number},{l_num}).\n')
-
                 if l_num > 0:
-                    bk2_file.write(f'{l_shape}3(t{train_c}_c{car_number}_payload).\n')
-                    bk2_file.write(f'has_payload3(t{train_c}_c{car_number},t{train_c}_c{car_number}_payload).\n')
-                bk3_file.write(f'has_payload(t{train_c}_c{car_number},{l_shape}).\n')
-                for p_c, payload in enumerate([load_obj1, load_obj2, load_obj3]):
-                    if payload != 'none':
-                        bk_file.write(f'{payload}(t{train_c}_c{car_number}).\n')
-                        # bk_file.write(f'has_payload3(t{train_c}_c{car_number},t{train_c}_c{car_number}_l{p_c}).\n')
+                    popper_bk2.write(f'{l_shape}3(t{train_c}_c{car_number}_payload).\n')
+                    popper_bk2.write(f'has_payload3(t{train_c}_c{car_number},t{train_c}_c{car_number}_payload).\n')
+                    popper_bk.write(f'{l_shape}(t{train_c}_c{car_number}).\n')
+                    aleph_bk.write(f'has_payload(t{train_c}_c{car_number},{l_shape}).\n')
 
-    file = Path(path_1 + '/bk.pl')
-    file.write_text(
-        "\n".join(
-            sorted(
-                file.read_text().split("\n")[:-1]
-            )
-        )
-    )
-    file = Path(path_2 + '/bk.pl')
-    file.write_text(
-        "\n".join(
-            sorted(
-                file.read_text().split("\n")[:-1]
-            )
-        )
-    )
-    file = Path(path_3 + '/bk.pl')
-    file.write_text(
-        "\n".join(
-            sorted(
-                file.read_text().split("\n")[:-1]
-            )
-        )
-    )
-    file = Path(path_1 + '/exs.pl')
-    file.write_text(
-        "\n".join(
-            sorted(
-                file.read_text().split("\n")[:-1]
-            )
-        )
-    )
-    try:
-        os.remove(path_aleph + '/train.b')
-    except OSError:
-        pass
-    with open('ilp/aleph/trains2/bias3', 'r') as bias, open(path_3 + '/bk.pl', 'r') as bk, open(path_aleph + '/train.b',
-                                                                                                'w+') as comb:
-        comb.write(bias.read() + '\n')
-        comb.write(bk.read())
+                for p_c in range(l_num):
+                    popper_bk3.write(f'{l_shape}3(t{train_c}_c{car_number}_l{p_c}).\n')
+                    popper_bk3.write(f'has_payload3(t{train_c}_c{car_number},t{train_c}_c{car_number}_l{p_c}).\n')
+                # for p_c, payload in enumerate([load_obj1, load_obj2, load_obj3]):
+                #     if payload != 'none':
+                #         bk3_file.write(f'{l_shape}3(t{train_c}_c{car_number}_l{p_c}).\n')
+                #         bk3_file.write(f'has_payload3(t{train_c}_c{car_number},t{train_c}_c{car_number}_l{p_c}).\n')
+                #         bk_file.write(f'{payload}(t{train_c}_c{car_number}).\n')
+
+    sort_file(Path(path_1 + '/bk.pl'))
+    sort_file(Path(path_2 + '/bk.pl'))
+    sort_file(Path(path_3 + '/bk.pl'))
+    sort_file(Path(path_1 + '/exs.pl'))
+    # with open('ilp/aleph/trains2/bias2', 'r') as aleph_bias, open(path_aleph + '/train.b', 'r') as aleph_bk, open(
+    #         path_aleph + '/tmp', 'w+') as tmp:
+    #     tmp.write(aleph_bias.read() + '\n')
+    #     tmp.write(aleph_bk.read())
+    # os.remove(path_aleph + '/train.b')
+    # os.rename('tmp', path_aleph + '/train.b')
+
     shutil.copy('ilp/popper/gt1/bias.pl', path_1 + '/bias.pl')
     shutil.copy('ilp/popper/gt2/bias.pl', path_2 + '/bias.pl')
     shutil.copy('ilp/popper/gt3/bias.pl', path_3 + '/bias.pl')
@@ -229,3 +221,13 @@ def create_bk(ds_path, out_path, ds_size=None, noise=0):
     shutil.copy(path_1 + '/bk.pl', path_dilp + '/facts.dilp')
     shutil.copy(path_1 + '/exs.pl', path_2 + '/exs.pl')
     shutil.copy(path_1 + '/exs.pl', path_3 + '/exs.pl')
+
+
+def sort_file(file):
+    file.write_text(
+        "\n".join(
+            sorted(
+                file.read_text().split("\n")[:-1]
+            )
+        )
+    )

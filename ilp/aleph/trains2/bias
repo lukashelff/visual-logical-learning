@@ -1,3 +1,7 @@
+%% minimal set of predicates, similar to poper bias 1
+%% all predicates take the car as input
+%% e.g. blue(car1)
+
 %% general
 :- mode(*,eastbound(+train)).
 :- mode(*,has_car(+train,-car)).

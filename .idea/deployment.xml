@@ -19,23 +19,6 @@
           </excludedPaths>
         </serverdata>
       </paths>
-      <paths name="fb20dgx2-d_2">
-        <serverdata>
-          <mappings>
-            <mapping deploy="/MichalskiTrainProblem" local="$PROJECT_DIR$" web="/" />
-          </mappings>
-          <excludedPaths>
-            <excludedPath local="true" path="$PROJECT_DIR$/TrainGenerator/tmp" />
-            <excludedPath local="true" path="$PROJECT_DIR$/TrainGenerator/output" />
-            <excludedPath local="true" path="$PROJECT_DIR$/TrainGenerator/raw/datasets" />
-            <excludedPath path="/MichalskiTrainProblem/TrainGenerator/tmp" />
-            <excludedPath path="/MichalskiTrainProblem/TrainGenerator/output" />
-            <excludedPath path="/MichalskiTrainProblem/TrainGenerator/raw/datasets" />
-            <excludedPath local="true" path="$PROJECT_DIR$/output" />
-            <excludedPath path="/MichalskiTrainProblem/output" />
-          </excludedPaths>
-        </serverdata>
-      </paths>
     </serverData>
     <option name="myAutoUpload" value="ALWAYS" />
   </component>

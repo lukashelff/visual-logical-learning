@@ -1,4 +1,7 @@
 %% Maximum expressiveness of the predicates
+%% attributes are defined as individual instances, predicates describe their relationship to the car
+%% color(car1,car1_c), blue(car1_c)
+
 max_clauses(2).
 max_vars(6).
 max_body(6).
@@ -6,6 +9,7 @@ max_body(6).
 %% general
 head_pred(eastbound,1).
 body_pred(has_car,2).
+%% car number
 body_pred(car_num,2).
 %% payload
 body_pred(has_payload3,2).

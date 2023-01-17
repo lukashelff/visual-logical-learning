@@ -1,4 +1,7 @@
-%% include some ground atoms but not all
+%% minimal set of predicates,
+%% all predicates take the car as input
+%% e.g. blue(car1)
+
 max_vars(6).
 max_body(6).
 max_rules(10).
@@ -10,7 +13,6 @@ body_pred(has_car,2).
 %% car number
 body_pred(car_num,2).
 %% payload number
-%% body_pred(has_payload3,2).
 body_pred(load_num,2).
 %% payload shape
 body_pred(barrel,1).
@@ -43,7 +45,6 @@ body_pred(solid_wall,1).
 %% general
 type(eastbound,(train,)).
 type(has_car,(train,car)).
-%% type(has_payload3,(car,load)).
 %% car number
 type(car_num,(car,integer)).
 %% colors
@@ -79,7 +80,6 @@ type(oval_vase,(car,)).
 %% general
 direction(eastbound,(in,)).
 direction(has_car,(in,out)).
-%% direction(has_payload3,(in,out)).
 %%direction(behind,(in,in)).
 %% car number
 direction(car_num,(in,out)).
