@@ -17,6 +17,7 @@ from tabulate import tabulate
 from torch.optim import lr_scheduler
 from torch.utils.data import Subset
 from torch.utils.data import DataLoader
+from itertools import product
 
 from michalski_trains.m_train_dataset import get_datasets
 from models.mlp.mlp import MLP
@@ -33,8 +34,8 @@ class Trainer:
     def __init__(self, base_scene, train_col, train_vis, device, model_name, class_rule, ds_path,
                  X_val='image', y_val='direction',
                  resume=False, pretrained=True, resize=False, optimizer_='ADAM', loss='CrossEntropyLoss',
-                 train_samples=10000, ds_size=10000, batch_size=50, num_worker=4, lr=0.001, step_size=5, gamma=.8,
-                 momentum=0.9,
+                 train_samples=10000, ds_size=10000, noise=0,
+                 batch_size=50, num_worker=4, lr=0.001, step_size=5, gamma=.8, momentum=0.9,
                  num_epochs=25, setup_model=True, setup_ds=True, save_model=True):
         if y_val == 'direction' and train_col == 'RandomTrains':
             raise AssertionError(f'There is no direction label for a {train_col}. Use MichalskiTrain DS.')
@@ -45,7 +46,7 @@ class Trainer:
         self.device = device
         self.X_val, self.y_val = X_val, y_val
         self.pretrained, self.resume, self.save_model = pretrained, resume, save_model
-        self.resize = resize
+        self.resize, self.noise = resize, noise
         # self.full_ds = get_datasets(self.base_scene, self.train_col, 10000, self.y_val, resize=resize,
         #                             X_val=self.X_val)
         self.full_ds = get_datasets(base_scene, self.train_col, self.train_vis, ds_size, ds_path=ds_path,
@@ -62,9 +63,12 @@ class Trainer:
         if setup_ds:
             self.setup_ds()
 
-    def cross_val_train(self, train_size=None, n_splits=5, model_path=None, save_models=False, replace=False):
+    def cross_val_train(self, train_size=None, noises=None, n_splits=5, model_path=None, save_models=False,
+                        replace=False):
         if train_size is None:
             train_size = [100, 1000, 10000]
+        if noises is None:
+            noises = [0, 0.1, 0.3]
         random_state = 0
         test_size = 2000
         self.save_model = save_models
@@ -73,8 +77,9 @@ class Trainer:
         else:
             y = np.zeros(self.full_ds.__len__())
         rtpt_extra = n_splits * len(train_size) * self.num_epochs
-        for training_size in train_size:
+        for training_size, noise in product(train_size, noises):
             self.image_count = training_size
+            self.noise = noise
             self.full_ds.predictions_im_count = training_size
             if self.train_col == 'MichalskiTrains':
                 cv = StratifiedShuffleSplit(train_size=training_size, test_size=test_size, random_state=random_state,
@@ -82,7 +87,7 @@ class Trainer:
             else:
                 cv = ShuffleSplit(n_splits=n_splits, train_size=training_size, test_size=test_size, )
             for fold, (tr_idx, val_idx) in enumerate(cv.split(np.zeros(len(y)), y)):
-                self.out_path = self.update_out_path(prefix=f'cv/', suffix=f'it_{fold}/')
+                self.out_path = self.update_out_path(prefix=True, suffix=f'it_{fold}/')
                 self.setup_model(resume=self.resume, path=model_path)
                 self.setup_ds(tr_idx=tr_idx, val_idx=val_idx)
 
@@ -170,12 +175,20 @@ class Trainer:
         if tex_table:
             csv_to_tex_table(path + 'mean_variance_comparison.csv')
 
-    def update_out_path(self, prefix='', suffix='', im_count=None):
+    def update_out_path(self, prefix=False, suffix='', im_count=None):
         pre = '_pretrained' if self.pretrained else ''
         im_count = self.image_count if im_count is None else im_count
         ds_settings = f'{self.train_vis}_{self.class_rule}_{self.train_col}_{self.base_scene}'
         train_config = f'imcount_{im_count}_X_val_{self.X_val}{pre}_lr_{self.lr}_step_{self.step_size}_gamma{self.gamma}'
-        out_path = f'output/models/{self.model_name}/{self.y_val}_classification/{ds_settings}/{prefix}{train_config}/{suffix}'
+        if self.noise > 0:
+            train_config += f'noise_{self.noise}'
+        if prefix and self.noise > 0:
+            pref = f'cv_{self.noise}noise/'
+        elif prefix:
+            pref = 'cv/'
+        else:
+            pref = ''
+        out_path = f'output/models/{self.model_name}/{self.y_val}_classification/{ds_settings}/{pref}{train_config}/{suffix}'
         return out_path
 
     def transfer_classification(self, train_size, n_splits=5, batch_size=None):

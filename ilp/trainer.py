@@ -4,6 +4,7 @@ import os
 import random
 from itertools import product
 from multiprocessing import Process
+from typing import Type
 
 import pandas as pd
 
@@ -15,8 +16,8 @@ from rdm.wrappers import Aleph
 
 class Ilp_trainer():
 
-    def __int__(self, method):
-        self.method = method
+    def __int__(self):
+        self.model, self.num_tsamples, self.rule, self.noise = [None] * 4
 
     # cmd = f"echo \"read_all(trains2/train). induce.\" | yap -s5000 -h20000 -l aleph.pl > log.txt 2>&1"
     def cross_val(self, train_description, rules=['numerical', 'theoryx', 'complex'], models=['aleph', 'popper'],
@@ -25,11 +26,13 @@ class Ilp_trainer():
         create_datasets(rules, train_count, train_description, folds, ds_size, noise_vals, replace_existing=False)
         ilp_stats_path = f'output/ilp/stats'
         os.makedirs(ilp_stats_path, exist_ok=True)
+
         for model, num_tsamples, rule, noise in product(models, train_count, rules, noise_vals):
+            self.model, self.num_tsamples, self.rule, self.noise = model, num_tsamples, rule, noise
+
             print(f'{model} learning {rule} rule: {folds}-fold Cross-Validation'
                   f' with {num_tsamples} training samples with {noise * 100}% noise')
-            data = pd.DataFrame(
-                columns=['Methods', 'training samples', 'rule', 'cv iteration', 'Validation acc', 'theory', 'noise'])
+
             csv = f'{ilp_stats_path}/{model}_{rule}_{num_tsamples}smpl_{noise}noise.csv' if noise > 0 else \
                 f'{ilp_stats_path}/{model}_{rule}_{num_tsamples}smpl.csv'
             if complete_run and os.path.exists(csv) and not pd.read_csv(open(csv)).empty:
@@ -41,36 +44,36 @@ class Ilp_trainer():
                 if model == 'popper':
                     # out = []
                     # for c, input in enumerate(inputs):
-                    #     theory, stats = self.popper_train(input, log)
-                    #     out.append([theory, stats])
+                    #     theory, stats = self.popper_train(input, log, c)
+
+                    # procs = [Process(target=self.popper_train, args=(i, log, i_c, results)) for i_c, i in enumerate(inputs)]
+                    # for proc in procs:
+                    #     proc.start()
+                    # for proc in procs:
+                    #     proc.join(3600)
+                    # for proc in procs:
+                    #     if proc.is_alive():
+                    #         proc.terminate()
+                    #         proc.join()
+
                     with mp.Pool(5) as p:
-                        inputs = [(i, log) for i in inputs]
+                        inputs = [(i, log) for i_c, i in enumerate(inputs)]
                         out = p.starmap(self.popper_train, inputs)
                 elif model == 'aleph':
-                    out = []
+                    # out = []
                     # for c, input in enumerate(inputs):
                     #     out.append(self.aleph_train(input, print_stats=True))
                     worker = 1 if num_tsamples > 1000 else 5
                     with mp.Pool(worker) as p:
-                        inputs = [(i, noise * num_tsamples, log) for i in inputs]
+                        inputs = [(i, noise * num_tsamples, log) for i_c, i in enumerate(inputs)]
                         out = p.starmap(self.aleph_train, inputs)
                 else:
                     raise ValueError(f'model: {model} not supported')
-                li = []
-                for c, o in enumerate(out):
-                    theory, stats = o
-                    if theory is not None:
-                        TP, FN, TN, FP, TP_train, FN_train, TN_train, FP_train = stats
-                        log_stats(stats, theory, model, num_tsamples, rule, noise, c)
-                        li.append([model, num_tsamples, rule, c, (TP + TN) / (TP + FN + TN + FP),
-                                   (TP_train + TN_train) / (TP_train + FN_train + TN_train + FP_train), theory, noise])
-                _df = pd.DataFrame(li, columns=['Methods', 'training samples', 'rule', 'cv iteration',
-                                                'Validation acc', 'Train acc', 'theory', 'noise'])
-                data = pd.concat([data, _df], ignore_index=True)
-                if data.empty:
-                    raise AssertionError(f'{model} exited with no results ({csv})')
+                results = self.to_df(out)
+                if results.empty:
+                    raise UserWarning(f'{model} exited with no results ({csv})')
                 else:
-                    data.to_csv(csv)
+                    results.to_csv(csv)
                 print(f'saved statistics in {csv}')
 
     def train(self, model, raw_trains, class_rule, train_size, val_size, noise=0, train_log=False):
@@ -99,46 +102,47 @@ class Ilp_trainer():
                 raise ValueError(f'model: {model} not supported')
             log_stats(stats, theory, model, train_size, class_rule, noise, 'trainer')
 
-    def popper_wrapper(self, popper_data, train_log, return_dict):
-        from popper.loop import learn_solution
-        from popper.util import Settings, format_prog, order_prog
-        settings = Settings(popper_data, debug=False, show_stats=train_log, quiet=not train_log, timeout=1000)
-        prog, score, stats = learn_solution(settings)
-        # deletes popper prolog files necessary when not
-        # from pyswip import Prolog
-        # prolog = Prolog()
-        # # prolog.consult(os.path.abspath(os.path.abspath('ilp/unloader.pl')))
-        # for source in list(prolog.query(f'source_file(X).')):
-        #     path = source['X']
-        #     # if 'popper' in path:
-        #         # list(prolog.query(f'unload_source(\'{path}\').'))
-        #     list(prolog.query(f'unload_file(\'{path}\').'))
-        theory = None if prog is None else format_prog(order_prog(prog))
-        return_dict[popper_data] = theory
+    # def popper_wrapper(self, popper_data, train_log, return_dict):
+    #     from popper.loop import learn_solution
+    #     from popper.util import Settings, format_prog, order_prog
+    #     settings = Settings(popper_data, debug=False, show_stats=train_log, quiet=not train_log, timeout=1000)
+    #     prog, score, stats = learn_solution(settings)
+    #     # deletes popper prolog files necessary when not
+    #     # from pyswip import Prolog
+    #     # prolog = Prolog()
+    #     # # prolog.consult(os.path.abspath(os.path.abspath('ilp/unloader.pl')))
+    #     # for source in list(prolog.query(f'source_file(X).')):
+    #     #     path = source['X']
+    #     #     # if 'popper' in path:
+    #     #         # list(prolog.query(f'unload_source(\'{path}\').'))
+    #     #     list(prolog.query(f'unload_file(\'{path}\').'))
+    #     theory = None if prog is None else format_prog(order_prog(prog))
+    #     return_dict[popper_data] = theory
 
     def popper_train(self, path, train_log=False):
         from popper.loop import learn_solution
         from popper.util import Settings, format_prog, order_prog
         print(f'training iteration: {path.split("/")[-1]}')
-        # # popper = reload(popper)
-        # reload(popper.loop.learn_solution)
         popper_data = f'{path}/popper/gt1'
         train_path = f'{path}/train_samples.txt'
         val_path = f'{path}/val_samples.txt'
-        # settings = Settings(popper_data)
-        settings = Settings(popper_data, debug=False, show_stats=train_log, quiet=(not train_log), timeout=3600)
+        settings = Settings(popper_data, debug=False, show_stats=train_log, quiet=(not train_log), timeout=36000)
+        # from multiprocessing.dummy import Pool as ThreadPool
+        # timeout = 3600
+        # p = ThreadPool(1)
+        # res = p.apply_async(learn_solution, args=[settings])
+        # try:
+        #     prog, score, stats = res.get(timeout)  # Wait timeout seconds for func to complete.
+        # except multiprocessing.TimeoutError:
+        #     print("Popper run aborted. No valid theory returned.")
+        #     unload_prolog()
+        #     return None, None
+
         prog, score, stats = learn_solution(settings)
         # if train_log:
         #     from popper.util import print_prog_score
         #     print_prog_score(prog, score)
-        from pyswip import Prolog
-        prolog = Prolog()
-        # prolog.consult(os.path.abspath(os.path.abspath('ilp/unloader.pl')))
-        for source in list(prolog.query(f'source_file(X).')):
-            path = source['X']
-            # if 'popper' in path:
-            # list(prolog.query(f'unload_source(\'{path}\').'))
-            list(prolog.query(f'unload_file(\'{path}\').'))
+        unload_prolog()
         theory = None if prog is None else format_prog(order_prog(prog))
         # for
         # manager = multiprocessing.Manager()
@@ -154,9 +158,9 @@ class Ilp_trainer():
 
             stats = eval_rule(theory=theory, ds_val=val_path, ds_train=train_path, dir='TrainGenerator/',
                               print_stats=False, )
-
         else:
-            raise AssertionError('Popper run aborted. No valid theory returned.')
+            print('Popper run aborted. No valid theory returned.')
+            return None, None
         return theory, stats
 
     def aleph_train(self, path, noisy_samples=0, print_stats=False):
@@ -183,7 +187,7 @@ class Ilp_trainer():
             stats = eval_rule(theory=theory, ds_val=val_path, ds_train=train_path, dir='TrainGenerator/',
                               print_stats=False)
         else:
-            raise AssertionError('Aleph run aborted. No valid theory returned. ')
+            raise AssertionError('Aleph run aborted. No valid theory returned.')
         del aleph
         return theory, stats
 
@@ -194,6 +198,22 @@ class Ilp_trainer():
     @staticmethod
     def plot_noise_robustness():
         visualization.plot_noise_robustness()
+
+    def to_df(self, out):
+        results = pd.DataFrame(
+            columns=['Methods', 'training samples', 'rule', 'cv iteration', 'Validation acc', 'theory', 'noise'])
+        for p_id, (theory, stats) in enumerate(out):
+            if theory is not None:
+                li = []
+                if theory is not None:
+                    TP, FN, TN, FP, TP_train, FN_train, TN_train, FP_train = stats
+                    log_stats(stats, theory, self.model, self.num_tsamples, self.rule, self.noise, p_id)
+                    li.append([self.model, self.num_tsamples, self.rule, p_id, (TP + TN) / (TP + FN + TN + FP),
+                               (TP_train + TN_train) / (TP_train + FN_train + TN_train + FP_train), theory, self.noise])
+                _df = pd.DataFrame(li, columns=['Methods', 'training samples', 'rule', 'cv iteration',
+                                                'Validation acc', 'Train acc', 'theory', 'noise'])
+                results = pd.concat([results, _df], ignore_index=True)
+        return results
 
 
 def log_stats(stats, theory, model, train_samples, rule, noise, cv_it):
@@ -210,3 +230,14 @@ def log_stats(stats, theory, model, train_samples, rule, noise, cv_it):
           f'Precision:{(TP / (TP + FP)) if (TP + FP) > 0 else 0}, '
           f'Recall:{(TP / (TP + FN)) if (TP + FN) > 0 else 0}, '
           f'TP:{TP}, FN:{FN}, TN:{TN}, FP:{FP}')
+
+
+def unload_prolog():
+    from pyswip import Prolog
+    prolog = Prolog()
+    # prolog.consult(os.path.abspath(os.path.abspath('ilp/unloader.pl')))
+    for source in list(prolog.query(f'source_file(X).')):
+        path = source['X']
+        # if 'popper' in path:
+        # list(prolog.query(f'unload_source(\'{path}\').'))
+        list(prolog.query(f'unload_file(\'{path}\').'))

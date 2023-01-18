@@ -1,21 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="fb20dgx2-d" remoteFilesAllowedToDisappearOnAutoupload="false" autoUploadExternalChanges="true" showNewOnSourceInSync="false">
+  <component name="PublishConfigData" autoUpload="Always" serverName="130.83.185.145" remoteFilesAllowedToDisappearOnAutoupload="false" autoUploadExternalChanges="true" showNewOnSourceInSync="false">
     <serverData>
-      <paths name="fb20dgx2-d">
+      <paths name="130.83.185.145">
         <serverdata>
           <mappings>
             <mapping deploy="/MichalskiTrainProblem" local="$PROJECT_DIR$" web="/" />
           </mappings>
           <excludedPaths>
-            <excludedPath local="true" path="$PROJECT_DIR$/TrainGenerator/tmp" />
-            <excludedPath local="true" path="$PROJECT_DIR$/TrainGenerator/output" />
-            <excludedPath local="true" path="$PROJECT_DIR$/TrainGenerator/raw/datasets" />
-            <excludedPath path="/MichalskiTrainProblem/TrainGenerator/tmp" />
-            <excludedPath path="/MichalskiTrainProblem/TrainGenerator/output" />
-            <excludedPath path="/MichalskiTrainProblem/TrainGenerator/raw/datasets" />
-            <excludedPath local="true" path="$PROJECT_DIR$/output" />
             <excludedPath path="/MichalskiTrainProblem/output" />
+            <excludedPath local="true" path="$PROJECT_DIR$/output" />
+            <excludedPath path="/MichalskiTrainProblem/TrainGenerator/output" />
+            <excludedPath path="/MichalskiTrainProblem/TrainGenerator/tmp" />
+            <excludedPath local="true" path="$PROJECT_DIR$/TrainGenerator/output" />
+            <excludedPath local="true" path="$PROJECT_DIR$/TrainGenerator/tmp" />
           </excludedPaths>
         </serverdata>
       </paths>
