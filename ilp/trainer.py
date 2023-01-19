@@ -26,11 +26,12 @@ class Ilp_trainer():
         create_datasets(rules, train_count, train_description, folds, ds_size, noise_vals, replace_existing=False)
         ilp_stats_path = f'output/ilp/stats'
         os.makedirs(ilp_stats_path, exist_ok=True)
+        t_its = len(models) + len(train_count) + len(rules) + len(noise_vals)
 
-        for model, num_tsamples, rule, noise in product(models, train_count, rules, noise_vals):
+        for it, (model, num_tsamples, rule, noise) in enumerate(product(models, train_count, rules, noise_vals)):
             self.model, self.num_tsamples, self.rule, self.noise = model, num_tsamples, rule, noise
 
-            print(f'{model} learning {rule} rule: {folds}-fold Cross-Validation'
+            print(f'iteration ({it}/{t_its}): {model} learning {rule} rule: {folds}-fold Cross-Validation'
                   f' with {num_tsamples} training samples with {noise * 100}% noise')
 
             csv = f'{ilp_stats_path}/{model}_{rule}_{num_tsamples}smpl_{noise}noise.csv' if noise > 0 else \
@@ -126,7 +127,8 @@ class Ilp_trainer():
         popper_data = f'{path}/popper/gt1'
         train_path = f'{path}/train_samples.txt'
         val_path = f'{path}/val_samples.txt'
-        settings = Settings(popper_data, debug=False, show_stats=train_log, quiet=(not train_log), timeout=36000)
+        settings = Settings(popper_data, debug=False, show_stats=train_log, quiet=(not train_log), timeout=360,
+                            )
         # from multiprocessing.dummy import Pool as ThreadPool
         # timeout = 3600
         # p = ThreadPool(1)
@@ -137,8 +139,10 @@ class Ilp_trainer():
         #     print("Popper run aborted. No valid theory returned.")
         #     unload_prolog()
         #     return None, None
-
-        prog, score, stats = learn_solution(settings)
+        try:
+            prog, score, stats = learn_solution(settings)
+        except:
+            prog, score, stats = None, None, None
         # if train_log:
         #     from popper.util import print_prog_score
         #     print_prog_score(prog, score)

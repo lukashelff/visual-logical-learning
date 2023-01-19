@@ -42,7 +42,7 @@ class Trainer:
 
         # ds_val setup
         self.base_scene, self.train_col, self.train_vis, self.class_rule = base_scene, train_col, train_vis, class_rule
-        self.ds_path = ds_path
+        self.ds_path, self.ds_size = ds_path, ds_size
         self.device = device
         self.X_val, self.y_val = X_val, y_val
         self.pretrained, self.resume, self.save_model = pretrained, resume, save_model
@@ -76,25 +76,28 @@ class Trainer:
             y = np.concatenate([self.full_ds.get_direction(item) for item in range(self.full_ds.__len__())])
         else:
             y = np.zeros(self.full_ds.__len__())
-        rtpt_extra = n_splits * len(train_size) * self.num_epochs
-        for training_size, noise in product(train_size, noises):
-            self.image_count = training_size
-            self.noise = noise
-            self.full_ds.predictions_im_count = training_size
-            if self.train_col == 'MichalskiTrains':
-                cv = StratifiedShuffleSplit(train_size=training_size, test_size=test_size, random_state=random_state,
-                                            n_splits=n_splits)
-            else:
-                cv = ShuffleSplit(n_splits=n_splits, train_size=training_size, test_size=test_size, )
-            for fold, (tr_idx, val_idx) in enumerate(cv.split(np.zeros(len(y)), y)):
-                self.out_path = self.update_out_path(prefix=True, suffix=f'it_{fold}/')
-                self.setup_model(resume=self.resume, path=model_path)
-                self.setup_ds(tr_idx=tr_idx, val_idx=val_idx)
+        rtpt_extra = n_splits * len(train_size) * self.num_epochs * len(noises)
+        for t_size, noise in product(train_size, noises):
+            self.full_ds = get_datasets(self.base_scene, self.train_col, self.train_vis, self.ds_size, noise=noise,
+                                        ds_path=self.ds_path, class_rule=self.class_rule, resize=self.resize)
+            for t_size in train_size:
+                self.image_count = t_size
+                self.noise = noise
+                self.full_ds.predictions_im_count = t_size
+                if self.train_col == 'MichalskiTrains':
+                    cv = StratifiedShuffleSplit(train_size=t_size, test_size=test_size, random_state=random_state,
+                                                n_splits=n_splits)
+                else:
+                    cv = ShuffleSplit(n_splits=n_splits, train_size=t_size, test_size=test_size, )
+                for fold, (tr_idx, val_idx) in enumerate(cv.split(np.zeros(len(y)), y)):
+                    self.out_path = self.update_out_path(prefix=True, suffix=f'it_{fold}/')
+                    self.setup_model(resume=self.resume, path=model_path)
+                    self.setup_ds(tr_idx=tr_idx, val_idx=val_idx)
 
-                if not os.path.isdir(self.out_path) or replace:
-                    self.train(rtpt_extra=rtpt_extra)
-                rtpt_extra -= self.num_epochs
-                del self.model
+                    if not os.path.isdir(self.out_path) or replace:
+                        self.train(rtpt_extra=rtpt_extra)
+                    rtpt_extra -= self.num_epochs
+                    del self.model
 
     def train(self, rtpt_extra=0):
         self.model = do_train(self.base_scene, self.train_col, self.y_val, self.device, self.out_path, self.model_name,
