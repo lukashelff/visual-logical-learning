@@ -2,6 +2,7 @@ import multiprocessing
 import multiprocessing as mp
 import os
 import random
+import time
 from itertools import product
 from multiprocessing import Process
 from typing import Type
@@ -27,7 +28,7 @@ class Ilp_trainer():
         create_datasets(rules, train_count, train_description, folds, ds_size, noise_vals, replace_existing=False)
         ilp_stats_path = f'output/ilp/stats'
         os.makedirs(ilp_stats_path, exist_ok=True)
-        t_its = len(models) + len(train_count) + len(rules) + len(noise_vals)
+        t_its = len(models) * len(train_count) * len(rules) * len(noise_vals)
 
         for it, (model, num_tsamples, rule, noise) in enumerate(product(models, train_count, rules, noise_vals)):
             self.model, self.num_tsamples, self.rule, self.noise = model, num_tsamples, rule, noise
@@ -44,23 +45,18 @@ class Ilp_trainer():
                           for fold in range(folds)]
                 # self.popper_train(out_path)
                 if model == 'popper':
-                    # out = []
-                    # for c, input in enumerate(inputs):
-                    #     theory, stats = self.popper_train(input, log, c)
-                    # queue = multiprocessing.Queue()
-                    # procs = [Process(target=self.popper_train, args=(i, log, queue)) for i_c, i in enumerate(inputs)]
-                    # for proc in procs:
-                    #     proc.start()
-                    # for proc in procs:
-                    #     proc.join(60)
-                    # for proc in procs:
-                    #     if proc.is_alive():
-                    #         proc.terminate()
-                    #         proc.join()
-                    # out = []
-                    # while not queue.empty():
-                    #     out += [queue.get()]
+                    worker = 5
+                    # with mp.Pool(worker) as p:
 
+                        # out = [(None, None)] * worker
+                        # def my_callback(t):
+                        #     i, theory, stats = t
+                        #     out[i] = (theory, stats)
+                        #
+                        # [p.apply_async(self.popper_train, args=(i, log, i_c), callback=my_callback) for i_c, i in
+                        #  enumerate(inputs)]
+                        # time.sleep(60)
+                        # p.terminate()
 
                     # with mp.Pool(5) as p:
                     #     inputs = [(i, log) for i_c, i in enumerate(inputs)]
@@ -138,14 +134,14 @@ class Ilp_trainer():
     #     theory = None if prog is None else format_prog(order_prog(prog))
     #     return_dict[popper_data] = theory
 
-    def popper_train(self, path, train_log=False, queue=None):
+    def popper_train(self, path, train_log=False, i=None):
         from popper.loop import learn_solution
         from popper.util import Settings, format_prog, order_prog
         print(f'training iteration: {path.split("/")[-1]}')
         popper_data = f'{path}/popper/gt1'
         train_path = f'{path}/train_samples.txt'
         val_path = f'{path}/val_samples.txt'
-        settings = Settings(popper_data, debug=False, show_stats=train_log, quiet=(not train_log), timeout=3600, )
+        settings = Settings(popper_data, debug=False, show_stats=train_log, quiet=(not train_log), timeout=6000, )
         # from multiprocessing.dummy import Pool as ThreadPool
         # timeout = 3600
         # p = ThreadPool(1)
@@ -178,12 +174,12 @@ class Ilp_trainer():
 
             stats = eval_rule(theory=theory, ds_val=val_path, ds_train=train_path, dir='TrainGenerator/',
                               print_stats=False, )
-            if queue is not None:
-                queue.put((theory, stats))
+            # if queue is not None:
+            #     queue.put((theory, stats))
         else:
             print('Popper run aborted. No valid theory returned.')
             return None, None
-        return theory, stats
+        return i, theory, stats
 
     def aleph_train(self, path, noisy_samples=0, print_stats=False):
         aleph_path = f"{path}/aleph"

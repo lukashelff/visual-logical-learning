@@ -64,7 +64,7 @@ def create_bk(ds_path, out_path, ds_size=None, noise=0):
         if 'aleph' in path:
             dirs = ['/train.n', '/train.f', '/train.b']
         elif 'popper' in path:
-            dirs = ['/bk.pl', '/exs.pl', 'bias.pl']
+            dirs = ['/bk.pl', '/exs.pl', '/bias.pl']
         elif 'dilp' in path:
             dirs = ['/facts.dilp', '/negative.dilp', '/positive.dilp']
         for file in dirs:

@@ -121,6 +121,7 @@ def plot_noise_robustness():
     # data = (data.loc[data['rule'] == 'numerical']).loc[data['Methods'] == 'popper']
     data['noise'] = (data['noise'] * 100).astype("int").astype("string") + '%'
     rules = data['rule'].unique()
+    rules = ['theoryx', 'complex', 'numerical']
     model_names = data['Methods'].unique()
     im_count = sorted(data['training samples'].unique())
 

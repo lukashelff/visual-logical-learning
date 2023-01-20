@@ -16,7 +16,8 @@ opencv-python
 #detectron2 @ git+https://github.com/facebookresearch/detectron2.git
 # pyswip @ git+https://github.com/yuce/pyswip@master#egg=pyswip
 pyswip @ git+https://github.com/david-r-cox/pyswip@swi-prolog-8.5.3-support
-popper-ilp @ git+https://github.com/logic-and-learning-lab/Popper@main
+popper-ilp @ git+https://github.com/logic-and-learning-lab/Popper@8e132faa0f1a7554275f70b0bb7546cc79cce901
 orange3
 clingo
-#python-rdm @ git+https://github.com/xflows/rdm.git
+# python-rdm @ git+https://github.com/xflows/rdm.git
+Pebble
