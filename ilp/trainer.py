@@ -47,30 +47,24 @@ class Ilp_trainer():
                 if model == 'popper':
                     worker = 5
                     # with mp.Pool(worker) as p:
-
-                        # out = [(None, None)] * worker
-                        # def my_callback(t):
-                        #     i, theory, stats = t
-                        #     out[i] = (theory, stats)
-                        #
-                        # [p.apply_async(self.popper_train, args=(i, log, i_c), callback=my_callback) for i_c, i in
-                        #  enumerate(inputs)]
-                        # time.sleep(60)
-                        # p.terminate()
+                    #
+                    # [p.apply_async(self.popper_train, args=(i, log, i_c), callback=my_callback) for i_c, i in
+                    #  enumerate(inputs)]
+                    # time.sleep(60)
+                    # p.terminate()
 
                     # with mp.Pool(5) as p:
                     #     inputs = [(i, log) for i_c, i in enumerate(inputs)]
                     #     out = p.starmap(self.popper_train, inputs)
-                    with ProcessPool(5) as p:
-                        out = []
+                    with ProcessPool(worker) as p:
+                        out = [(None, None)] * worker
                         for i in inputs:
-                            future = p.schedule(self.popper_train, args=(i, log), timeout=360)
+                            future = p.schedule(self.popper_train, args=[i, log], timeout=600)
                         try:
-                            out = future.result()
+                            for w in range(worker):
+                                out[w] = future.result()
                         except:
-                            print(out)
                             pass
-                        # out = p.starmap(self.popper_train, inputs)
                 elif model == 'aleph':
                     # out = []
                     # for c, input in enumerate(inputs):
@@ -83,10 +77,10 @@ class Ilp_trainer():
                     raise ValueError(f'model: {model} not supported')
                 results = self.to_df(out)
                 if results.empty:
-                    warnings.warn(f'{model} exited with no results ({csv})')
+                    warnings.warn(f'{model} exited with no results ({csv}). No stats saved.')
                 else:
                     results.to_csv(csv)
-                print(f'saved statistics in {csv}')
+                    print(f'saved statistics in {csv}')
 
     def train(self, model, raw_trains, class_rule, train_size, val_size, noise=0, train_log=False):
         ds_path = f'TrainGenerator/output/image_generator/dataset_descriptions/{raw_trains}_{class_rule}.txt'
@@ -134,14 +128,14 @@ class Ilp_trainer():
     #     theory = None if prog is None else format_prog(order_prog(prog))
     #     return_dict[popper_data] = theory
 
-    def popper_train(self, path, train_log=False, i=None):
+    def popper_train(self, path, train_log=False):
         from popper.loop import learn_solution
         from popper.util import Settings, format_prog, order_prog
-        print(f'training iteration: {path.split("/")[-1]}')
+        # print(f'training iteration: {path.split("/")[-1]}')
         popper_data = f'{path}/popper/gt1'
         train_path = f'{path}/train_samples.txt'
         val_path = f'{path}/val_samples.txt'
-        settings = Settings(popper_data, debug=False, show_stats=train_log, quiet=(not train_log), timeout=6000, )
+        settings = Settings(popper_data, debug=False, show_stats=train_log, quiet=(not train_log), timeout=60*60*3, )
         # from multiprocessing.dummy import Pool as ThreadPool
         # timeout = 3600
         # p = ThreadPool(1)
@@ -179,7 +173,7 @@ class Ilp_trainer():
         else:
             print('Popper run aborted. No valid theory returned.')
             return None, None
-        return i, theory, stats
+        return theory, stats
 
     def aleph_train(self, path, noisy_samples=0, print_stats=False):
         aleph_path = f"{path}/aleph"

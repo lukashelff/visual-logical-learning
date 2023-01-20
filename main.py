@@ -39,8 +39,8 @@ def main():
         rules = ['theoryx', 'numerical', 'complex']
         models = ['popper', 'aleph'][:1]
         train_count = [100, 1000, 10000]
-        noise = [0, 0.1, 0.3][2:]
-        trainer.cross_val(raw_trains, folds=5, rules=rules, models=models, train_count=train_count, noise=noise, log=False, complete_run=False)
+        noise = [0, 0.1, 0.3][1:]
+        trainer.cross_val(raw_trains, folds=5, rules=rules, models=models, train_count=train_count, noise=noise, log=False, complete_run=True)
         # trainer.plot_ilp_crossval()
         # trainer.plot_noise_robustness()
 
