@@ -5,8 +5,9 @@ import random
 from itertools import product
 from multiprocessing import Process
 from typing import Type
-
+import warnings
 import pandas as pd
+from pebble import ProcessPool
 
 from ilp import visualization
 from ilp.setup import create_bk, create_datasets
@@ -46,20 +47,34 @@ class Ilp_trainer():
                     # out = []
                     # for c, input in enumerate(inputs):
                     #     theory, stats = self.popper_train(input, log, c)
-
-                    # procs = [Process(target=self.popper_train, args=(i, log, i_c, results)) for i_c, i in enumerate(inputs)]
+                    # queue = multiprocessing.Queue()
+                    # procs = [Process(target=self.popper_train, args=(i, log, queue)) for i_c, i in enumerate(inputs)]
                     # for proc in procs:
                     #     proc.start()
                     # for proc in procs:
-                    #     proc.join(3600)
+                    #     proc.join(60)
                     # for proc in procs:
                     #     if proc.is_alive():
                     #         proc.terminate()
                     #         proc.join()
+                    # out = []
+                    # while not queue.empty():
+                    #     out += [queue.get()]
 
-                    with mp.Pool(5) as p:
-                        inputs = [(i, log) for i_c, i in enumerate(inputs)]
-                        out = p.starmap(self.popper_train, inputs)
+
+                    # with mp.Pool(5) as p:
+                    #     inputs = [(i, log) for i_c, i in enumerate(inputs)]
+                    #     out = p.starmap(self.popper_train, inputs)
+                    with ProcessPool(5) as p:
+                        out = []
+                        for i in inputs:
+                            future = p.schedule(self.popper_train, args=(i, log), timeout=360)
+                        try:
+                            out = future.result()
+                        except:
+                            print(out)
+                            pass
+                        # out = p.starmap(self.popper_train, inputs)
                 elif model == 'aleph':
                     # out = []
                     # for c, input in enumerate(inputs):
@@ -72,7 +87,7 @@ class Ilp_trainer():
                     raise ValueError(f'model: {model} not supported')
                 results = self.to_df(out)
                 if results.empty:
-                    raise UserWarning(f'{model} exited with no results ({csv})')
+                    warnings.warn(f'{model} exited with no results ({csv})')
                 else:
                     results.to_csv(csv)
                 print(f'saved statistics in {csv}')
@@ -101,7 +116,10 @@ class Ilp_trainer():
                 theory, stats = self.aleph_train(out_path, print_stats=train_log)
             else:
                 raise ValueError(f'model: {model} not supported')
-            log_stats(stats, theory, model, train_size, class_rule, noise, 'trainer')
+            if stats is None:
+                print('popper run aborted. no valid theory returned')
+            else:
+                log_stats(stats, theory, model, train_size, class_rule, noise, 'trainer')
 
     # def popper_wrapper(self, popper_data, train_log, return_dict):
     #     from popper.loop import learn_solution
@@ -120,15 +138,14 @@ class Ilp_trainer():
     #     theory = None if prog is None else format_prog(order_prog(prog))
     #     return_dict[popper_data] = theory
 
-    def popper_train(self, path, train_log=False):
+    def popper_train(self, path, train_log=False, queue=None):
         from popper.loop import learn_solution
         from popper.util import Settings, format_prog, order_prog
         print(f'training iteration: {path.split("/")[-1]}')
         popper_data = f'{path}/popper/gt1'
         train_path = f'{path}/train_samples.txt'
         val_path = f'{path}/val_samples.txt'
-        settings = Settings(popper_data, debug=False, show_stats=train_log, quiet=(not train_log), timeout=360,
-                            )
+        settings = Settings(popper_data, debug=False, show_stats=train_log, quiet=(not train_log), timeout=3600, )
         # from multiprocessing.dummy import Pool as ThreadPool
         # timeout = 3600
         # p = ThreadPool(1)
@@ -139,10 +156,9 @@ class Ilp_trainer():
         #     print("Popper run aborted. No valid theory returned.")
         #     unload_prolog()
         #     return None, None
-        try:
-            prog, score, stats = learn_solution(settings)
-        except:
-            prog, score, stats = None, None, None
+        prog, score, stats = learn_solution(settings)
+
+        # raise AssertionError('Popper run aborted. No valid theory returned.')
         # if train_log:
         #     from popper.util import print_prog_score
         #     print_prog_score(prog, score)
@@ -162,6 +178,8 @@ class Ilp_trainer():
 
             stats = eval_rule(theory=theory, ds_val=val_path, ds_train=train_path, dir='TrainGenerator/',
                               print_stats=False, )
+            if queue is not None:
+                queue.put((theory, stats))
         else:
             print('Popper run aborted. No valid theory returned.')
             return None, None
@@ -209,11 +227,10 @@ class Ilp_trainer():
         for p_id, (theory, stats) in enumerate(out):
             if theory is not None:
                 li = []
-                if theory is not None:
-                    TP, FN, TN, FP, TP_train, FN_train, TN_train, FP_train = stats
-                    log_stats(stats, theory, self.model, self.num_tsamples, self.rule, self.noise, p_id)
-                    li.append([self.model, self.num_tsamples, self.rule, p_id, (TP + TN) / (TP + FN + TN + FP),
-                               (TP_train + TN_train) / (TP_train + FN_train + TN_train + FP_train), theory, self.noise])
+                TP, FN, TN, FP, TP_train, FN_train, TN_train, FP_train = stats
+                log_stats(stats, theory, self.model, self.num_tsamples, self.rule, self.noise, p_id)
+                li.append([self.model, self.num_tsamples, self.rule, p_id, (TP + TN) / (TP + FN + TN + FP),
+                           (TP_train + TN_train) / (TP_train + FN_train + TN_train + FP_train), theory, self.noise])
                 _df = pd.DataFrame(li, columns=['Methods', 'training samples', 'rule', 'cv iteration',
                                                 'Validation acc', 'Train acc', 'theory', 'noise'])
                 results = pd.concat([results, _df], ignore_index=True)

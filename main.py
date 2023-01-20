@@ -36,10 +36,10 @@ def main():
     if command == 'ilp_crossval':
         from ilp.trainer import Ilp_trainer
         trainer = Ilp_trainer()
-        rules = ['theoryx', 'numerical', 'complex']
+        rules = ['theoryx', 'numerical', 'complex'][0:1]
         models = ['popper', 'aleph'][:1]
-        train_count = [100, 1000, 10000]
-        noise = [0, 0.1, 0.3]
+        train_count = [100, 1000, 10000][1:2]
+        noise = [0, 0.1, 0.3][2:]
         trainer.cross_val(raw_trains, folds=5, rules=rules, models=models, train_count=train_count, noise=noise, log=False, complete_run=True)
         # trainer.plot_ilp_crossval()
         # trainer.plot_noise_robustness()
@@ -47,10 +47,10 @@ def main():
     if command == 'ilp':
         from ilp.trainer import Ilp_trainer
         trainer = Ilp_trainer()
-        train_size, val_size = 10000, 2000
+        train_size, val_size = 1000, 2000
         model = 'popper'
-        class_rule = 'complex'
-        trainer.train(model, raw_trains, class_rule, train_size, val_size, noise=0.3, train_log=False)
+        class_rule = 'theoryx'
+        trainer.train(model, raw_trains, class_rule, train_size, val_size, noise=0.3, train_log=True)
 
     if command == 'split_ds':
         from michalski_trains.m_train_dataset import get_datasets
@@ -109,7 +109,7 @@ def main():
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
                           setup_model=False, setup_ds=False, batch_size=batch_size, resize=resize, lr=lr)
         # train_size = [10000]
-        trainer.cross_val_train(replace=True, save_models=True)
+        trainer.cross_val_train(replace=False, save_models=True)
 
     if command == 'compare_models':
         model_names = ['resnet18', 'VisionTransformer', 'EfficientNet']
