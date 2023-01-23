@@ -63,42 +63,44 @@ class Trainer:
         if setup_ds:
             self.setup_ds()
 
-    def cross_val_train(self, train_size=None, noises=None, n_splits=5, model_path=None, save_models=False,
+    def cross_val_train(self, train_size=None, noises=None, rules=None, visualizations=None, scenes=None, n_splits=5,
+                        model_path=None, save_models=False,
                         replace=False):
         if train_size is None:
-            train_size = [100, 1000, 10000]
+            train_size = [self.image_count]
         if noises is None:
-            noises = [0, 0.1, 0.3]
+            noises = [self.noise]
+        if rules is None:
+            rules = [self.class_rule]
+        if visualizations is None:
+            visualizations = [self.train_vis]
+        if scenes is None:
+            scenes = [self.base_scene]
         random_state = 0
         test_size = 2000
         self.save_model = save_models
-        if self.train_col == 'MichalskiTrains':
-            y = np.concatenate([self.full_ds.get_direction(item) for item in range(self.full_ds.__len__())])
-        else:
-            y = np.zeros(self.full_ds.__len__())
         tr_it = 0
-        tr_max = n_splits * len(train_size) * len(noises)
-        for noise in noises:
-            self.full_ds = get_datasets(self.base_scene, self.train_col, self.train_vis, self.ds_size, noise=noise,
-                                        ds_path=self.ds_path, class_rule=self.class_rule, resize=self.resize)
+        tr_max = n_splits * len(train_size) * len(noises) * len(rules) * len(visualizations) * len(scenes)
+        for noise, rule, visualization, scene in product(noises, rules, visualizations, scenes):
+            self.noise, self.class_rule, self.train_vis, self.base_scene = noise, rule, visualization, scene
+            self.full_ds = get_datasets(self.base_scene, self.train_col, self.train_vis, self.ds_size, noise=self.noise,
+                                        ds_path=self.ds_path, class_rule=rule, resize=self.resize)
             for t_size in train_size:
                 self.image_count = t_size
                 self.noise = noise
                 self.full_ds.predictions_im_count = t_size
-                if self.train_col == 'MichalskiTrains':
-                    cv = StratifiedShuffleSplit(train_size=t_size, test_size=test_size, random_state=random_state,
-                                                n_splits=n_splits)
-                else:
-                    cv = ShuffleSplit(n_splits=n_splits, train_size=t_size, test_size=test_size, )
+                cv = StratifiedShuffleSplit(train_size=t_size, test_size=test_size, random_state=random_state,
+                                            n_splits=n_splits)
+                y = np.concatenate([self.full_ds.get_direction(item) for item in range(self.full_ds.__len__())])
+
                 for fold, (tr_idx, val_idx) in enumerate(cv.split(np.zeros(len(y)), y)):
                     self.out_path = self.update_out_path(prefix=True, suffix=f'it_{fold}/')
-
-
                     if not os.path.isdir(self.out_path) or replace:
+                        print('====' * 10)
                         print(f'training iteration {tr_it} of {tr_max}')
                         self.setup_model(resume=self.resume, path=model_path)
                         self.setup_ds(tr_idx=tr_idx, val_idx=val_idx)
-                        self.train(rtpt_extra=(tr_max-tr_it)*self.num_epochs)
+                        self.train(rtpt_extra=(tr_max - tr_it) * self.num_epochs)
                         del self.model
                     tr_it += 1
 
@@ -174,10 +176,12 @@ class Trainer:
         vis_confusion_matrix(self.train_col, self.base_scene, self.out_path, self.model_name, self.model,
                              self.dl, self.device)
 
-    def plt_cross_val_performance(self, tex_table=False):
+    def plt_cross_val_performance(self, tex_table=False, models=None):
+        if models is None:
+            models = [self.model_name]
         print('plotting  cross validated performance')
         path = self.update_out_path()
-        model_scene_imcount_comparison(self.train_col, [self.model_name], self.y_val, path)
+        model_scene_imcount_comparison(self.train_col, models, self.y_val, path)
         if tex_table:
             csv_to_tex_table(path + 'mean_variance_comparison.csv')
 
@@ -347,6 +351,9 @@ def do_train(base_scene, train_col, y_val, device, out_path, model_name, model, 
                 max_iterations=num_epochs + rtpt_extra)
     rtpt.start()
     epoch_init = 0
+    print(f'training settings: {out_path}')
+    print('-' * 10)
+
     if checkpoint is not None:
         epoch_init = checkpoint['epoch']
         loss = checkpoint['loss']
@@ -390,12 +397,7 @@ def do_train(base_scene, train_col, y_val, device, out_path, model_name, model, 
     for epoch in range(num_epochs):
         # Update the RTPT (subtitle is optional)
         rtpt.step()
-        print('-' * 10)
-        print(f'Epoch {epoch + 1}/{num_epochs} training {model_name}')
-        print(f'settings {out_path}')
         time_elapsed = time.time() - since
-        print('Elapsed time: {:.0f}m {:.0f}s'.format(
-            time_elapsed // 60, time_elapsed % 60))
 
         # Each epoch has a training and validation phase
         for phase in ['train', 'val']:
@@ -465,13 +467,16 @@ def do_train(base_scene, train_col, y_val, device, out_path, model_name, model, 
                 for acc_type, metric_name in zip([bal_acc, acc], ['bal_acc', 'acc']):
                     epoch_label_accs[phase][label_name][metric_name][epoch] += acc_type
                     epoch_acum_accs[phase][metric_name][epoch] += acc_type / len(unique_label_names)
-            print(
-                '{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss[phase][epoch],
-                                                     epoch_acum_accs[phase]['acc'][epoch]))
+
             # deep copy the model
             if phase == 'val' and epoch_acum_accs[phase]['acc'][epoch] > best_acc:
                 best_acc = epoch_acum_accs[phase]['acc'][epoch]
                 best_model_wts = copy.deepcopy(model.state_dict())
+        print(f'{model_name} training Epoch {epoch + 1}/{num_epochs}, '
+              f'elapsed time: {int(time_elapsed // 60)}m {int(time_elapsed % 60)}s, '
+              f'train Loss: {round(epoch_loss["train"][epoch], 4)} Acc: {round(epoch_acum_accs["train"]["acc"][epoch] * 100, 1)}%, '
+              f'val Loss: {round(epoch_loss["val"][epoch], 4)} Acc: {round(epoch_acum_accs["val"]["acc"][epoch] * 100, 1)}%'
+              )
 
     print('Best val Acc: {:4f}'.format(best_acc))
     os.makedirs(out_path, exist_ok=True)

@@ -6,6 +6,7 @@ import matplotlib.lines as mlines
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import tabulate
 from matplotlib import pyplot as plt
 
 
@@ -47,7 +48,7 @@ def plot_ilp_crossval(noise=0):
         ax.tick_params(bottom=False, left=False)
         for spine in ax.spines.values():
             spine.set_edgecolor('gray')
-        data_t = data.loc[data['rule'] == rule]
+        data_t = data.loc[data['rule'] == rule].sort_values(by=['Methods'], ascending=True)
         # sns.violinplot(x='Validation acc', y='rule', hue='number of images', data=data_t,
         #                inner="quart", linewidth=0.5, dodge=False, palette="pastel", saturation=.2, scale='width',
         #                ax=ax
@@ -68,7 +69,6 @@ def plot_ilp_crossval(noise=0):
         # Show the conditional means, aligning each pointplot in the
         # center of the strips by adjusting the width allotted to each
         # category (.8 by default) by the number of hue levels
-
         sns.pointplot(x='Validation acc', y='Methods', hue='training samples', data=data_t,
                       dodge=False,
                       join=False,

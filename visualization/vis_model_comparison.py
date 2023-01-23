@@ -16,121 +16,38 @@ from tabulate import tabulate
 
 
 def rule_comparison(model_names, out_path, y_val='direction'):
-    data = pd.DataFrame(
-        columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'cv iteration', 'label', 'epoch',
-                 'Validation acc'])
-    data_acum_acc = pd.DataFrame(
-        columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'cv iteration', 'epoch',
-                 'Validation acc', 'Train acc'])
-    data_ev = pd.DataFrame(
-        columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'mean', 'variance', 'std'])
-    for model_name in model_names:
-
-        input_path = f'output/models/{model_name}/{y_val}_classification/'
-        try:
-            datasets = os.listdir(input_path)
-        except:
-            datasets = []
-        visualizations = set([ds.split('_')[0] for ds in datasets])
-        rules = set([ds.split('_')[1] for ds in datasets])
-        train_typs = set([ds.split('_')[2] for ds in datasets])
-        scenes = set([ds.split('_')[3] + '_' + ds[4] for ds in datasets])
-
-        for ds in datasets:
-            sets = ds.split('_')
-            visualization = sets[0]
-            rule = sets[1]
-            train_typ = sets[2]
-            scene = sets[3] + '_' + sets[4]
-            input_path = f'output/models/{model_name}/{y_val}_classification/{ds}/cv/'
-            configs = os.listdir(input_path)
-            configs.insert(0, configs.pop())
-            for config in configs:
-                conf = config.split('_')
-                imcount = int(conf[1])
-                dir = input_path + config
-                cv_paths = glob.glob(dir + '/*/metrics.json')
-
-                final_acc = []
-                for iteration, path in enumerate(cv_paths):
-                    with open(path, 'r') as fp:
-                        statistics = json.load(fp)
-                    epoch_label_accs = statistics['epoch_label_accs']['val']
-                    epoch_acum_accs = statistics['epoch_acum_accs']
-                    epoch_loss = statistics['epoch_loss']['val']
-                    num_epochs = len(epoch_loss)
-                    final_acc.append(epoch_acum_accs['val']['acc'][-1])
-                    labels = [key for key in epoch_label_accs][:-2]
-                    for label in labels:
-                        val_acc = epoch_label_accs[label]
-                        li = []
-                        for epoch in range(num_epochs):
-                            acc = val_acc['acc'][epoch]
-                            li.append([model_name, imcount, rule, visualization, scene, iteration, label, epoch, acc])
-                        _df = pd.DataFrame(li, columns=['Methods', 'number of images', 'rule', 'visualization', 'scene',
-                                                        'cv iteration', 'label', 'epoch', 'Validation acc'])
-                        data = pd.concat([data, _df], ignore_index=True)
-
-                        li = []
-                        for epoch in range(num_epochs):
-                            acc = epoch_acum_accs['val']['acc'][epoch]
-                            acc_train = epoch_acum_accs['train']['acc'][epoch]
-                            li.append(
-                                [model_name, imcount, rule, visualization, scene, iteration, epoch, acc, acc_train])
-                        _df = pd.DataFrame(li, columns=['Methods', 'number of images', 'rule', 'visualization', 'scene',
-                                                        'cv iteration', 'epoch', 'Validation acc', 'Train acc'])
-                        data_acum_acc = pd.concat([data_acum_acc, _df], ignore_index=True)
-                final_acc = np.array(final_acc) * 100
-                mean = sum(final_acc) / len(final_acc)
-                variance = sum((xi - mean) ** 2 for xi in final_acc) / len(final_acc)
-                std = np.sqrt(variance)
-                li = [model_name, imcount, rule, visualization, scene, mean, variance, std]
-                _df = pd.DataFrame([li],
-                                   columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'mean',
-                                            'variance', 'std'])
-                data_ev = pd.concat([data_ev, _df], ignore_index=True)
-
     _out_path = f'{out_path}/'
-    os.makedirs(_out_path, exist_ok=True)
-    data.to_csv(_out_path + 'label_acc_over_epoch.csv')
-    data_acum_acc.to_csv(_out_path + 'mean_acc_over_epoch.csv')
-    data_ev.to_csv(_out_path + 'mean_variance_comparison.csv')
+    get_cv_data(_out_path, y_val)
 
     with open(_out_path + 'label_acc_over_epoch.csv', 'r') as f:
         data = pd.read_csv(f)
+        scenes = data['scene'].unique()
+        im_count = sorted(data['number of images'].unique())
+        visuals = data['visualization'].unique()
+        rules = data['rule'].unique()
+        noise = data['noise'].unique()
+        colors_s = sns.color_palette()[:len(im_count) + 1]
+        markers = {'SimpleObjects': 'X', 'Trains': 'o', }
+        colors = {10000: colors_s[2], 1000: colors_s[1], 100: colors_s[0]}
+    # print(tabulate(data))
     # print(tabulate(data.loc[data['epoch'] == 24].loc[data['Methods'] == 'resnet18'].loc[data['rule'] == 'numerical'].loc[data['visualization'] == 'Trains'], headers='keys', tablefmt='psql'))
     # data = data.loc[data['epoch'] == 24].loc[data['Methods'] == 'resnet18'].loc[data['rule'] == 'numerical']
     # plot over count
     fig = plt.figure()
-    gs = fig.add_gridspec(len(model_names), hspace=0)
+    gs = fig.add_gridspec(len(rules), hspace=0)
     axes = gs.subplots(sharex=True, sharey=True)
     axes = axes if isinstance(axes, np.ndarray) else [axes]
-    scenes = data['scene'].unique()
-    im_count = sorted(data['number of images'].unique())
-    visuals = data['visualization'].unique()
-    colors_s = sns.color_palette()[:len(im_count) + 1]
-    markers = {
-        'SimpleObjects': 'X',
-        'Trains': 'o',
-    }
-    colors = {
-        10000: colors_s[2],
-        1000: colors_s[1],
-        100: colors_s[0]
-    }
 
     # fig, axes = plt.subplots(len(model_names))
     # for model_name, ax in zip(model_names, axes):
     #     data_t = data.loc[data['epoch'] == 24].loc[data['Methods'] == model_name]
-    rules = ['theoryx', 'numerical', 'complex']
     for rule, ax in zip(rules, axes):
         ax.grid(axis='x', linestyle='solid', color='gray')
         ax.tick_params(bottom=False, left=False)
         for spine in ax.spines.values():
             spine.set_edgecolor('gray')
 
-
-        data_t = data.loc[data['epoch'] == 24].loc[data['rule'] == rule]
+        data_t = data.loc[data['epoch'] == 24].loc[data['rule'] == rule].loc[data['noise'] == 0]
         # sns.violinplot(x='Validation acc', y='rule', hue='number of images', data=data_t,
         #                inner="quart", linewidth=0.5, dodge=False, palette="pastel", saturation=.2, scale='width',
         #                ax=ax
@@ -178,7 +95,8 @@ def rule_comparison(model_names, out_path, y_val='direction'):
     trains_lab = 'Train'
     mean = mlines.Line2D([], [], color='grey', marker='d', linestyle='None', markersize=5)
     mean_lab = 'Mean'
-    color_markers = [mlines.Line2D([], [], color=colors[c], marker='d', linestyle='None', markersize=5) for c in im_count]
+    color_markers = [mlines.Line2D([], [], color=colors[c], marker='d', linestyle='None', markersize=5) for c in
+                     im_count]
     for c, ax in enumerate(axes):
         ax.get_legend().remove()
         ax.set_xlim([0.5, 1])
@@ -209,12 +127,108 @@ def rule_comparison(model_names, out_path, y_val='direction'):
     # csv_to_tex_table(out_path + 'mean_variance_transfer_classification.csv')
 
 
+def get_cv_data(out_path, y_val):
+    data = pd.DataFrame(
+        columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'cv iteration', 'label', 'epoch',
+                 'Validation acc', 'noise'])
+    data_acum_acc = pd.DataFrame(
+        columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'cv iteration', 'epoch',
+                 'Validation acc', 'Train acc', 'noise'])
+    data_ev = pd.DataFrame(
+        columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'mean', 'variance', 'std', 'noise'])
+    models = os.listdir('output/models/')
+    if 'old' in models:
+        models.remove('old')
+    for model_name in models:
+
+        path1 = f'output/models/{model_name}/{y_val}_classification/'
+        try:
+            datasets = os.listdir(path1)
+        except:
+            datasets = []
+        visualizations = set([ds.split('_')[0] for ds in datasets])
+        rules = set([ds.split('_')[1] for ds in datasets])
+        train_typs = set([ds.split('_')[2] for ds in datasets])
+        scenes = set([ds.split('_')[3] + '_' + ds[4] for ds in datasets])
+        for ds in datasets:
+            sets = ds.split('_')
+            visualization = sets[0]
+            rule = sets[1]
+            train_typ = sets[2]
+            scene = sets[3] + '_' + sets[4]
+            path2 = path1 + f'{ds}/'
+            noises = os.listdir(path2)
+            for noise in noises:
+                path3 = path2 + f'{noise}/'
+                ns = 0 if len(noise) == 2 else float(noise.split('_')[1][:3])
+                configs = os.listdir(path3)
+                configs.insert(0, configs.pop())
+                for config in configs:
+
+                    conf = config.split('_')
+                    imcount = int(conf[1])
+                    cv_paths = glob.glob(path3 + config + '/*/metrics.json')
+                    if rule != 'theoryx':
+                        print(cv_paths)
+                        print(path3 + config)
+                    final_acc = []
+                    for iteration, path in enumerate(cv_paths):
+                        with open(path, 'r') as fp:
+                            statistics = json.load(fp)
+                            epoch_label_accs = statistics['epoch_label_accs']['val']
+                            epoch_acum_accs = statistics['epoch_acum_accs']
+                            epoch_loss = statistics['epoch_loss']['val']
+                            num_epochs = len(epoch_loss)
+                            final_acc.append(epoch_acum_accs['val']['acc'][-1])
+                            labels = [key for key in epoch_label_accs][:-2]
+                            for label in labels:
+                                val_acc = epoch_label_accs[label]
+                                li = []
+                                for epoch in range(num_epochs):
+                                    acc = val_acc['acc'][epoch]
+                                    li.append(
+                                        [model_name, imcount, rule, visualization, scene, iteration, label, epoch, acc,
+                                         ns])
+                                _df = pd.DataFrame(li, columns=['Methods', 'number of images', 'rule', 'visualization',
+                                                                'scene',
+                                                                'cv iteration', 'label', 'epoch', 'Validation acc',
+                                                                'noise'])
+                                data = pd.concat([data, _df], ignore_index=True)
+                                li = []
+                                for epoch in range(num_epochs):
+                                    acc = epoch_acum_accs['val']['acc'][epoch]
+                                    acc_train = epoch_acum_accs['train']['acc'][epoch]
+                                    li.append(
+                                        [model_name, imcount, rule, visualization, scene, iteration, epoch, acc,
+                                         acc_train, ns])
+                                _df = pd.DataFrame(li, columns=['Methods', 'number of images', 'rule', 'visualization',
+                                                                'scene',
+                                                                'cv iteration', 'epoch', 'Validation acc', 'Train acc',
+                                                                'noise'])
+                                data_acum_acc = pd.concat([data_acum_acc, _df], ignore_index=True)
+                    if len(final_acc) > 0:
+                        final_acc = np.array(final_acc) * 100
+                        mean = sum(final_acc) / len(final_acc)
+                        variance = sum((xi - mean) ** 2 for xi in final_acc) / len(final_acc)
+                        std = np.sqrt(variance)
+                        li = [model_name, imcount, rule, visualization, scene, mean, variance, std, ns]
+                        _df = pd.DataFrame([li],
+                                           columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'mean',
+                                                    'variance', 'std', 'noise'])
+                        data_ev = pd.concat([data_ev, _df], ignore_index=True)
+    os.makedirs(out_path, exist_ok=True)
+    data.to_csv(out_path + 'label_acc_over_epoch.csv')
+    data_acum_acc.to_csv(out_path + 'mean_acc_over_epoch.csv')
+    data_ev.to_csv(out_path + 'mean_variance_comparison.csv')
+
+
 def model_scene_imcount_comparison(train_col, model_names, y_val, out_path, transfer_eval=False):
     # full_ds = get_datasets(base_scene, train_col, 1)
     #
     # label_names = full_ds.labels
     # unique_label_names = list(set(label_names))
     # label_classes = full_ds.label_classes
+
     data = pd.DataFrame(
         columns=['Methods', 'number of images', 'cv iteration', 'Validation acc', 'epoch', 'scene', 'label'])
     data_acum_acc = pd.DataFrame(
@@ -227,7 +241,7 @@ def model_scene_imcount_comparison(train_col, model_names, y_val, out_path, tran
         columns=['Methods', 'number of images', 'scene', 'mean', 'variance', 'std'])
     for model_name in model_names:
 
-        _out_path = f'output/models/{model_name}/{y_val}_classification/{train_col}'
+        _out_path = f'output/models/{model_name}/{y_val}_classification/'
         scenes = os.listdir(_out_path)
         if transfer_eval:
             with open(_out_path + f'/base_scene/transfer_classification_cv.csv', 'r') as f:
@@ -238,7 +252,7 @@ def model_scene_imcount_comparison(train_col, model_names, y_val, out_path, tran
                 _df = _df.rename(columns={'methods': 'Methods', 'scenes': 'scene'})
                 data_transfer_classification_ev = pd.concat([data_transfer_classification_ev, _df], ignore_index=True)
         for scene in scenes:
-            _out_path = f'output/models/{model_name}/{y_val}_classification/{train_col}/{scene}/cv/'
+            _out_path = f'output/models/{model_name}/{y_val}_classification/{scene}/cv/'
             configs = os.listdir(_out_path)
             configs.insert(0, configs.pop())
             for config in configs:

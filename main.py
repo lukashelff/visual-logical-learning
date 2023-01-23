@@ -39,10 +39,9 @@ def main():
         rules = ['theoryx', 'numerical', 'complex']
         models = ['popper', 'aleph'][:1]
         train_count = [100, 1000, 10000]
-        noise = [0, 0.1, 0.3][1:]
-        trainer.cross_val(raw_trains, folds=5, rules=rules, models=models, train_count=train_count, noise=noise, log=False, complete_run=True)
-        # trainer.plot_ilp_crossval()
-        # trainer.plot_noise_robustness()
+        noise = [0, 0.1, 0.3][:1]
+        trainer.cross_val(raw_trains, folds=5, rules=rules, models=models, train_count=train_count, noise=noise,
+                          log=False, complete_run=True)
 
     if command == 'ilp':
         from ilp.trainer import Ilp_trainer
@@ -51,6 +50,12 @@ def main():
         model = 'popper'
         class_rule = 'theoryx'
         trainer.train(model, raw_trains, class_rule, train_size, val_size, noise=0.3, train_log=True)
+
+    if command == "ilp_plot":
+        from ilp.trainer import Ilp_trainer
+        trainer = Ilp_trainer()
+        trainer.plot_ilp_crossval()
+        trainer.plot_noise_robustness()
 
     if command == 'split_ds':
         from michalski_trains.m_train_dataset import get_datasets
@@ -98,8 +103,11 @@ def main():
         resize = False
         batch_size = 25
         lr = 0.001
-        rules = ['theoryx', 'numerical', 'complex']
-        rules = ['complex']
+        rules = ['theoryx', 'numerical', 'complex'][1:]
+        train_size = [100, 1000, 10000]
+        noises = [0, 0.1, 0.3][:1]
+        visualizations = ['Trains', 'SimpleObjects']
+        scenes = ['base_scene', 'desert_scene', 'sky_scene', 'fisheye_scene']
         if model_name == 'EfficientNet':
             batch_size = 25
         elif model_name == 'VisionTransformer':
@@ -108,10 +116,10 @@ def main():
 
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
                           setup_model=False, setup_ds=False, batch_size=batch_size, resize=resize, lr=lr)
-        # train_size = [10000]
-        trainer.cross_val_train(replace=False, save_models=True)
+        trainer.cross_val_train(train_size=train_size, noises=noises, rules=rules, replace=False, save_models=True)
+        # trainer.plt_cross_val_performance(True, models=['resnet18', 'EfficientNet', 'VisionTransformer'])
 
-    if command == 'compare_models':
+    if command == 'cnn_plot':
         model_names = ['resnet18', 'VisionTransformer', 'EfficientNet']
         # model_names = ['resnet18', 'EfficientNet']
         out_path = 'output/model_comparison/'
@@ -136,7 +144,7 @@ def parse():
     parser.add_argument('--background_scene', type=str, default='base_scene',
                         help='dataset Scene: base_scene, desert_scene, sky_scene or fisheye_scene')
     parser.add_argument('--model_name', type=str, default='resnet18',
-                        help='model to use for training: \'resnet18\', \'VisionTransformer\' or \'EfficientNet\'')
+                        help='model to use for training: \'tesnet18\', \'VisionTransformer\' or \'EfficientNet\'')
 
     parser.add_argument('--cuda', type=int, default=0, help='Which cuda device to use')
     parser.add_argument('--command', type=str, default='cnn',

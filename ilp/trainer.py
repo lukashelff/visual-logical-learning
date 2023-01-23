@@ -38,33 +38,33 @@ class Ilp_trainer():
 
             csv = f'{ilp_stats_path}/{model}_{rule}_{num_tsamples}smpl_{noise}noise.csv' if noise > 0 else \
                 f'{ilp_stats_path}/{model}_{rule}_{num_tsamples}smpl.csv'
-            if complete_run and os.path.exists(csv) and not pd.read_csv(open(csv)).empty:
+            # if complete_run and os.path.exists(csv) and not pd.read_csv(open(csv)).empty:
+            if complete_run and os.path.exists(csv):
                 print('found training results of previous run, skipping training')
             else:
+                try:
+                    os.remove(csv)
+                except:
+                    pass
                 inputs = [f'output/ilp/datasets/{rule}/{train_description}{num_tsamples}_{noise}noise/cv_{fold}'
                           for fold in range(folds)]
                 # self.popper_train(out_path)
                 if model == 'popper':
                     worker = 5
-                    # with mp.Pool(worker) as p:
-                    #
-                    # [p.apply_async(self.popper_train, args=(i, log, i_c), callback=my_callback) for i_c, i in
-                    #  enumerate(inputs)]
-                    # time.sleep(60)
-                    # p.terminate()
 
                     # with mp.Pool(5) as p:
                     #     inputs = [(i, log) for i_c, i in enumerate(inputs)]
                     #     out = p.starmap(self.popper_train, inputs)
+                    futures = []
                     with ProcessPool(worker) as p:
                         out = [(None, None)] * worker
                         for i in inputs:
-                            future = p.schedule(self.popper_train, args=[i, log], timeout=600)
-                        try:
-                            for w in range(worker):
-                                out[w] = future.result()
-                        except:
-                            pass
+                            futures.append(p.schedule(self.popper_train, args=[i, log], timeout=60 * 60 * 3))
+                        for c, f in enumerate(futures):
+                            try:
+                                out[c] = f.result()
+                            except:
+                                pass
                 elif model == 'aleph':
                     # out = []
                     # for c, input in enumerate(inputs):
@@ -135,17 +135,9 @@ class Ilp_trainer():
         popper_data = f'{path}/popper/gt1'
         train_path = f'{path}/train_samples.txt'
         val_path = f'{path}/val_samples.txt'
-        settings = Settings(popper_data, debug=False, show_stats=train_log, quiet=(not train_log), timeout=60*60*3, )
-        # from multiprocessing.dummy import Pool as ThreadPool
-        # timeout = 3600
-        # p = ThreadPool(1)
-        # res = p.apply_async(learn_solution, args=[settings])
-        # try:
-        #     prog, score, stats = res.get(timeout)  # Wait timeout seconds for func to complete.
-        # except multiprocessing.TimeoutError:
-        #     print("Popper run aborted. No valid theory returned.")
-        #     unload_prolog()
-        #     return None, None
+        settings = Settings(popper_data, debug=False, show_stats=train_log, quiet=(not train_log),
+                            timeout=60 * 60 * 4, )
+
         prog, score, stats = learn_solution(settings)
 
         # raise AssertionError('Popper run aborted. No valid theory returned.')
@@ -154,18 +146,7 @@ class Ilp_trainer():
         #     print_prog_score(prog, score)
         unload_prolog()
         theory = None if prog is None else format_prog(order_prog(prog))
-        # for
-        # manager = multiprocessing.Manager()
-        # return_dict = manager.dict()
-        # p = multiprocessing.Process(target=self.popper_wrapper, args=(popper_data, train_log, return_dict))
-        # p.start()
-        # p.join()
-        # theory = return_dict[popper_data]
         if theory is not None:
-            # with ThreadPoolExecutor() as executor:
-            #     future = executor.submit(eval_rule, (theory, val_path, train_path, 'TrainGenerator/', False, True,))
-            #     stats = future.result()
-
             stats = eval_rule(theory=theory, ds_val=val_path, ds_train=train_path, dir='TrainGenerator/',
                               print_stats=False, )
             # if queue is not None:
@@ -204,7 +185,7 @@ class Ilp_trainer():
         return theory, stats
 
     @staticmethod
-    def plot_ilp_crossval(noise):
+    def plot_ilp_crossval(noise=0):
         visualization.plot_ilp_crossval(noise=noise)
 
     @staticmethod
