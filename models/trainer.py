@@ -95,7 +95,7 @@ class Trainer:
 
                 for fold, (tr_idx, val_idx) in enumerate(cv.split(np.zeros(len(y)), y)):
                     self.out_path = self.update_out_path(prefix=True, suffix=f'it_{fold}/')
-                    if not os.path.isdir(self.out_path) or replace:
+                    if not os.path.isfile(self.out_path + 'metrics.json') or replace:
                         print('====' * 10)
                         print(f'training iteration {tr_it} of {tr_max}')
                         self.setup_model(resume=self.resume, path=model_path)

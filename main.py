@@ -103,9 +103,9 @@ def main():
         resize = False
         batch_size = 25
         lr = 0.001
-        rules = ['theoryx', 'numerical', 'complex'][1:]
+        rules = ['theoryx', 'numerical', 'complex']
         train_size = [100, 1000, 10000]
-        noises = [0, 0.1, 0.3][:1]
+        noises = [0, 0.1, 0.3]
         visualizations = ['Trains', 'SimpleObjects']
         scenes = ['base_scene', 'desert_scene', 'sky_scene', 'fisheye_scene']
         if model_name == 'EfficientNet':
