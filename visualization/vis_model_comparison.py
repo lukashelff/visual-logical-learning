@@ -21,6 +21,7 @@ def rule_comparison(model_names, out_path, y_val='direction'):
 
     with open(_out_path + 'label_acc_over_epoch.csv', 'r') as f:
         data = pd.read_csv(f)
+        data = data.loc[data['visualization'] == 'Trains']
         scenes = data['scene'].unique()
         im_count = sorted(data['number of images'].unique())
         visuals = data['visualization'].unique()
@@ -33,6 +34,7 @@ def rule_comparison(model_names, out_path, y_val='direction'):
     # print(tabulate(data.loc[data['epoch'] == 24].loc[data['Methods'] == 'resnet18'].loc[data['rule'] == 'numerical'].loc[data['visualization'] == 'Trains'], headers='keys', tablefmt='psql'))
     # data = data.loc[data['epoch'] == 24].loc[data['Methods'] == 'resnet18'].loc[data['rule'] == 'numerical']
     # plot over count
+    # rules = ['theoryx']
     fig = plt.figure()
     gs = fig.add_gridspec(len(rules), hspace=0)
     axes = gs.subplots(sharex=True, sharey=True)
@@ -127,6 +129,9 @@ def rule_comparison(model_names, out_path, y_val='direction'):
     # csv_to_tex_table(out_path + 'mean_variance_transfer_classification.csv')
 
 
+
+
+
 def get_cv_data(out_path, y_val):
     data = pd.DataFrame(
         columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'cv iteration', 'label', 'epoch',
@@ -168,9 +173,6 @@ def get_cv_data(out_path, y_val):
                     conf = config.split('_')
                     imcount = int(conf[1])
                     cv_paths = glob.glob(path3 + config + '/*/metrics.json')
-                    if rule != 'theoryx':
-                        print(cv_paths)
-                        print(path3 + config)
                     final_acc = []
                     for iteration, path in enumerate(cv_paths):
                         with open(path, 'r') as fp:
@@ -213,7 +215,8 @@ def get_cv_data(out_path, y_val):
                         std = np.sqrt(variance)
                         li = [model_name, imcount, rule, visualization, scene, mean, variance, std, ns]
                         _df = pd.DataFrame([li],
-                                           columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'mean',
+                                           columns=['Methods', 'number of images', 'rule', 'visualization', 'scene',
+                                                    'mean',
                                                     'variance', 'std', 'noise'])
                         data_ev = pd.concat([data_ev, _df], ignore_index=True)
     os.makedirs(out_path, exist_ok=True)
