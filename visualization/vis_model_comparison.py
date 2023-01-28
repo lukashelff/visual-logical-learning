@@ -14,215 +14,133 @@ import matplotlib.lines as mlines
 from util import *
 from tabulate import tabulate
 
+from visualization.data_handler import get_cv_data
 
-def rule_comparison(model_names, out_path, y_val='direction'):
+
+def rule_comparison(out_path, y_val='direction'):
     _out_path = f'{out_path}/'
     get_cv_data(_out_path, y_val)
 
     with open(_out_path + 'label_acc_over_epoch.csv', 'r') as f:
         data = pd.read_csv(f)
-        data = data.loc[data['visualization'] == 'Trains']
+        data = data.loc[data['noise'] == 0].loc[data['epoch'] == 24]
         scenes = data['scene'].unique()
         im_count = sorted(data['number of images'].unique())
         visuals = data['visualization'].unique()
         rules = data['rule'].unique()
         noise = data['noise'].unique()
+        models = data['Methods'].unique()
+
         colors_s = sns.color_palette()[:len(im_count) + 1]
-        markers = {'SimpleObjects': 'X', 'Trains': 'o', }
+        markers = {f'{models[0]}': 'X', f'{models[1]}': 'o', f'{models[2]}': '>'}
         colors = {10000: colors_s[2], 1000: colors_s[1], 100: colors_s[0]}
+    rules = ['theoryx', 'numerical', 'complex']
+
     # print(tabulate(data))
     # print(tabulate(data.loc[data['epoch'] == 24].loc[data['Methods'] == 'resnet18'].loc[data['rule'] == 'numerical'].loc[data['visualization'] == 'Trains'], headers='keys', tablefmt='psql'))
     # data = data.loc[data['epoch'] == 24].loc[data['Methods'] == 'resnet18'].loc[data['rule'] == 'numerical']
     # plot over count
     # rules = ['theoryx']
     fig = plt.figure()
-    gs = fig.add_gridspec(len(rules), hspace=0)
-    axes = gs.subplots(sharex=True, sharey=True)
+    gs = fig.add_gridspec(len(rules), len(visuals), hspace=0, wspace=0.1, right=1.3)
+    axes = gs.subplots(sharex=True, sharey=False)
     axes = axes if isinstance(axes, np.ndarray) else [axes]
 
     # fig, axes = plt.subplots(len(model_names))
     # for model_name, ax in zip(model_names, axes):
     #     data_t = data.loc[data['epoch'] == 24].loc[data['Methods'] == model_name]
-    for rule, ax in zip(rules, axes):
+    for (rule, vis), ax in zip(product(rules, visuals), axes.flatten()):
         ax.grid(axis='x', linestyle='solid', color='gray')
         ax.tick_params(bottom=False, left=False)
         for spine in ax.spines.values():
             spine.set_edgecolor('gray')
 
-        data_t = data.loc[data['epoch'] == 24].loc[data['rule'] == rule].loc[data['noise'] == 0]
+        data_t = data.loc[data['rule'] == rule].loc[data['visualization'] == vis]
         # sns.violinplot(x='Validation acc', y='rule', hue='number of images', data=data_t,
         #                inner="quart", linewidth=0.5, dodge=False, palette="pastel", saturation=.2, scale='width',
         #                ax=ax
         #                )
-        for count, vis in product(im_count, visuals):
-            data_tmp = data_t.loc[data_t['number of images'] == count].loc[data_t['visualization'] == vis]
-            # for count in im_count:
-            #     data_tmp = data_t.loc[data_t['number of images'] == count]
-            #     print(tabulate(data_tmp == data.loc[data['epoch'] == 24].loc[data['Methods'] == 'resnet18'].loc[data['visualization'] == vis].loc[data['number of images'] == count].loc[data['epoch'] == 24], headers='keys', tablefmt='psql'))
-            # Show each observation with a scatterplot
-            sns.stripplot(x='Validation acc', y='Methods',
-                          hue='visualization',
-                          hue_order=['SimpleObjects', 'Trains'],
-                          data=data_tmp,
-                          dodge=True,
-                          alpha=.25,
-                          zorder=1,
-                          jitter=False,
-                          marker=markers[vis],
-                          palette=[colors[count], colors[count]],
-                          ax=ax
-                          )
+        for count in im_count:
+            data_tmp = data_t.loc[data_t['number of images'] == count]
+            for model in models:
+                data_tmp2 = data_tmp.loc[data_t['Methods'] == model]
+
+                # for count in im_count:
+                #     data_tmp = data_t.loc[data_t['number of images'] == count]
+                #     print(tabulate(data_tmp == data.loc[data['epoch'] == 24].loc[data['Methods'] == 'resnet18'].loc[data['visualization'] == vis].loc[data['number of images'] == count].loc[data['epoch'] == 24], headers='keys', tablefmt='psql'))
+                # Show each observation with a scatterplot
+                sns.stripplot(x='Validation acc', y='Methods',
+                              hue='number of images',
+                              hue_order=im_count,
+                              data=data_tmp2,
+                              dodge=False,
+                              alpha=.25,
+                              zorder=1,
+                              jitter=False,
+                              marker=markers[model],
+                              palette=sns.color_palette()[:len(im_count)],
+                              ax=ax
+                              )
 
         # Show the conditional means, aligning each pointplot in the
         # center of the strips by adjusting the width allotted to each
         # category (.8 by default) by the number of hue levels
-
-        sns.pointplot(x='Validation acc', y='Methods', hue='number of images', data=data_t,
+        # for model in models:
+        #     data_tmp2 = data_t.loc[data_t['Methods'] == model]
+        sns.pointplot(x='Validation acc', y='Methods', hue='number of images', data=data_t, order=models,
                       dodge=False,
                       join=False,
                       # palette="dark",
-                      markers="d",
-                      scale=.75,
+                      markers='d',
+                      scale=.6,
                       errorbar=None,
                       ax=ax
                       )
     # plt.title('Comparison of Supervised learning methods')
     # Improve the legend
-    handles, labels = axes[-1].get_legend_handles_labels()
+    handles, labels = axes[2, 0].get_legend_handles_labels()
     length = len(handles) // 2
     # length = 0
-    simple = mlines.Line2D([], [], color='grey', marker='X', linestyle='None', markersize=5)
-    simple_lab = 'Simple'
-    trains = mlines.Line2D([], [], color='grey', marker='o', linestyle='None', markersize=5)
-    trains_lab = 'Train'
+    white = mlines.Line2D([], [], color='white', marker='X', linestyle='None', markersize=0)
+    h1 = mlines.Line2D([], [], color='grey', marker='X', linestyle='None', markersize=5)
+    lab1 = models[0]
+    h2 = mlines.Line2D([], [], color='grey', marker='o', linestyle='None', markersize=5)
+    lab2 = models[1]
+    h3 = mlines.Line2D([], [], color='grey', marker='>', linestyle='None', markersize=5)
+    lab3 = models[2]
     mean = mlines.Line2D([], [], color='grey', marker='d', linestyle='None', markersize=5)
-    mean_lab = 'Mean'
+    mean_lab = 'Mean accuracy'
     color_markers = [mlines.Line2D([], [], color=colors[c], marker='d', linestyle='None', markersize=5) for c in
                      im_count]
-    for c, ax in enumerate(axes):
+    for c, ax in enumerate(axes.flatten()):
         ax.get_legend().remove()
         ax.set_xlim([0.5, 1])
-        ax.set_ylabel(model_names[c])
-        ax.set_ylabel(rules[c])
-
-    axes[-1].legend([simple, trains, mean] + color_markers,
-                    [simple_lab, trains_lab, mean_lab] + [str(i) for i in im_count], title="Training samples",
-                    loc='lower center', bbox_to_anchor=(1.2, 0), frameon=False,
-                    handletextpad=0, ncol=2)
+        if c % 2 == 0:
+            # ax.set_ylabel(model_names[c % 3])
+            ax.set_ylabel(rules[c % 3])
+            ax.get_yaxis().set_ticks([])
+        else:
+            # ax.get_xaxis().set_visible(False)
+            ax.get_yaxis().set_visible(False)
+        if c < 2:
+            ax.title.set_text(visuals[c])
+    # labels, handels = [str(i) for i in im_count], []
+    # for i in range(3):
+    #     labels
+    axes[2, 1].legend(
+        [white, white, color_markers[0], h1, color_markers[1], h2, color_markers[2], h3,                                                   mean],
+        ['Training samples:', 'Models:'] + [im_count[0], lab1, im_count[1], lab2, im_count[2], lab3, mean_lab],
+        loc='lower center', bbox_to_anchor=(-.04, -.84), frameon=True,
+        handletextpad=0, ncol=5)
 
     # axes[-1].set_ylabel(f"Rule-based learning problem")
-    axes[-1].set_xlabel("Validation accuracy")
+    # axes[2, 0].set_xlabel("Validation accuracy")
 
     os.makedirs(out_path, exist_ok=True)
     plt.savefig(out_path + f'/neural_lr_mean_variance.png', bbox_inches='tight', dpi=400)
 
     plt.close()
     # over epoch
-    # plot_label_acc_over_epochs(data, out_path)
-    # plot_label_acum_acc_over_epoch(data_acum_acc, out_path)
-
-    # plot table
-    # csv_to_tex_table(out_path + 'mean_variance_comparison.csv')
-
-    # transfer classification comparison
-    # transfer_train_comparison(out_path)
-    # csv_to_tex_table(out_path + 'mean_variance_transfer_classification.csv')
-
-
-
-
-
-def get_cv_data(out_path, y_val):
-    data = pd.DataFrame(
-        columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'cv iteration', 'label', 'epoch',
-                 'Validation acc', 'noise'])
-    data_acum_acc = pd.DataFrame(
-        columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'cv iteration', 'epoch',
-                 'Validation acc', 'Train acc', 'noise'])
-    data_ev = pd.DataFrame(
-        columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'mean', 'variance', 'std', 'noise'])
-    models = os.listdir('output/models/')
-    if 'old' in models:
-        models.remove('old')
-    for model_name in models:
-
-        path1 = f'output/models/{model_name}/{y_val}_classification/'
-        try:
-            datasets = os.listdir(path1)
-        except:
-            datasets = []
-        visualizations = set([ds.split('_')[0] for ds in datasets])
-        rules = set([ds.split('_')[1] for ds in datasets])
-        train_typs = set([ds.split('_')[2] for ds in datasets])
-        scenes = set([ds.split('_')[3] + '_' + ds[4] for ds in datasets])
-        for ds in datasets:
-            sets = ds.split('_')
-            visualization = sets[0]
-            rule = sets[1]
-            train_typ = sets[2]
-            scene = sets[3] + '_' + sets[4]
-            path2 = path1 + f'{ds}/'
-            noises = os.listdir(path2)
-            for noise in noises:
-                path3 = path2 + f'{noise}/'
-                ns = 0 if len(noise) == 2 else float(noise.split('_')[1][:3])
-                configs = os.listdir(path3)
-                configs.insert(0, configs.pop())
-                for config in configs:
-
-                    conf = config.split('_')
-                    imcount = int(conf[1])
-                    cv_paths = glob.glob(path3 + config + '/*/metrics.json')
-                    final_acc = []
-                    for iteration, path in enumerate(cv_paths):
-                        with open(path, 'r') as fp:
-                            statistics = json.load(fp)
-                            epoch_label_accs = statistics['epoch_label_accs']['val']
-                            epoch_acum_accs = statistics['epoch_acum_accs']
-                            epoch_loss = statistics['epoch_loss']['val']
-                            num_epochs = len(epoch_loss)
-                            final_acc.append(epoch_acum_accs['val']['acc'][-1])
-                            labels = [key for key in epoch_label_accs][:-2]
-                            for label in labels:
-                                val_acc = epoch_label_accs[label]
-                                li = []
-                                for epoch in range(num_epochs):
-                                    acc = val_acc['acc'][epoch]
-                                    li.append(
-                                        [model_name, imcount, rule, visualization, scene, iteration, label, epoch, acc,
-                                         ns])
-                                _df = pd.DataFrame(li, columns=['Methods', 'number of images', 'rule', 'visualization',
-                                                                'scene',
-                                                                'cv iteration', 'label', 'epoch', 'Validation acc',
-                                                                'noise'])
-                                data = pd.concat([data, _df], ignore_index=True)
-                                li = []
-                                for epoch in range(num_epochs):
-                                    acc = epoch_acum_accs['val']['acc'][epoch]
-                                    acc_train = epoch_acum_accs['train']['acc'][epoch]
-                                    li.append(
-                                        [model_name, imcount, rule, visualization, scene, iteration, epoch, acc,
-                                         acc_train, ns])
-                                _df = pd.DataFrame(li, columns=['Methods', 'number of images', 'rule', 'visualization',
-                                                                'scene',
-                                                                'cv iteration', 'epoch', 'Validation acc', 'Train acc',
-                                                                'noise'])
-                                data_acum_acc = pd.concat([data_acum_acc, _df], ignore_index=True)
-                    if len(final_acc) > 0:
-                        final_acc = np.array(final_acc) * 100
-                        mean = sum(final_acc) / len(final_acc)
-                        variance = sum((xi - mean) ** 2 for xi in final_acc) / len(final_acc)
-                        std = np.sqrt(variance)
-                        li = [model_name, imcount, rule, visualization, scene, mean, variance, std, ns]
-                        _df = pd.DataFrame([li],
-                                           columns=['Methods', 'number of images', 'rule', 'visualization', 'scene',
-                                                    'mean',
-                                                    'variance', 'std', 'noise'])
-                        data_ev = pd.concat([data_ev, _df], ignore_index=True)
-    os.makedirs(out_path, exist_ok=True)
-    data.to_csv(out_path + 'label_acc_over_epoch.csv')
-    data_acum_acc.to_csv(out_path + 'mean_acc_over_epoch.csv')
-    data_ev.to_csv(out_path + 'mean_variance_comparison.csv')
 
 
 def model_scene_imcount_comparison(train_col, model_names, y_val, out_path, transfer_eval=False):

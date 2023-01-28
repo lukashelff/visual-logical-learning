@@ -5,8 +5,9 @@ from itertools import product
 
 import torch
 
-from ilp.vis_training import plot_ilp_training
-from visualization.vis_box import plot_sinlge_box, plot_multi_box
+from ilp.vis_bar import plot_ilp_bar
+from visualization.vis_bar import plot_sinlge_box, plot_multi_box
+from visualization.vis_point import plot_neural_noise
 
 
 def main():
@@ -57,11 +58,12 @@ def main():
         trainer.train(model, raw_trains, class_rule, train_size, val_size, noise=0.3, train_log=True)
 
     if command == "ilp_plot":
-        from ilp.trainer import Ilp_trainer
-        trainer = Ilp_trainer()
+        # from ilp.trainer import Ilp_trainer
+        # trainer = Ilp_trainer()
         # trainer.plot_ilp_crossval()
-        # trainer.plot_noise_robustness()
-        plot_ilp_training()
+        from ilp.visualization import plot_noise_robustness
+        plot_noise_robustness()
+        # plot_ilp_bar()
 
     if command == 'split_ds':
         from michalski_trains.m_train_dataset import get_datasets
@@ -132,11 +134,12 @@ def main():
         class_rules = ['numerical', 'theoryx', 'complex']
         visuals = ['SimpleObjects', 'Trains']
         from visualization.vis_model_comparison import rule_comparison
-        # rule_comparison(model_names, out_path)
-        # for rule, vis in product(class_rules, visuals):
-        #     plot_sinlge_box(rule, vis, out_path)
+        for rule, vis in product(class_rules, visuals):
+            plot_sinlge_box(rule, vis, out_path)
         for rule in class_rules:
             plot_multi_box(rule, visuals, out_path)
+        # plot_neural_noise(out_path)
+        # rule_comparison(out_path)
 
 
 def parse():
