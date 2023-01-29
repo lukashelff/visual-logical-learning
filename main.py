@@ -134,11 +134,11 @@ def main():
         class_rules = ['numerical', 'theoryx', 'complex']
         visuals = ['SimpleObjects', 'Trains']
         from visualization.vis_model_comparison import rule_comparison
-        for rule, vis in product(class_rules, visuals):
-            plot_sinlge_box(rule, vis, out_path)
-        for rule in class_rules:
-            plot_multi_box(rule, visuals, out_path)
-        # plot_neural_noise(out_path)
+        # for rule, vis in product(class_rules, visuals):
+        #     plot_sinlge_box(rule, vis, out_path)
+        # for rule in class_rules:
+        #     plot_multi_box(rule, visuals, out_path)
+        plot_neural_noise(out_path)
         # rule_comparison(out_path)
 
 

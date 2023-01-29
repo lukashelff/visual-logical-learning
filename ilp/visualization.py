@@ -1,6 +1,7 @@
 import glob
 import os
 from itertools import product
+import matplotlib.patches as mpatches
 
 import matplotlib.lines as mlines
 import numpy as np
@@ -8,6 +9,7 @@ import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
 import matplotlib.gridspec as gridspec
+
 
 def plot_ilp_crossval(noise=0):
     ilp_stats_path = f'output/ilp/stats'
@@ -124,21 +126,25 @@ def plot_noise_robustness():
     models = data['Methods'].unique()
     im_count = sorted(data['training samples'].unique())
 
-    fig = plt.figure(figsize=(15, 4))
-    outer = gridspec.GridSpec(2, 2, hspace=.05, wspace=0.05, figure=fig)
-    # outer = outer if isinstance(outer, np.ndarray) else [outer]
+    fig = plt.figure(figsize=(8, 6))
+    outer = fig.add_gridspec(2, 2, hspace=.15, wspace=0.1, figure=fig)
     colors_s = sns.color_palette()[:len(im_count) + 1]
     colors = {count: colors_s[n] for n, count in enumerate(im_count)}
     markers = {f'{models[0]}': 'X', f'{models[1]}': 'o'}
 
     for c, rule in enumerate(rules):
-        # out = outer[c // 2, c % 2]
-        inner = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=outer[c], wspace=0.1, hspace=0)
+        out = outer[c // 2, c % 2]
+        inner = out.subgridspec(ncols=1, nrows=2, hspace=0)
+        axes = inner.subplots()
+        axes[0].set_title(rule.title())
+        # inner = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=outer[c], wspace=0.1, hspace=0)
         # inner = inner.subplots(sharex=True, sharey=False)
-        for j, model in enumerate(models):
-            ax = plt.Subplot(fig, inner[j,0])
-            ax.grid(axis='x', linestyle='solid', color='gray')
+        for j in range(len(models)):
+            # ax = plt.Subplot(fig, inner[j,0])
+            model, ax = models[j], axes[j]
+            # ax.grid(axis='x', linestyle='solid', color='gray')
             ax.tick_params(bottom=False, left=False)
+            ax.grid(axis='x')
             for spine in ax.spines.values():
                 spine.set_edgecolor('gray')
             data_t = (data.loc[data['rule'] == rule]).loc[data['Methods'] == model].sort_values(by=['noise'],
@@ -153,6 +159,7 @@ def plot_noise_robustness():
                                   dodge=False,
                                   alpha=.25,
                                   zorder=1,
+                                  size=6,
                                   jitter=False,
                                   marker=markers[model],
                                   palette=[colors[count]],
@@ -171,45 +178,45 @@ def plot_noise_robustness():
                               markers="d",
                               scale=.75,
                               errorbar=None,
+                              errwidth=0,
                               ax=ax
                               )
+
+            ax.get_legend().remove()
+            if c % 2:
+                ax.get_yaxis().set_visible(False)
+            else:
+                ax.set_ylabel('Noise')
+            ax.set_xlim([.5, 1])
+            if j % 2 == 0 or c == 0:
+                ax.set_xlabel('')
+                ax.set_xticklabels([''] * 6)
+            else:
+                ax.set_xlabel('Accuracy')
+
     # Improve the legend
-    h1 = mlines.Line2D([], [], color='grey', marker='X', linestyle='None', markersize=5)
-    white = mlines.Line2D([], [], color='white', marker='X', linestyle='None', markersize=0)
-    lab1 = models[0]
-    h2 = mlines.Line2D([], [], color='grey', marker='o', linestyle='None', markersize=5)
-    lab2 = models[1]
-    # h3 = mlines.Line2D([], [], color='grey', marker='>', linestyle='None', markersize=5)
-    # lab3 = models[2]
-    mean = mlines.Line2D([], [], color='grey', marker='d', linestyle='None', markersize=5)
-    mean_lab = 'Mean accuracy'
     color_markers = [mlines.Line2D([], [], color=colors[c], marker='d', linestyle='None', markersize=5) for c in
                      im_count]
-    y_lab = list(product(rules, models))
-    # for c, ax in enumerate(axes.flatten()):
-    #     ax.get_legend().remove()
-    #     ax.set_xlim([0.5, 1])
-    #     ax.set_ylabel(y_lab[c][0] + '\n' + y_lab[c][1])
-    #     if c % 3 == 0:
-    #         ax.set_ylabel('noise')
-    #     else:
-    #         ax.get_yaxis().set_visible(False)
-    #     if c < 3:
-    #         ax.title.set_text(rules[c])
-    fig.legend(
-        # [plt.plot([], marker="", ls="")[0]] * 2 +
-        [white, white, color_markers[0], h1, color_markers[1], h2, color_markers[2], mean],
-        ['Training samples:', 'Models:'] +
-        [im_count[0], lab1, im_count[1], lab2, im_count[2], mean_lab],
-        loc='lower center',
-        bbox_to_anchor=(0.5, -.66),
+    popper = mlines.Line2D([], [], color='grey', marker=markers['popper'], linestyle='None', markersize=5)
+    aleph = mlines.Line2D([], [], color='grey', marker=markers['aleph'], linestyle='None', markersize=5)
+    mean = mlines.Line2D([], [], color='grey', marker='d', linestyle='None', markersize=5)
+    mean_lab = 'Mean Accuracy'
+
+    white = [mlines.Line2D([], [], color='white', marker='X', linestyle='None', markersize=0)]
+    plt.rcParams.update({'hatch.color': 'black'})
+
+    leg = fig.legend(
+        white + color_markers + white + [aleph, popper, mean],
+        ['Training Samples:'] + im_count + ['Models:'] + [m.title() for m in models] + [mean_lab],
+        loc='lower left',
+        bbox_to_anchor=(.522, 0.26),
         frameon=True,
         handletextpad=0,
-        ncol=5
+        ncol=2, handleheight=1.2, handlelength=2.2
     )
-
-    # axes[-1].set_ylabel(f"Rule-based learning problem")
-    # axes[-1].set_xlabel("Validation accuracy")
+    for vpack in leg._legend_handle_box.get_children():
+        for hpack in vpack.get_children()[:1]:
+            hpack.get_children()[0].set_width(0)
 
     os.makedirs(ilp_vis_path, exist_ok=True)
     plt.savefig(ilp_vis_path + f'/ilp_on_noisy_data.png', bbox_inches='tight', dpi=400)

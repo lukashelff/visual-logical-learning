@@ -39,64 +39,76 @@ def plot_neural_noise(out_path, y_val='direction'):
     # plot over count
     rules = ['theoryx', 'numerical', 'complex']
     data['noise'] = (data['noise'] * 100).astype("int").astype("string") + '%'
-    fig = plt.figure(figsize=(17, 7))
-    gs = fig.add_gridspec(len(rules), len(models), hspace=0)
-    axes = gs.subplots(sharex=True, sharey=False)
-    axes = axes if isinstance(axes, np.ndarray) else [axes]
+    fig = plt.figure(figsize=(10, 8))
+    outer = fig.add_gridspec(2, 2, hspace=.15, wspace=0.1, figure=fig)
 
-    # fig, axes = plt.subplots(len(model_names))
-    # for model_name, ax in zip(model_names, axes):
-    #     data_t = data.loc[data['epoch'] == 24].loc[data['Methods'] == model_name]
-    for (model, rule), ax in zip(product(models, rules), axes.flatten()):
-        ax.grid(axis='x', linestyle='solid', color='gray')
-        ax.tick_params(bottom=False, left=False)
-        for spine in ax.spines.values():
-            spine.set_edgecolor('gray')
 
-        data_t = data.loc[data['rule'] == rule].loc[data['Methods'] == model].sort_values(by=['noise'], ascending=True)
 
-        # sns.violinplot(x='Validation acc', y='rule', hue='number of images', data=data_t,
-        #                inner="quart", linewidth=0.5, dodge=False, palette="pastel", saturation=.2, scale='width',
-        #                ax=ax
-        #                )
-        for count in im_count:
-            data_tmp = data_t.loc[data_t['number of images'] == count]
-            # for count in im_count:
-            #     data_tmp = data_t.loc[data_t['number of images'] == count]
-            #     print(tabulate(data_tmp == data.loc[data['epoch'] == 24].loc[data['Methods'] == 'resnet18'].loc[data['visualization'] == vis].loc[data['number of images'] == count].loc[data['epoch'] == 24], headers='keys', tablefmt='psql'))
-            # Show each observation with a scatterplot
-            sns.stripplot(x='Validation acc', y='noise',
-                          hue='number of images',
-                          # hue_order=['SimpleObjects', 'Trains'],
-                          data=data_tmp,
+    for c, rule in enumerate(rules):
+        out = outer[c // 2, c % 2]
+        inner = out.subgridspec(ncols=1, nrows=3, hspace=0)
+        axes = inner.subplots()
+        axes[0].set_title(rule.title())
+        for j in range(len(models)):
+            model, ax = models[j], axes[j]
+            ax.tick_params(bottom=False, left=False)
+            ax.grid(axis='x')
+            for spine in ax.spines.values():
+                spine.set_edgecolor('gray')
+            data_t = data.loc[data['rule'] == rule].loc[data['Methods'] == model].sort_values(by=['noise'], ascending=True)
+
+            # sns.violinplot(x='Validation acc', y='rule', hue='number of images', data=data_t,
+            #                inner="quart", linewidth=0.5, dodge=False, palette="pastel", saturation=.2, scale='width',
+            #                ax=ax
+            #                )
+            for count in im_count:
+                data_tmp = data_t.loc[data_t['number of images'] == count]
+                # for count in im_count:
+                #     data_tmp = data_t.loc[data_t['number of images'] == count]
+                #     print(tabulate(data_tmp == data.loc[data['epoch'] == 24].loc[data['Methods'] == 'resnet18'].loc[data['visualization'] == vis].loc[data['number of images'] == count].loc[data['epoch'] == 24], headers='keys', tablefmt='psql'))
+                # Show each observation with a scatterplot
+                sns.stripplot(x='Validation acc', y='noise',
+                              hue='number of images',
+                              # hue_order=['SimpleObjects', 'Trains'],
+                              data=data_tmp,
+                              dodge=False,
+                              alpha=.25,
+                              zorder=1,
+                              size=6,
+                              jitter=False,
+                              marker=markers[model],
+                              palette=[colors[count]],
+                              ax=ax
+                              )
+
+            # Show the conditional means, aligning each pointplot in the
+            # center of the strips by adjusting the width allotted to each
+            # category (.8 by default) by the number of hue levels
+            sns.pointplot(x='Validation acc', y='noise', hue='number of images', data=data_t,
                           dodge=False,
-                          alpha=.25,
-                          zorder=1,
-                          jitter=False,
-                          marker=markers[model],
-                          palette=[colors[count]],
+                          join=False,
+                          # palette="dark",
+                          markers="d",
+                          scale=.75,
+                          errorbar=None,
+                          errwidth=0,
                           ax=ax
                           )
+            ax.get_legend().remove()
+            if c % 2:
+                ax.get_yaxis().set_visible(False)
+            else:
+                ax.set_ylabel('Noise')
+            ax.set_xlim([.5, 1])
+            if j != 2 or c == 0:
+                ax.set_xlabel('')
+                ax.set_xticklabels([''] * 6)
+            else:
+                ax.set_xlabel('Accuracy')
 
-        # Show the conditional means, aligning each pointplot in the
-        # center of the strips by adjusting the width allotted to each
-        # category (.8 by default) by the number of hue levels
 
-        sns.pointplot(x='Validation acc', y='noise', hue='number of images', data=data_t,
-                      dodge=False,
-                      join=False,
-                      # palette="dark",
-                      markers="d",
-                      scale=.75,
-                      errorbar=None,
-                      ax=ax
-                      )
-    # plt.title('Comparison of Supervised learning methods')
-    # Improve the legend
-    handles, labels = axes[2, 0].get_legend_handles_labels()
-    length = len(handles) // 2
     # length = 0
-    white = mlines.Line2D([], [], color='white', marker='X', linestyle='None', markersize=0)
+    white = [mlines.Line2D([], [], color='white', marker='X', linestyle='None', markersize=0)]
     h1 = mlines.Line2D([], [], color='grey', marker='X', linestyle='None', markersize=5)
     lab1 = models[0]
     h2 = mlines.Line2D([], [], color='grey', marker='o', linestyle='None', markersize=5)
@@ -104,30 +116,28 @@ def plot_neural_noise(out_path, y_val='direction'):
     h3 = mlines.Line2D([], [], color='grey', marker='>', linestyle='None', markersize=5)
     lab3 = models[2]
     mean = mlines.Line2D([], [], color='grey', marker='d', linestyle='None', markersize=5)
-    mean_lab = 'Mean accuracy'
+    mean_lab = 'Mean Accuracy'
     color_markers = [mlines.Line2D([], [], color=colors[c], marker='d', linestyle='None', markersize=5) for c in
                      im_count]
-    for c, ax in enumerate(axes.flatten()):
-        ax.get_legend().remove()
-        ax.set_xlim([0.5, 1])
-        if c % 3 == 0:
-            ax.set_ylabel('noise')
-            # ax.set_ylabel(models[c // 3])
-            # ax.set_ylabel(rules[c % 3])
-        else:
-            # ax.get_xaxis().set_visible(False)
-            ax.get_yaxis().set_visible(False)
-        if c < 3:
-            ax.title.set_text(rules[c])
-    # labels, handels = [str(i) for i in im_count], []
-    # for i in range(3):
-    #     labels
-    axes[2, 1].legend(
-        [white, white, color_markers[0], h1, color_markers[1], h2, color_markers[2], h3,
-                                                   mean],
-        ['Training samples:', 'Models:'] + [im_count[0], lab1, im_count[1], lab2, im_count[2], lab3, mean_lab],
-        loc='lower center', bbox_to_anchor=(0.5, -.57), frameon=True,
-        handletextpad=0, ncol=5)
+
+    leg = fig.legend(
+        white + color_markers + white*2 + [h1, h2, h3, mean],
+        ['Training Samples:'] + im_count + ['' ,'Models:'] + [m.title() for m in models] + [mean_lab],
+        loc='lower left',
+        bbox_to_anchor=(.52, 0.3),
+        frameon=True,
+        handletextpad=0,
+        ncol=2, handleheight=1.2, handlelength=2.2
+    )
+    for vpack in leg._legend_handle_box.get_children():
+        for hpack in vpack.get_children()[:1]:
+            hpack.get_children()[0].set_width(0)
+    # fig.legend(
+    #     [white, white, color_markers[0], h1, color_markers[1], h2, color_markers[2], h3,
+    #                                                mean],
+    #     ['Training samples:', 'Models:'] + [im_count[0], lab1, im_count[1], lab2, im_count[2], lab3, mean_lab],
+    #     loc='lower center', bbox_to_anchor=(0.5, -.57), frameon=True,
+    #     handletextpad=0, ncol=5)
 
     # axes[-1].set_ylabel(f"Rule-based learning problem")
     # axes[2, 0].set_xlabel("Validation accuracy")
