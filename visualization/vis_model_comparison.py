@@ -1,6 +1,6 @@
 import glob
 import json
-from itertools import product
+from itertools import product, chain
 
 import matplotlib.colors as mcolors
 import pandas as pd
@@ -32,23 +32,15 @@ def rule_comparison(out_path, y_val='direction'):
         models = data['Methods'].unique()
 
         colors_s = sns.color_palette()[:len(im_count) + 1]
-        markers = {f'{models[0]}': 'X', f'{models[1]}': 'o', f'{models[2]}': '>'}
+        markers = {f'{models[0]}': 'X', f'{models[1]}': 'o', f'{models[2]}': 'd'}
         colors = {10000: colors_s[2], 1000: colors_s[1], 100: colors_s[0]}
     rules = ['theoryx', 'numerical', 'complex']
 
-    # print(tabulate(data))
-    # print(tabulate(data.loc[data['epoch'] == 24].loc[data['Methods'] == 'resnet18'].loc[data['rule'] == 'numerical'].loc[data['visualization'] == 'Trains'], headers='keys', tablefmt='psql'))
-    # data = data.loc[data['epoch'] == 24].loc[data['Methods'] == 'resnet18'].loc[data['rule'] == 'numerical']
-    # plot over count
-    # rules = ['theoryx']
     fig = plt.figure()
     gs = fig.add_gridspec(len(rules), len(visuals), hspace=0, wspace=0.1, right=1.3)
     axes = gs.subplots(sharex=True, sharey=False)
     axes = axes if isinstance(axes, np.ndarray) else [axes]
 
-    # fig, axes = plt.subplots(len(model_names))
-    # for model_name, ax in zip(model_names, axes):
-    #     data_t = data.loc[data['epoch'] == 24].loc[data['Methods'] == model_name]
     for (rule, vis), ax in zip(product(rules, visuals), axes.flatten()):
         ax.grid(axis='x', linestyle='solid', color='gray')
         ax.tick_params(bottom=False, left=False)
@@ -65,10 +57,6 @@ def rule_comparison(out_path, y_val='direction'):
             for model in models:
                 data_tmp2 = data_tmp.loc[data_t['Methods'] == model]
 
-                # for count in im_count:
-                #     data_tmp = data_t.loc[data_t['number of images'] == count]
-                #     print(tabulate(data_tmp == data.loc[data['epoch'] == 24].loc[data['Methods'] == 'resnet18'].loc[data['visualization'] == vis].loc[data['number of images'] == count].loc[data['epoch'] == 24], headers='keys', tablefmt='psql'))
-                # Show each observation with a scatterplot
                 sns.stripplot(x='Validation acc', y='Methods',
                               hue='number of images',
                               hue_order=im_count,
@@ -87,27 +75,23 @@ def rule_comparison(out_path, y_val='direction'):
         # category (.8 by default) by the number of hue levels
         # for model in models:
         #     data_tmp2 = data_t.loc[data_t['Methods'] == model]
-        sns.pointplot(x='Validation acc', y='Methods', hue='number of images', data=data_t, order=models,
-                      dodge=False,
-                      join=False,
-                      # palette="dark",
-                      markers='d',
-                      scale=.6,
-                      errorbar=None,
-                      ax=ax
-                      )
+        for model in models:
+            data_tm2 = data_t.loc[data_t['Methods'] == model]
+            sns.pointplot(x='Validation acc', y='Methods', hue='number of images', data=data_tm2, order=models,
+                          dodge=False,
+                          join=False,
+                          # palette="dark",
+                          markers=markers[model],
+                          scale=.6,
+                          errorbar=None,
+                          ax=ax
+                          )
     # plt.title('Comparison of Supervised learning methods')
     # Improve the legend
-    handles, labels = axes[2, 0].get_legend_handles_labels()
-    length = len(handles) // 2
     # length = 0
     white = mlines.Line2D([], [], color='white', marker='X', linestyle='None', markersize=0)
-    h1 = mlines.Line2D([], [], color='grey', marker='X', linestyle='None', markersize=5)
-    lab1 = models[0]
-    h2 = mlines.Line2D([], [], color='grey', marker='o', linestyle='None', markersize=5)
-    lab2 = models[1]
-    h3 = mlines.Line2D([], [], color='grey', marker='>', linestyle='None', markersize=5)
-    lab3 = models[2]
+    handels = [mlines.Line2D([], [], color='grey', marker=markers[m], linestyle='None', markersize=5) for m in models]
+
     mean = mlines.Line2D([], [], color='grey', marker='d', linestyle='None', markersize=5)
     mean_lab = 'Mean accuracy'
     color_markers = [mlines.Line2D([], [], color=colors[c], marker='d', linestyle='None', markersize=5) for c in
@@ -124,17 +108,15 @@ def rule_comparison(out_path, y_val='direction'):
             ax.get_yaxis().set_visible(False)
         if c < 2:
             ax.title.set_text(visuals[c])
-    # labels, handels = [str(i) for i in im_count], []
-    # for i in range(3):
-    #     labels
-    axes[2, 1].legend(
-        [white, white, color_markers[0], h1, color_markers[1], h2, color_markers[2], h3,                                                   mean],
-        ['Training samples:', 'Models:'] + [im_count[0], lab1, im_count[1], lab2, im_count[2], lab3, mean_lab],
-        loc='lower center', bbox_to_anchor=(-.04, -.84), frameon=True,
-        handletextpad=0, ncol=5)
 
-    # axes[-1].set_ylabel(f"Rule-based learning problem")
-    # axes[2, 0].set_xlabel("Validation accuracy")
+    leg = fig.legend(
+        [white, white] + list(chain.from_iterable(zip(color_markers, handels))),
+        ['Training samples:', 'Models:'] + list(chain.from_iterable(zip(im_count, models))),
+        loc='lower center', bbox_to_anchor=(.72, -.115), frameon=True,
+        handletextpad=0, ncol=4)
+    for vpack in leg._legend_handle_box.get_children()[:1]:
+        for hpack in vpack.get_children():
+            hpack.get_children()[0].set_width(0)
 
     os.makedirs(out_path, exist_ok=True)
     plt.savefig(out_path + f'/neural_lr_mean_variance.png', bbox_inches='tight', dpi=400)

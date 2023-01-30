@@ -40,8 +40,8 @@ def plot_ilp_bar(noise=0):
     materials_s = ["///", '/']
     mt = {model: materials_s[n] for n, model in enumerate(models)}
 
-    fig = plt.figure()
-    gs = fig.add_gridspec(2, 2, wspace=.05)
+    fig = plt.figure(figsize=(7,6))
+    gs = fig.add_gridspec(2, 2, wspace=.05, hspace=.15)
 
     axes = gs.subplots(sharex=True, sharey=False)
     axes = axes if isinstance(axes, np.ndarray) else [axes]
@@ -62,7 +62,9 @@ def plot_ilp_bar(noise=0):
         ax.set_ylim([50, 100])
         ax.get_xaxis().set_visible(False)
         if c % 2:
-            ax.get_yaxis().set_visible(False)
+            # ax.get_yaxis().set_visible(False)
+            ax.set_ylabel('')
+            ax.set_yticklabels([''] * 6)
         else:
             ax.set_ylabel('Accuracy')
 
@@ -72,13 +74,12 @@ def plot_ilp_bar(noise=0):
                      im_count]
     white = [mlines.Line2D([], [], color='white', marker='X', linestyle='None', markersize=0)]
     plt.rcParams.update({'hatch.color': 'black'})
-    patch1 = mpatches.Patch(facecolor='grey', hatch='/')
-    patch2 = mpatches.Patch(facecolor='grey', hatch='///')
+    handels = [mpatches.Patch(facecolor='grey', hatch=mt[m]) for m in models]
     leg = fig.legend(
-        white + color_markers + white + [patch1, patch2],
+        white + color_markers + white + handels,
         ['Training samples:'] + im_count + ['Models:'] + [m.title() for m in models],
         loc='lower left',
-        bbox_to_anchor=(.5, 0.238),
+        bbox_to_anchor=(.515, 0.292),
         frameon=True,
         handletextpad=0,
         ncol=2, handleheight=1.2, handlelength=2.2

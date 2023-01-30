@@ -139,7 +139,7 @@ def main():
         # for rule in class_rules:
         #     plot_multi_box(rule, visuals, out_path)
         plot_neural_noise(out_path)
-        # rule_comparison(out_path)
+        rule_comparison(out_path)
 
 
 def parse():

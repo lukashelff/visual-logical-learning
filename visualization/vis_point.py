@@ -31,7 +31,7 @@ def plot_neural_noise(out_path, y_val='direction'):
         noise = data['noise'].unique()
         models = data['Methods'].unique()
         colors_s = sns.color_palette()[:len(im_count) + 1]
-        markers = {f'{models[0]}': 'X', f'{models[1]}': 'o', f'{models[2]}': '>'}
+        markers = {f'{models[0]}': 'X', f'{models[1]}': 'o', f'{models[2]}': 'd'}
         colors = {10000: colors_s[2], 1000: colors_s[1], 100: colors_s[0]}
     # print(tabulate(data))
     # print(tabulate(data.loc[data['epoch'] == 24].loc[data['Methods'] == 'resnet18'].loc[data['rule'] == 'numerical'].loc[data['visualization'] == 'Trains'], headers='keys', tablefmt='psql'))
@@ -88,8 +88,8 @@ def plot_neural_noise(out_path, y_val='direction'):
                           dodge=False,
                           join=False,
                           # palette="dark",
-                          markers="d",
-                          scale=.75,
+                          markers=markers[model],
+                          scale=.7,
                           errorbar=None,
                           errwidth=0,
                           ax=ax
@@ -109,20 +109,15 @@ def plot_neural_noise(out_path, y_val='direction'):
 
     # length = 0
     white = [mlines.Line2D([], [], color='white', marker='X', linestyle='None', markersize=0)]
-    h1 = mlines.Line2D([], [], color='grey', marker='X', linestyle='None', markersize=5)
-    lab1 = models[0]
-    h2 = mlines.Line2D([], [], color='grey', marker='o', linestyle='None', markersize=5)
-    lab2 = models[1]
-    h3 = mlines.Line2D([], [], color='grey', marker='>', linestyle='None', markersize=5)
-    lab3 = models[2]
+    handels = [mlines.Line2D([], [], color='grey', marker=markers[m], linestyle='None', markersize=5) for m in models]
     mean = mlines.Line2D([], [], color='grey', marker='d', linestyle='None', markersize=5)
     mean_lab = 'Mean Accuracy'
     color_markers = [mlines.Line2D([], [], color=colors[c], marker='d', linestyle='None', markersize=5) for c in
                      im_count]
 
     leg = fig.legend(
-        white + color_markers + white*2 + [h1, h2, h3, mean],
-        ['Training Samples:'] + im_count + ['' ,'Models:'] + [m.title() for m in models] + [mean_lab],
+        white + color_markers + white + handels,
+        ['Training Samples:'] + im_count + ['Models:'] + [m.title() for m in models],
         loc='lower left',
         bbox_to_anchor=(.52, 0.3),
         frameon=True,
@@ -132,30 +127,12 @@ def plot_neural_noise(out_path, y_val='direction'):
     for vpack in leg._legend_handle_box.get_children():
         for hpack in vpack.get_children()[:1]:
             hpack.get_children()[0].set_width(0)
-    # fig.legend(
-    #     [white, white, color_markers[0], h1, color_markers[1], h2, color_markers[2], h3,
-    #                                                mean],
-    #     ['Training samples:', 'Models:'] + [im_count[0], lab1, im_count[1], lab2, im_count[2], lab3, mean_lab],
-    #     loc='lower center', bbox_to_anchor=(0.5, -.57), frameon=True,
-    #     handletextpad=0, ncol=5)
-
-    # axes[-1].set_ylabel(f"Rule-based learning problem")
-    # axes[2, 0].set_xlabel("Validation accuracy")
 
     os.makedirs(out_path, exist_ok=True)
     plt.savefig(out_path + f'/neural_on_noise_v2.png', bbox_inches='tight', dpi=400)
 
     plt.close()
-    # over epoch
-    # plot_label_acc_over_epochs(data, out_path)
-    # plot_label_acum_acc_over_epoch(data_acum_acc, out_path)
 
-    # plot table
-    # csv_to_tex_table(out_path + 'mean_variance_comparison.csv')
-
-    # transfer classification comparison
-    # transfer_train_comparison(out_path)
-    # csv_to_tex_table(out_path + 'mean_variance_transfer_classification.csv')
 
 
 

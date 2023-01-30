@@ -175,8 +175,8 @@ def plot_noise_robustness():
                               dodge=False,
                               join=False,
                               # palette="dark",
-                              markers="d",
-                              scale=.75,
+                              markers=markers[model],
+                              scale=.7,
                               errorbar=None,
                               errwidth=0,
                               ax=ax
@@ -199,15 +199,15 @@ def plot_noise_robustness():
                      im_count]
     popper = mlines.Line2D([], [], color='grey', marker=markers['popper'], linestyle='None', markersize=5)
     aleph = mlines.Line2D([], [], color='grey', marker=markers['aleph'], linestyle='None', markersize=5)
-    mean = mlines.Line2D([], [], color='grey', marker='d', linestyle='None', markersize=5)
-    mean_lab = 'Mean Accuracy'
+    # mean = mlines.Line2D([], [], color='grey', marker='d', linestyle='None', markersize=5)
+    # mean_lab = 'Mean Accuracy'
 
     white = [mlines.Line2D([], [], color='white', marker='X', linestyle='None', markersize=0)]
     plt.rcParams.update({'hatch.color': 'black'})
 
     leg = fig.legend(
-        white + color_markers + white + [aleph, popper, mean],
-        ['Training Samples:'] + im_count + ['Models:'] + [m.title() for m in models] + [mean_lab],
+        white + color_markers + white + [aleph, popper],
+        ['Training Samples:'] + im_count + ['Models:'] + [m.title() for m in models],
         loc='lower left',
         bbox_to_anchor=(.522, 0.26),
         frameon=True,

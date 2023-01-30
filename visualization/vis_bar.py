@@ -46,6 +46,7 @@ def plot_sinlge_box(rule, vis, out_path, y_val='direction'):
     ax.tick_params(bottom=False, left=False)
     ax.set_ylim([0.5, 1])
     ax.get_xaxis().set_visible(False)
+    ax.set_ylabel('Accuracy')
     color_markers = [mlines.Line2D([], [], color=colors[c], marker='d', linestyle='None', markersize=5) for c in
                      im_count]
     white = mlines.Line2D([], [], color='white', marker='X', linestyle='None', markersize=0)
@@ -111,6 +112,8 @@ def plot_multi_box(rule, visuals, out_path, y_val='direction'):
         ax.set_ylim([0.5, 1])
         if c > 0:
             ax.set_ylabel("")
+        else:
+            ax.set_ylabel('Accuracy')
 
         ax.get_xaxis().set_visible(False)
 
@@ -118,11 +121,10 @@ def plot_multi_box(rule, visuals, out_path, y_val='direction'):
                      im_count]
     white = mlines.Line2D([], [], color='white', marker='X', linestyle='None', markersize=0)
     plt.rcParams.update({'hatch.color': 'black'})
-    patch1 = mpatches.Patch(facecolor='grey', hatch='/')
-    patch2 = mpatches.Patch(facecolor='grey', hatch='///')
-    patch3 = mpatches.Patch(facecolor='grey', hatch='\\')
+    handels = [mpatches.Patch(facecolor='grey', hatch=mt[m]) for m in models]
     axes[1].legend(
-        [white] * 2 + [color_markers[0], patch1, color_markers[1], patch2, color_markers[2], patch3] + [white] * 2,
+        [white] * 2 +
+        [color_markers[0], handels[0], color_markers[1], handels[1], color_markers[2], handels[2]] + [white] * 2,
         ['Training samples:', 'Models:'] + [im_count[0], models[0], im_count[1], models[1], im_count[2], models[2]],
         loc='lower center',
         bbox_to_anchor=(0, -.18),
