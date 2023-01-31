@@ -17,19 +17,18 @@ from tabulate import tabulate
 from visualization.data_handler import get_cv_data
 
 
-def rule_comparison(out_path, y_val='direction'):
+def rule_comparison(out_path):
     _out_path = f'{out_path}/'
-    get_cv_data(_out_path, y_val)
 
     with open(_out_path + 'label_acc_over_epoch.csv', 'r') as f:
         data = pd.read_csv(f)
         data = data.loc[data['noise'] == 0].loc[data['epoch'] == 24]
         scenes = data['scene'].unique()
         im_count = sorted(data['number of images'].unique())
-        visuals = data['visualization'].unique()
+        visuals = sorted(data['visualization'].unique())
         rules = data['rule'].unique()
         noise = data['noise'].unique()
-        models = data['Methods'].unique()
+        models = sorted(data['Methods'].unique())
 
         colors_s = sns.color_palette()[:len(im_count) + 1]
         markers = {f'{models[0]}': 'X', f'{models[1]}': 'o', f'{models[2]}': 'd'}
@@ -86,29 +85,21 @@ def rule_comparison(out_path, y_val='direction'):
                           errorbar=None,
                           ax=ax
                           )
-    # plt.title('Comparison of Supervised learning methods')
-    # Improve the legend
-    # length = 0
-    white = mlines.Line2D([], [], color='white', marker='X', linestyle='None', markersize=0)
-    handels = [mlines.Line2D([], [], color='grey', marker=markers[m], linestyle='None', markersize=5) for m in models]
-
-    mean = mlines.Line2D([], [], color='grey', marker='d', linestyle='None', markersize=5)
-    mean_lab = 'Mean accuracy'
-    color_markers = [mlines.Line2D([], [], color=colors[c], marker='d', linestyle='None', markersize=5) for c in
-                     im_count]
-    for c, ax in enumerate(axes.flatten()):
         ax.get_legend().remove()
         ax.set_xlim([0.5, 1])
-        if c % 2 == 0:
-            # ax.set_ylabel(model_names[c % 3])
-            ax.set_ylabel(rules[c % 3])
+        if vis == visuals[0]:
+            ax.set_ylabel(rule)
             ax.get_yaxis().set_ticks([])
         else:
-            # ax.get_xaxis().set_visible(False)
             ax.get_yaxis().set_visible(False)
-        if c < 2:
-            ax.title.set_text(visuals[c])
+        if rule == rules[0]:
+            ax.title.set_text(vis)
 
+
+    white = mlines.Line2D([], [], color='white', marker='X', linestyle='None', markersize=0)
+    handels = [mlines.Line2D([], [], color='grey', marker=markers[m], linestyle='None', markersize=5) for m in models]
+    color_markers = [mlines.Line2D([], [], color=colors[c], marker='d', linestyle='None', markersize=5) for c in
+                     im_count]
     leg = fig.legend(
         [white, white] + list(chain.from_iterable(zip(color_markers, handels))),
         ['Training samples:', 'Models:'] + list(chain.from_iterable(zip(im_count, models))),

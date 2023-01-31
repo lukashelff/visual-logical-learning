@@ -1,5 +1,5 @@
 import os
-from itertools import product
+from itertools import product, chain
 import matplotlib.patches as mpatches
 
 import matplotlib.lines as mlines
@@ -11,9 +11,7 @@ from matplotlib import pyplot as plt
 from visualization.data_handler import get_cv_data
 
 
-def plot_sinlge_box(rule, vis, out_path, y_val='direction'):
-    # get_cv_data(f'{out_path}/', y_val)
-
+def plot_sinlge_box(rule, vis, out_path):
     with open(out_path + '/label_acc_over_epoch.csv', 'r') as f:
         data = pd.read_csv(f)
         data = data.loc[data['visualization'] == vis].loc[data['rule'] == rule].loc[data['epoch'] == 24].loc[
@@ -23,7 +21,7 @@ def plot_sinlge_box(rule, vis, out_path, y_val='direction'):
         visuals = data['visualization'].unique()
         rules = data['rule'].unique()
         noise = data['noise'].unique()
-        models = data['Methods'].unique()
+        models = sorted(data['Methods'].unique())
         colors_s = sns.color_palette()[:len(im_count) + 1]
         markers = {'SimpleObjects': 'X', 'Trains': 'o', }
         colors = {10000: colors_s[2], 1000: colors_s[1], 100: colors_s[0]}
@@ -50,12 +48,12 @@ def plot_sinlge_box(rule, vis, out_path, y_val='direction'):
     color_markers = [mlines.Line2D([], [], color=colors[c], marker='d', linestyle='None', markersize=5) for c in
                      im_count]
     white = mlines.Line2D([], [], color='white', marker='X', linestyle='None', markersize=0)
-    patch1 = mpatches.Patch(facecolor='grey', hatch='/')
-    patch2 = mpatches.Patch(facecolor='grey', hatch='///')
-    patch3 = mpatches.Patch(facecolor='grey', hatch='\\')
+    handels = [mpatches.Patch(facecolor='grey', hatch=mt[m]) for m in models]
     ax.legend(
-        [white] * 2 + [color_markers[0], patch1, color_markers[1], patch2, color_markers[2], patch3] + [white] * 2,
-        ['Training samples:', 'Models:'] + [im_count[0], models[0], im_count[1], models[1], im_count[2], models[2]],
+
+        [white, white] + list(chain.from_iterable(zip(color_markers, handels))),
+        ['Training samples:', 'Models:'] + list(chain.from_iterable(zip(im_count, models))),
+
         loc='lower center',
         bbox_to_anchor=(.505, -.2),
         frameon=True,
@@ -68,9 +66,7 @@ def plot_sinlge_box(rule, vis, out_path, y_val='direction'):
     plt.close()
 
 
-def plot_multi_box(rule, visuals, out_path, y_val='direction'):
-    get_cv_data(f'{out_path}/', y_val)
-
+def plot_multi_box(rule, visuals, out_path):
     with open(out_path + '/label_acc_over_epoch.csv', 'r') as f:
         data = pd.read_csv(f)
         data = data.loc[data['rule'] == rule].loc[data['epoch'] == 24].loc[data['noise'] == 0]
@@ -79,7 +75,7 @@ def plot_multi_box(rule, visuals, out_path, y_val='direction'):
         im_count = sorted(data['number of images'].unique())
         rules = data['rule'].unique()
         noise = data['noise'].unique()
-        models = data['Methods'].unique()
+        models = sorted(data['Methods'].unique())
         colors_s = sns.color_palette()[:len(im_count) + 1]
         markers = {'SimpleObjects': 'X', 'Trains': 'o', }
         colors = {10000: colors_s[2], 1000: colors_s[1], 100: colors_s[0]}
@@ -121,20 +117,20 @@ def plot_multi_box(rule, visuals, out_path, y_val='direction'):
                      im_count]
     white = mlines.Line2D([], [], color='white', marker='X', linestyle='None', markersize=0)
     plt.rcParams.update({'hatch.color': 'black'})
+
     handels = [mpatches.Patch(facecolor='grey', hatch=mt[m]) for m in models]
-    axes[1].legend(
-        [white] * 2 +
-        [color_markers[0], handels[0], color_markers[1], handels[1], color_markers[2], handels[2]] + [white] * 2,
-        ['Training samples:', 'Models:'] + [im_count[0], models[0], im_count[1], models[1], im_count[2], models[2]],
+    leg = ax.legend(
+        [white, white] + list(chain.from_iterable(zip(color_markers, handels))),
+        ['Training samples:', 'Models:'] + list(chain.from_iterable(zip(im_count, models))),
         loc='lower center',
-        bbox_to_anchor=(0, -.18),
+        bbox_to_anchor=(-.1, -.18),
         frameon=True,
         handletextpad=0,
         ncol=4, handleheight=1.2, handlelength=2.2
     )
-
-    # axes[-1].set_ylabel(f"Rule-based learning problem")
-    # axes[-1].set_xlabel("Validation accuracy")
+    for vpack in leg._legend_handle_box.get_children()[:1]:
+        for hpack in vpack.get_children():
+            hpack.get_children()[0].set_width(0)
 
     os.makedirs(out_path, exist_ok=True)
     plt.savefig(out_path + f'/{rule}_bar_neural_lr_mean_variance.png', bbox_inches='tight', dpi=400)
@@ -153,7 +149,7 @@ def plot_neural_noise_as_bars(out_path, y_val='direction'):
         im_count = sorted(data['number of images'].unique())
         rules = data['rule'].unique()
         noise = sorted(data['noise'].unique())
-        model_names = data['Methods'].unique()
+        model_names = sorted(data['Methods'].unique())
         colors_s = sns.color_palette()[:len(im_count) + 1]
         markers = {'SimpleObjects': 'X', 'Trains': 'o', }
         colors = {10000: colors_s[2], 1000: colors_s[1], 100: colors_s[0]}

@@ -25,7 +25,7 @@ def plot_ilp_crossval(ilp_path='output/ilp', noise=0):
     data = pd.concat(data, ignore_index=True)
     data = data.loc[data['noise'] == noise]
     rules = data['rule'].unique()
-    model_names = data['Methods'].unique()
+    model_names = sorted(data['Methods'].unique())
     im_count = sorted(data['training samples'].unique())
     # print(tabulate(data))
 

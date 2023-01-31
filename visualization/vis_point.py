@@ -17,9 +17,8 @@ from tabulate import tabulate
 from visualization.data_handler import get_cv_data
 
 
-def plot_neural_noise(out_path, y_val='direction'):
+def plot_neural_noise(out_path):
     _out_path = f'{out_path}/'
-    get_cv_data(_out_path, y_val)
 
     with open(_out_path + 'label_acc_over_epoch.csv', 'r') as f:
         data = pd.read_csv(f)
@@ -29,7 +28,7 @@ def plot_neural_noise(out_path, y_val='direction'):
         visuals = data['visualization'].unique()
         rules = data['rule'].unique()
         noise = data['noise'].unique()
-        models = data['Methods'].unique()
+        models = sorted(data['Methods'].unique())
         colors_s = sns.color_palette()[:len(im_count) + 1]
         markers = {f'{models[0]}': 'X', f'{models[1]}': 'o', f'{models[2]}': 'd'}
         colors = {10000: colors_s[2], 1000: colors_s[1], 100: colors_s[0]}

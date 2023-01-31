@@ -24,7 +24,7 @@ def plot_noise_robustness(ilp_path='output/ilp', noise=0):
     data['noise'] = (data['noise'] * 100).astype("int").astype("string") + '%'
     rules = data['rule'].unique()
     rules = ['theoryx', 'numerical', 'complex']
-    models = data['Methods'].unique()
+    models = sorted(data['Methods'].unique())
     im_count = sorted(data['training samples'].unique())
 
     fig = plt.figure(figsize=(8, 6))
@@ -98,16 +98,13 @@ def plot_noise_robustness(ilp_path='output/ilp', noise=0):
     # Improve the legend
     color_markers = [mlines.Line2D([], [], color=colors[c], marker='d', linestyle='None', markersize=5) for c in
                      im_count]
-    popper = mlines.Line2D([], [], color='grey', marker=markers['popper'], linestyle='None', markersize=5)
-    aleph = mlines.Line2D([], [], color='grey', marker=markers['aleph'], linestyle='None', markersize=5)
-    # mean = mlines.Line2D([], [], color='grey', marker='d', linestyle='None', markersize=5)
-    # mean_lab = 'Mean Accuracy'
+    patches = [mlines.Line2D([], [], color='grey', marker=markers[m], linestyle='None', markersize=5) for m in models]
 
     white = [mlines.Line2D([], [], color='white', marker='X', linestyle='None', markersize=0)]
     plt.rcParams.update({'hatch.color': 'black'})
 
     leg = fig.legend(
-        white + color_markers + white + [aleph, popper],
+        white + color_markers + white + patches,
         ['Training Samples:'] + im_count + ['Models:'] + [m.title() for m in models],
         loc='lower left',
         bbox_to_anchor=(.522, 0.26),

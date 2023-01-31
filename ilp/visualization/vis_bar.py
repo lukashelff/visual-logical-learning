@@ -23,7 +23,7 @@ def plot_ilp_bar(ilp_pth='output/ilp', noise=0):
     data = pd.concat(data, ignore_index=True)
 
     rules = data['rule'].unique()
-    models = data['Methods'].unique()
+    models = sorted(data['Methods'].unique())
     rules = ['theoryx', 'numerical', 'complex', ]
 
     # data = pd.concat(data, ignore_index=True)
@@ -87,10 +87,6 @@ def plot_ilp_bar(ilp_pth='output/ilp', noise=0):
     for vpack in leg._legend_handle_box.get_children():
         for hpack in vpack.get_children()[:1]:
             hpack.get_children()[0].set_width(0)
-
-    # for vpack in leg._legend_handle_box.get_children():
-    #     for hpack in vpack.get_children()[:1]:
-    #         hpack.get_children()[0].set_width(0)
 
     os.makedirs(ilp_vis_path, exist_ok=True)
     plt.savefig(ilp_vis_path + f'/ilp_bar{noise_tag}.png', bbox_inches='tight', dpi=400)

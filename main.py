@@ -1,5 +1,6 @@
 import argparse
 import sys
+from itertools import product
 
 import torch
 
@@ -94,10 +95,13 @@ def main():
         class_rules = ['numerical', 'theoryx', 'complex']
         visuals = ['SimpleObjects', 'Trains']
         from visualization.vis_model_comparison import rule_comparison
-        # for rule, vis in product(class_rules, visuals):
-        #     plot_sinlge_box(rule, vis, out_path)
-        # for rule in class_rules:
-        #     plot_multi_box(rule, visuals, out_path)
+        from visualization.vis_bar import plot_sinlge_box, plot_multi_box
+        from visualization.data_handler import get_cv_data
+        get_cv_data(f'{out_path}/', 'direction')
+        for rule, vis in product(class_rules, visuals):
+            plot_sinlge_box(rule, vis, out_path)
+        for rule in class_rules:
+            plot_multi_box(rule, visuals, out_path)
         from visualization.vis_point import plot_neural_noise
         plot_neural_noise(out_path)
         rule_comparison(out_path)
