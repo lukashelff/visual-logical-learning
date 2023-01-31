@@ -10,9 +10,9 @@ import tabulate
 from matplotlib import pyplot as plt
 
 
-def plot_ilp_bar(noise=0):
-    ilp_stats_path = f'output/ilp/stats'
-    ilp_vis_path = f'output/ilp/vis'
+def plot_ilp_bar(ilp_pth='output/ilp', noise=0):
+    ilp_stats_path = f'{ilp_pth}/stats'
+    ilp_vis_path = f'{ilp_pth}/vis'
     noise_tag = '' if noise == 0 else f'_noise_{noise}'
 
     dirs = glob.glob(ilp_stats_path + '/*.csv')
@@ -40,7 +40,7 @@ def plot_ilp_bar(noise=0):
     materials_s = ["///", '/']
     mt = {model: materials_s[n] for n, model in enumerate(models)}
 
-    fig = plt.figure(figsize=(7,6))
+    fig = plt.figure(figsize=(7, 6))
     gs = fig.add_gridspec(2, 2, wspace=.05, hspace=.15)
 
     axes = gs.subplots(sharex=True, sharey=False)

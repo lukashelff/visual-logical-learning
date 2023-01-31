@@ -231,3 +231,45 @@ def sort_file(file):
             )
         )
     )
+
+
+def setup_alpha_ilp_ds(base_scene, raw_trains, train_vis, ds_size, ds_path, class_rule):
+    from michalski_trains.m_train_dataset import get_datasets
+    import shutil
+    ds = get_datasets(base_scene, raw_trains, train_vis, ds_size, ds_path=ds_path, class_rule=class_rule)
+    path_train_true = 'output/alphailp-images/train/true'
+    path_test_true = 'output/alphailp-images/test/true'
+    path_val_true = 'output/alphailp-images/val/true'
+    path_train_false = 'output/alphailp-images/train/false'
+    path_test_false = 'output/alphailp-images/test/false'
+    path_val_false = 'output/alphailp-images/val/false'
+    for p in [path_train_true, path_test_true, path_val_true, path_train_false, path_test_false, path_val_false]:
+        os.makedirs(p, exist_ok=True)
+        p += '/image'
+    train_t, test_t, val_t, train_f, test_f, val_f = [0] * 6
+    c = 0
+    while sum([train_t, test_t, val_t, train_f, test_f, val_f]) < 300:
+        path = ds.get_image_path(c)
+        label = ds.get_label_for_id(c)
+        # print(f'iteration: {c}, label: {label}, path: {path}')
+        if label == 'east':
+            if train_t < 50:
+                shutil.copyfile(path, path_train_true + f'/image{train_t}.png')
+                train_t += 1
+            elif test_t < 50:
+                shutil.copyfile(path, path_test_true + f'/image{test_t}.png')
+                test_t += 1
+            elif val_t < 50:
+                shutil.copyfile(path, path_val_true + f'/image{val_t}.png')
+                val_t += 1
+        elif label == 'west':
+            if train_f < 50:
+                shutil.copyfile(path, path_train_false + f'/image{train_f}.png')
+                train_f += 1
+            elif test_f < 50:
+                shutil.copyfile(path, path_test_false + f'/image{test_f}.png')
+                test_f += 1
+            elif val_f < 50:
+                shutil.copyfile(path, path_val_false + f'/image{val_f}.png')
+                val_f += 1
+        c += 1
