@@ -58,10 +58,6 @@ class Trainer:
         self.image_count, self.batch_size, self.num_worker, self.lr, self.step_size, self.gamma, self.momentum, self.num_epochs = \
             train_samples, batch_size, num_worker, lr, step_size, gamma, momentum, num_epochs
         self.out_path = self.update_out_path()
-        if setup_model:
-            self.setup_model(resume)
-        if setup_ds:
-            self.setup_ds()
 
     def cross_val_train(self, train_size=None, noises=None, rules=None, visualizations=None, scenes=None, n_splits=5,
                         model_path=None, save_models=False,
@@ -100,11 +96,16 @@ class Trainer:
                         print(f'training iteration {tr_it} of {tr_max}')
                         self.setup_model(resume=self.resume, path=model_path)
                         self.setup_ds(tr_idx=tr_idx, val_idx=val_idx)
-                        self.train(rtpt_extra=(tr_max - tr_it) * self.num_epochs)
+                        self.train(rtpt_extra=(tr_max - tr_it) * self.num_epochs, set_up=False)
                         del self.model
                     tr_it += 1
 
-    def train(self, rtpt_extra=0):
+    def train(self, rtpt_extra=0, ds_size=None, set_up=True):
+        if set_up:
+            if ds_size is not None:
+                self.image_count = ds_size
+            self.setup_model(self.resume)
+            self.setup_ds()
         self.model = do_train(self.base_scene, self.train_col, self.y_val, self.device, self.out_path, self.model_name,
                               self.model, self.full_ds, self.dl, self.checkpoint, self.optimizer, self.scheduler,
                               self.criteria, num_epochs=self.num_epochs, lr=self.lr, step_size=self.step_size,

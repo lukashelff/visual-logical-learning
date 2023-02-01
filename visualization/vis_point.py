@@ -40,9 +40,6 @@ def plot_neural_noise(out_path):
     data['noise'] = (data['noise'] * 100).astype("int").astype("string") + '%'
     fig = plt.figure(figsize=(10, 8))
     outer = fig.add_gridspec(2, 2, hspace=.15, wspace=0.1, figure=fig)
-
-
-
     for c, rule in enumerate(rules):
         out = outer[c // 2, c % 2]
         inner = out.subgridspec(ncols=1, nrows=3, hspace=0)
@@ -51,7 +48,7 @@ def plot_neural_noise(out_path):
         for j in range(len(models)):
             model, ax = models[j], axes[j]
             ax.tick_params(bottom=False, left=False)
-            ax.grid(axis='x')
+            ax.grid(axis='y')
             for spine in ax.spines.values():
                 spine.set_edgecolor('gray')
             data_t = data.loc[data['rule'] == rule].loc[data['Methods'] == model].sort_values(by=['noise'], ascending=True)
@@ -106,6 +103,7 @@ def plot_neural_noise(out_path):
                 ax.set_xlabel('Accuracy')
 
 
+
     # length = 0
     white = [mlines.Line2D([], [], color='white', marker='X', linestyle='None', markersize=0)]
     handels = [mlines.Line2D([], [], color='grey', marker=markers[m], linestyle='None', markersize=5) for m in models]
@@ -121,7 +119,7 @@ def plot_neural_noise(out_path):
         bbox_to_anchor=(.52, 0.3),
         frameon=True,
         handletextpad=0,
-        ncol=2, handleheight=1.2, handlelength=2.2
+        ncol=2,
     )
     for vpack in leg._legend_handle_box.get_children():
         for hpack in vpack.get_children()[:1]:

@@ -89,8 +89,6 @@ def main():
         # trainer.plt_cross_val_performance(True, models=['resnet18', 'EfficientNet', 'VisionTransformer'])
 
     if command == 'cnn_plot':
-        model_names = ['resnet18', 'VisionTransformer', 'EfficientNet']
-        # model_names = ['resnet18', 'EfficientNet']
         out_path = 'output/model_comparison/'
         class_rules = ['numerical', 'theoryx', 'complex']
         visuals = ['SimpleObjects', 'Trains']
@@ -105,6 +103,13 @@ def main():
         from visualization.vis_point import plot_neural_noise
         plot_neural_noise(out_path)
         rule_comparison(out_path)
+
+    if command == 'perception':
+        from models.trainer import Trainer
+        model_name = 'resnet18'
+        trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
+                          y_val='attribute')
+        trainer.train(1000)
 
 
 def parse():
