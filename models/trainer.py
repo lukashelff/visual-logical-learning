@@ -19,7 +19,9 @@ from torch.utils.data import Subset
 from torch.utils.data import DataLoader
 from itertools import product
 
-from michalski_trains.m_train_dataset import get_datasets
+from torchvision.models import ResNet18_Weights, ResNet50_Weights, ResNet101_Weights
+
+from ds_helper.michalski_3d import get_datasets
 from models.mlp.mlp import MLP
 from models.multi_label_nn import MultiLabelNeuralNetwork
 from models.multioutput_regression.pos_net import PositionNetwork
@@ -37,8 +39,7 @@ class Trainer:
                  train_samples=10000, ds_size=10000, noise=0,
                  batch_size=50, num_worker=4, lr=0.001, step_size=5, gamma=.8, momentum=0.9,
                  num_epochs=25, setup_model=True, setup_ds=True, save_model=True):
-        if y_val == 'direction' and train_col == 'RandomTrains':
-            raise AssertionError(f'There is no direction label for a {train_col}. Use MichalskiTrain DS.')
+
 
         # ds_val setup
         self.base_scene, self.train_col, self.train_vis, self.class_rule = base_scene, train_col, train_vis, class_rule
@@ -49,7 +50,7 @@ class Trainer:
         self.resize, self.noise = resize, noise
         # self.full_ds = get_datasets(self.base_scene, self.train_col, 10000, self.y_val, resize=resize,
         #                             X_val=self.X_val)
-        self.full_ds = get_datasets(base_scene, self.train_col, self.train_vis, ds_size, ds_path=ds_path,
+        self.full_ds = get_datasets(base_scene, self.train_col, self.train_vis, ds_size, ds_path=ds_path, y_val=y_val,
                                     class_rule=class_rule, resize=resize)
         # model setup
         self.model_name = model_name
@@ -104,8 +105,8 @@ class Trainer:
         if set_up:
             if ds_size is not None:
                 self.image_count = ds_size
-            self.setup_model(self.resume)
             self.setup_ds()
+            self.setup_model(self.resume)
         self.model = do_train(self.base_scene, self.train_col, self.y_val, self.device, self.out_path, self.model_name,
                               self.model, self.full_ds, self.dl, self.checkpoint, self.optimizer, self.scheduler,
                               self.criteria, num_epochs=self.num_epochs, lr=self.lr, step_size=self.step_size,
@@ -509,11 +510,11 @@ def do_train(base_scene, train_col, y_val, device, out_path, model_name, model, 
 
 def get_model(model_name, pretrained, num_output, num_class):
     if model_name == 'resnet18':
-        model = models.resnet18(pretrained=pretrained)
+        model = models.resnet18(weights=ResNet18_Weights.DEFAULT)
     elif model_name == 'resnet50':
-        model = models.resnet50(pretrained=pretrained)
+        model = models.resnet50(weights=ResNet50_Weights.DEFAULT)
     elif model_name == 'resnet101':
-        model = models.resnet101(pretrained=pretrained)
+        model = models.resnet101(weights=ResNet101_Weights.DEFAULT)
     elif model_name == 'VisionTransformer':
         model = timm.create_model('vit_large_patch16_224', pretrained=pretrained, num_classes=2)
     elif model_name == 'EfficientNet':

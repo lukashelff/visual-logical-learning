@@ -53,8 +53,7 @@ class MichalskiTrainDataset(Dataset):
         # ds labels
         self.labels = ['direction']
         self.label_classes = ['west', 'east']
-        self.class_dim = len(self.label_classes)
-        self.output_dim = len(self.labels)
+        self.attributes = ['color', 'length', 'walls', 'roofs', 'wheel_count', 'load_obj1', 'load_obj2', 'load_obj3'] * 4
         color = ['yellow', 'green', 'grey', 'red', 'blue']
         length = ['short', 'long']
         walls = ["braced_wall", 'solid_wall']
@@ -62,6 +61,12 @@ class MichalskiTrainDataset(Dataset):
         wheel_count = ['2_wheels', '3_wheels']
         load_obj = ['diamond', "box", "golden_vase", 'barrel', 'metal_pot', 'oval_vase']
         self.attribute_classes = ['none'] + color + length + walls + roofs + wheel_count + load_obj
+        if y_val == 'direction':
+            self.class_dim = len(self.label_classes)
+            self.output_dim = len(self.labels)
+        elif y_val == 'attribute':
+            self.class_dim = len(self.attribute_classes)
+            self.output_dim = len(self.attributes)
 
         # check ds consistency
         if not os.path.isfile(self.all_scenes_path + '/all_scenes.json'):
@@ -176,7 +181,8 @@ class MichalskiTrainDataset(Dataset):
         return self.labels
 
 
-def get_datasets(base_scene, raw_trains, train_vis, ds_size, ds_path, class_rule='theoryx', resize=False, noise=0):
+def get_datasets(base_scene, raw_trains, train_vis, ds_size, ds_path, y_val='direction', class_rule='theoryx',
+                 resize=False, noise=0):
     """
     Load dataset from file if they exist.
 
@@ -185,6 +191,7 @@ def get_datasets(base_scene, raw_trains, train_vis, ds_size, ds_path, class_rule
     :param train_vis: train visualization
     :param ds_size: size of the dataset
     :param ds_path: path to the dataset folder
+    :param y_val: value to predict, either direction or attribute
     :param class_rule: class rule to use
     :param resize: resize images to 224x224
     :param noise: noise to apply to labels
@@ -217,6 +224,6 @@ def get_datasets(base_scene, raw_trains, train_vis, ds_size, ds_path, class_rule
             f'no JSON found')
     # image_count = None for standard image count
     full_ds = MichalskiTrainDataset(class_rule=class_rule, base_scene=base_scene, raw_trains=raw_trains,
-                                    train_vis=train_vis, label_noise=noise,
+                                    train_vis=train_vis, label_noise=noise, y_val=y_val,
                                     ds_size=ds_size, resize=resize, ds_path=ds_path)
     return full_ds

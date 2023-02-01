@@ -24,9 +24,11 @@ class MultiLabelNeuralNetwork(nn.Module):
         # load shape output, 6 different shape + absence of car
         if dim_out == 28:
             self.label_num_classes = [6, 3, 3, 5, 3, 4, 7]
-        else:
+        elif dim_out == 32:
             # all labels can obtain all classes
             self.label_num_classes = [22] * 8
+        else:
+            raise ValueError(f'unknown dim_out {dim_out}')
         all_classes = sum(self.label_num_classes)
         in_features = resnet.inplanes
         for _ in range(4):
