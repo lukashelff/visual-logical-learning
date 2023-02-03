@@ -114,6 +114,21 @@ class Trainer:
                               )
         torch.cuda.empty_cache()
 
+    def val(self, ds_size=None, set_up=True):
+        eps = self.num_epochs
+        self.num_epochs = 1
+        if set_up:
+            if ds_size is not None:
+                self.image_count = ds_size
+            self.setup_ds()
+            self.setup_model(self.resume)
+        self.model = do_train(self.base_scene, self.train_col, self.y_val, self.device, self.out_path, self.model_name,
+                              self.model, self.full_ds, self.dl, self.checkpoint, self.optimizer, self.scheduler,
+                              self.criteria, num_epochs=self.num_epochs, lr=self.lr, step_size=self.step_size,
+                              gamma=self.gamma, save_model=self.save_model, train='val'
+                              )
+        torch.cuda.empty_cache()
+        self.num_epochs = eps
     def setup_model(self, resume=False, path=None):
         # set path
         path = self.out_path if path is None else path
@@ -348,11 +363,12 @@ class Trainer:
 
 def do_train(base_scene, train_col, y_val, device, out_path, model_name, model, full_ds, dl,
              checkpoint, optimizer, scheduler, criteria, num_epochs=25, lr=0.001, step_size=5, gamma=.8,
-             save_model=True, rtpt_extra=0):
+             save_model=True, rtpt_extra=0, train='train'):
     rtpt = RTPT(name_initials='LH', experiment_name=f'train_{base_scene[:3]}_{train_col[0]}',
                 max_iterations=num_epochs + rtpt_extra)
     rtpt.start()
     epoch_init = 0
+    phases = ['train', 'val'] if train == 'train' else ['val']
     print(f'training settings: {out_path}')
     print('-' * 10)
 
@@ -402,7 +418,7 @@ def do_train(base_scene, train_col, y_val, device, out_path, model_name, model, 
         time_elapsed = time.time() - since
 
         # Each epoch has a training and validation phase
-        for phase in ['train', 'val']:
+        for phase in phases:
             if phase == 'train':
                 model.train()  # Set model to training mode
             else:
@@ -476,7 +492,7 @@ def do_train(base_scene, train_col, y_val, device, out_path, model_name, model, 
                 best_model_wts = copy.deepcopy(model.state_dict())
         print(f'{model_name} training Epoch {epoch + 1}/{num_epochs}, '
               f'elapsed time: {int(time_elapsed // 60)}m {int(time_elapsed % 60)}s, '
-              f'train Loss: {round(epoch_loss["train"][epoch], 4)} Acc: {round(epoch_acum_accs["train"]["acc"][epoch] * 100, 1)}%, '
+              f'train Loss: {round(epoch_loss["train"][epoch], 4)} Acc: {round(epoch_acum_accs["train"]["acc"][epoch] * 100, 1)}%, ' if 'train' in phases else ''
               f'val Loss: {round(epoch_loss["val"][epoch], 4)} Acc: {round(epoch_acum_accs["val"]["acc"][epoch] * 100, 1)}%'
               )
 

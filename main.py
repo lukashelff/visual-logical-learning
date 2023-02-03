@@ -107,9 +107,10 @@ def main():
     if command == 'perception':
         from models.trainer import Trainer
         model_name = 'resnet18'
+        batch_size = 50
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
-                          y_val='attribute')
-        trainer.train(1000)
+                          y_val='attribute', resume=True, batch_size=batch_size)
+        trainer.val()
 
 
 def parse():
