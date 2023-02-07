@@ -59,14 +59,9 @@ class MichalskiTrainDataset(Dataset):
         walls = ["braced_wall", 'solid_wall']
         roofs = ["roof_foundation", 'solid_roof', 'braced_roof', 'peaked_roof']
         wheel_count = ['2_wheels', '3_wheels']
-        load_obj = ['diamond', "box", "golden_vase", 'barrel', 'metal_pot', 'oval_vase']
+        load_obj = ["box", "golden_vase", 'barrel', 'diamond', 'metal_pot', 'oval_vase']
         self.attribute_classes = ['none'] + color + length + walls + roofs + wheel_count + load_obj
-        if y_val == 'direction':
-            self.class_dim = len(self.label_classes)
-            self.output_dim = len(self.labels)
-        elif y_val == 'attribute':
-            self.class_dim = len(self.attribute_classes)
-            self.output_dim = len(self.attributes)
+
 
         # check ds consistency
         if not os.path.isfile(self.all_scenes_path + '/all_scenes.json'):
@@ -166,6 +161,7 @@ class MichalskiTrainDataset(Dataset):
 
     def get_pil_image(self, item):
         im_path = self.get_image_path(item)
+        print(im_path)
         return Image.open(im_path).convert('RGB')
 
     def get_image_path(self, item):
@@ -178,9 +174,25 @@ class MichalskiTrainDataset(Dataset):
         return self.trains
 
     def get_ds_labels(self):
-        return self.labels
+        return self.labels if self.y_val == 'direction' else self.attributes
 
+    def get_ds_classes(self):
+        return self.label_classes if self.y_val == 'direction' else self.attribute_classes
 
+    def get_class_dim(self):
+        if self.y_val == 'direction':
+            return len(self.label_classes)
+        elif self.y_val == 'attribute':
+            return len(self.attribute_classes)
+        else:
+            raise ValueError(f'unknown y_val {self.y_val}')
+    def get_output_dim(self):
+        if self.y_val == 'direction':
+            return len(self.labels)
+        elif self.y_val == 'attribute':
+            return len(self.attributes)
+        else:
+            raise ValueError(f'unknown y_val {self.y_val}')
 def get_datasets(base_scene, raw_trains, train_vis, ds_size, ds_path, y_val='direction', class_rule='theoryx',
                  resize=False, noise=0):
     """

@@ -23,7 +23,7 @@ from torchvision.models import ResNet18_Weights, ResNet50_Weights, ResNet101_Wei
 
 from ds_helper.michalski_3d import get_datasets
 from models.mlp.mlp import MLP
-from models.multi_label_nn import MultiLabelNeuralNetwork
+from models.multi_label_nn import MultiLabelNeuralNetwork, print_train, show_torch_im
 from models.multioutput_regression.pos_net import PositionNetwork
 from models.set_transformer import SetTransformer
 from models.spacial_attr_net.attr_net import AttributeNetwork
@@ -39,7 +39,6 @@ class Trainer:
                  train_samples=10000, ds_size=10000, noise=0,
                  batch_size=50, num_worker=4, lr=0.001, step_size=5, gamma=.8, momentum=0.9,
                  num_epochs=25, setup_model=True, setup_ds=True, save_model=True):
-
 
         # ds_val setup
         self.base_scene, self.train_col, self.train_vis, self.class_rule = base_scene, train_col, train_vis, class_rule
@@ -120,7 +119,7 @@ class Trainer:
         if set_up:
             if ds_size is not None:
                 self.image_count = ds_size
-            self.setup_ds()
+            self.setup_ds(val_size=ds_size)
             self.setup_model(self.resume)
         self.model = do_train(self.base_scene, self.train_col, self.y_val, self.device, self.out_path, self.model_name,
                               self.model, self.full_ds, self.dl, self.checkpoint, self.optimizer, self.scheduler,
@@ -129,6 +128,7 @@ class Trainer:
                               )
         torch.cuda.empty_cache()
         self.num_epochs = eps
+
     def setup_model(self, resume=False, path=None):
         # set path
         path = self.out_path if path is None else path
@@ -143,13 +143,13 @@ class Trainer:
             self.checkpoint = None
 
         print(set_up_txt)
-        dim_out = self.full_ds.output_dim
+        dim_out = self.full_ds.get_output_dim()
         if self.loss_name == 'MSELoss':
             loss_fn = nn.MSELoss()
         else:
             loss_fn = nn.CrossEntropyLoss()
         self.criteria = [loss_fn] * dim_out
-        self.model = get_model(self.model_name, self.pretrained, dim_out, self.full_ds.class_dim)
+        self.model = get_model(self.model_name, self.pretrained, dim_out, self.full_ds.get_class_dim())
 
         if self.checkpoint is not None:
             self.model.load_state_dict(self.checkpoint['model_state_dict'])
@@ -169,9 +169,15 @@ class Trainer:
         # self.scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
         self.scheduler = lr_scheduler.StepLR(self.optimizer, step_size=self.step_size, gamma=self.gamma)
 
-    def setup_ds(self, tr_idx=None, val_idx=None):
+    def setup_ds(self, tr_idx=None, val_idx=None, train_size=None, val_size=None):
         if tr_idx is None or val_idx is None:
-            train_size, val_size = int(0.8 * self.image_count), int(0.2 * self.image_count)
+            if train_size is None and val_size is None:
+                train_size = int(0.8 * self.image_count)
+                val_size = int(0.2 * self.image_count)
+            elif train_size is None:
+                train_size = 0
+            else:
+                val_size = int(0.2 * self.image_count)
             tr_idx = arange(train_size)
             val_idx = arange(train_size, train_size + val_size)
         set_up_txt = f'setup ds with {len(tr_idx)} images for training and {len(val_idx)} images for validation'
@@ -377,9 +383,8 @@ def do_train(base_scene, train_col, y_val, device, out_path, model_name, model, 
         loss = checkpoint['loss']
 
     label_names = full_ds.get_ds_labels()
+    class_names = full_ds.get_ds_classes()
     unique_label_names = list(set(label_names))
-    class_names = full_ds.label_classes
-    num_classes = len(class_names)
     since = time.time()
     best_model_wts = copy.deepcopy(model.state_dict())
     best_acc = 0.0
@@ -413,7 +418,6 @@ def do_train(base_scene, train_col, y_val, device, out_path, model_name, model, 
                 epoch_label_accs[phase][metric][l_class] = [0] * num_epochs
 
     for epoch in range(num_epochs):
-        # Update the RTPT (subtitle is optional)
         rtpt.step()
         time_elapsed = time.time() - since
 
@@ -458,17 +462,25 @@ def do_train(base_scene, train_col, y_val, device, out_path, model_name, model, 
                     if phase == 'train':
                         loss.backward()
                         optimizer.step()
+                print_train(outputs)
+                show_torch_im(inputs)
 
                 # to numpy
                 labels, preds = labels.to("cpu"), preds.to("cpu")
                 labels, preds = labels.detach().numpy(), preds.detach().numpy()
-                num_labels = len(unique_label_names)
+                # print_train(labels)
+                # print_train(preds)
                 # combine the same attributes (labels) to a collective list e.g. color of car 3 and 4
-                for i in range(len(label_names) // num_labels):
-                    all_labels = np.hstack((all_labels, labels[num_labels * i:num_labels * (i + 1)]))
-                    all_preds = np.hstack((all_preds, preds[num_labels * i:num_labels * (i + 1)]))
+                for i in range(len(label_names) // len(unique_label_names)):
+                    all_labels = np.hstack(
+                        (all_labels, labels[len(unique_label_names) * i:len(unique_label_names) * (i + 1)]))
+                    all_preds = np.hstack(
+                        (all_preds, preds[len(unique_label_names) * i:len(unique_label_names) * (i + 1)]))
                 # statistics
                 running_loss += loss.item() * inputs.size(0) / labels.shape[0]
+
+            print(f'TP + TN: {np.sum(all_labels == all_preds)}')
+            print(f'FP + FN: {np.sum(all_labels != all_preds)}')
             if phase == 'train':
                 scheduler.step()
             epoch_loss[phase][epoch] = running_loss / dataset_sizes[phase]
@@ -485,15 +497,14 @@ def do_train(base_scene, train_col, y_val, device, out_path, model_name, model, 
                 for acc_type, metric_name in zip([bal_acc, acc], ['bal_acc', 'acc']):
                     epoch_label_accs[phase][label_name][metric_name][epoch] += acc_type
                     epoch_acum_accs[phase][metric_name][epoch] += acc_type / len(unique_label_names)
-
             # deep copy the model
             if phase == 'val' and epoch_acum_accs[phase]['acc'][epoch] > best_acc:
                 best_acc = epoch_acum_accs[phase]['acc'][epoch]
                 best_model_wts = copy.deepcopy(model.state_dict())
-        print(f'{model_name} training Epoch {epoch + 1}/{num_epochs}, '
-              f'elapsed time: {int(time_elapsed // 60)}m {int(time_elapsed % 60)}s, '
-              f'train Loss: {round(epoch_loss["train"][epoch], 4)} Acc: {round(epoch_acum_accs["train"]["acc"][epoch] * 100, 1)}%, ' if 'train' in phases else ''
-              f'val Loss: {round(epoch_loss["val"][epoch], 4)} Acc: {round(epoch_acum_accs["val"]["acc"][epoch] * 100, 1)}%'
+        print(f'{model_name} training Epoch {epoch + 1}/{num_epochs}, ' +
+              f'elapsed time: {int(time_elapsed // 60)}m {int(time_elapsed % 60)}s, ' +
+              f'val Loss: {round(epoch_loss["val"][epoch], 4)} Acc: {round(epoch_acum_accs["val"]["acc"][epoch] * 100, 2)}% ' +
+              f'train Loss: {round(epoch_loss["train"][epoch], 4)} Acc: {round(epoch_acum_accs["train"]["acc"][epoch] * 100, 2)}%' if 'train' in phases else ''
               )
 
     print('Best val Acc: {:4f}'.format(best_acc))

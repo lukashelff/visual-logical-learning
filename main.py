@@ -5,10 +5,37 @@ from itertools import product
 import torch
 
 
+def parse():
+    # Instantiate the parser
+    parser = argparse.ArgumentParser(description='The Michalski Train Problem')
+    parser.add_argument('--dataset_size', type=int, default=12000, help='Size of the dataset')
+    parser.add_argument('--ds_path', type=str, default="TrainGenerator/output/image_generator",
+                        help='path to the dataset directories')
+    parser.add_argument('--classification_rule', type=str, default='theoryx',
+                        help='the classification rule of the dataset, possible options: '
+                             '\'theoryx\', \'easy\', \'color\', \'numerical\', \'multi\', \'complex\', \'custom\'')
+    parser.add_argument('--description', type=str, default='MichalskiTrains',
+                        help='type of descriptions either \'MichalskiTrains\' or \'RandomTrains\'')
+    parser.add_argument('--visualization', type=str, default='Trains', help='Visualization typ of the dataset: '
+                                                                            '\'Trains\' or \'SimpleObjects\'')
+    parser.add_argument('--background_scene', type=str, default='base_scene',
+                        help='dataset Scene: base_scene, desert_scene, sky_scene or fisheye_scene')
+    parser.add_argument('--model_name', type=str, default='resnet18',
+                        help='model to use for training: \'tesnet18\', \'VisionTransformer\' or \'EfficientNet\'')
+
+    parser.add_argument('--cuda', type=int, default=0, help='Which cuda device to use or cpu if -1')
+    parser.add_argument('--command', type=str, default='cnn',
+                        help='command ot execute: \'compare_models\' \'cnn\', \'vis\', \'ilp\' or \'ct\'')
+
+    args = parser.parse_args()
+
+    return args
+
+
 def main():
     args = parse()
 
-    device = torch.device(f"cuda:{args.cuda}" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cpu" if not torch.cuda.is_available() or args.cuda == -1 else f"cuda:{args.cuda}")
 
     # michalski train dataset settings
     raw_trains = args.description
@@ -107,37 +134,10 @@ def main():
     if command == 'perception':
         from models.trainer import Trainer
         model_name = 'resnet18'
-        batch_size = 50
+        batch_size = 1
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
                           y_val='attribute', resume=True, batch_size=batch_size)
-        trainer.val()
-
-
-def parse():
-    # Instantiate the parser
-    parser = argparse.ArgumentParser(description='The Michalski Train Problem')
-    parser.add_argument('--dataset_size', type=int, default=12000, help='Size of the dataset')
-    parser.add_argument('--ds_path', type=str, default="TrainGenerator/output/image_generator",
-                        help='path to the dataset directories')
-    parser.add_argument('--classification_rule', type=str, default='theoryx',
-                        help='the classification rule of the dataset, possible options: '
-                             '\'theoryx\', \'easy\', \'color\', \'numerical\', \'multi\', \'complex\', \'custom\'')
-    parser.add_argument('--description', type=str, default='MichalskiTrains',
-                        help='type of descriptions either \'MichalskiTrains\' or \'RandomTrains\'')
-    parser.add_argument('--visualization', type=str, default='Trains', help='Visualization typ of the dataset: '
-                                                                            '\'Trains\' or \'SimpleObjects\'')
-    parser.add_argument('--background_scene', type=str, default='base_scene',
-                        help='dataset Scene: base_scene, desert_scene, sky_scene or fisheye_scene')
-    parser.add_argument('--model_name', type=str, default='resnet18',
-                        help='model to use for training: \'tesnet18\', \'VisionTransformer\' or \'EfficientNet\'')
-
-    parser.add_argument('--cuda', type=int, default=0, help='Which cuda device to use')
-    parser.add_argument('--command', type=str, default='cnn',
-                        help='command ot execute: \'compare_models\' \'cnn\', \'vis\', \'ilp\' or \'ct\'')
-
-    args = parser.parse_args()
-
-    return args
+        trainer.val(2)
 
 
 if __name__ == '__main__':
