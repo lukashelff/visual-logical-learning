@@ -237,12 +237,12 @@ def setup_alpha_ilp_ds(base_scene, raw_trains, train_vis, ds_size, ds_path, clas
     from michalski_trains.m_train_dataset import get_datasets
     import shutil
     ds = get_datasets(base_scene, raw_trains, train_vis, ds_size, ds_path=ds_path, class_rule=class_rule)
-    path_train_true = 'output/alphailp-images/train/true'
-    path_test_true = 'output/alphailp-images/test/true'
-    path_val_true = 'output/alphailp-images/val/true'
-    path_train_false = 'output/alphailp-images/train/false'
-    path_test_false = 'output/alphailp-images/test/false'
-    path_val_false = 'output/alphailp-images/val/false'
+    path_train_true = f'output/alphailp-images/{class_rule}/train/true'
+    path_test_true = f'output/alphailp-images/{class_rule}/test/true'
+    path_val_true = f'output/alphailp-images/{class_rule}/val/true'
+    path_train_false = f'output/alphailp-images/{class_rule}/train/false'
+    path_test_false = f'output/alphailp-images/{class_rule}/test/false'
+    path_val_false = f'output/alphailp-images/{class_rule}/val/false'
     for p in [path_train_true, path_test_true, path_val_true, path_train_false, path_test_false, path_val_false]:
         os.makedirs(p, exist_ok=True)
         p += '/image'

@@ -92,7 +92,8 @@ def main():
 
     if command == 'split_ds':
         from ilp.setup import setup_alpha_ilp_ds
-        setup_alpha_ilp_ds(base_scene, raw_trains, train_vis, ds_size, ds_path, class_rule)
+        for rule in ['theoryx', 'numerical', 'complex']:
+            setup_alpha_ilp_ds(base_scene, raw_trains, train_vis, ds_size, ds_path, rule)
 
     if command == 'cnn':
         from models.trainer import Trainer
