@@ -234,7 +234,7 @@ def sort_file(file):
 
 
 def setup_alpha_ilp_ds(base_scene, raw_trains, train_vis, ds_size, ds_path, class_rule):
-    from michalski_trains.m_train_dataset import get_datasets
+    from michalski_trains.michalskitraindataset import get_datasets
     import shutil
     ds = get_datasets(base_scene, raw_trains, train_vis, ds_size, ds_path=ds_path, class_rule=class_rule)
     path_train_true = f'output/alphailp-images/{class_rule}/train/true'

@@ -8,8 +8,8 @@ from torch.utils.data import Dataset
 from PIL import Image
 from torchvision import transforms
 from torchvision.transforms import InterpolationMode
-
-from blender_image_generator.json_util import merge_json_files, combine_json
+from michalski_trains.m_train import *
+from michalski_trains.michalskitraindataset import combine_json
 
 
 class MichalskiTrainDataset(Dataset):
@@ -53,7 +53,8 @@ class MichalskiTrainDataset(Dataset):
         # ds labels
         self.labels = ['direction']
         self.label_classes = ['west', 'east']
-        self.attributes = ['color', 'length', 'walls', 'roofs', 'wheel_count', 'load_obj1', 'load_obj2', 'load_obj3'] * 4
+        self.attributes = ['color', 'length', 'walls', 'roofs', 'wheel_count', 'load_obj1', 'load_obj2',
+                           'load_obj3'] * 4
         color = ['yellow', 'green', 'grey', 'red', 'blue']
         length = ['short', 'long']
         walls = ["braced_wall", 'solid_wall']
@@ -61,7 +62,6 @@ class MichalskiTrainDataset(Dataset):
         wheel_count = ['2_wheels', '3_wheels']
         load_obj = ["box", "golden_vase", 'barrel', 'diamond', 'metal_pot', 'oval_vase']
         self.attribute_classes = ['none'] + color + length + walls + roofs + wheel_count + load_obj
-
 
         # check ds consistency
         if not os.path.isfile(self.all_scenes_path + '/all_scenes.json'):
@@ -76,9 +76,10 @@ class MichalskiTrainDataset(Dataset):
             all_scenes = json.load(f)
             for scene in all_scenes['scenes'][:ds_size]:
                 self.images.append(scene['image_filename'])
-                # self.depths.append(scene['depth_map_filename'])
-                train = jsonpickle.decode(scene['m_train'])
-                self.trains.append(train)
+                train = scene['m_train']
+                # self.trains.append(jsonpickle.decode(train.replace('michalski_trains.m_train.',
+                #                                  'TrainGenerator.michalski_trains.michalskitrain.')))
+                self.trains.append(jsonpickle.decode(train))
                 self.masks.append(scene['car_masks'])
         # init ds transforms
         trans = [
@@ -161,7 +162,6 @@ class MichalskiTrainDataset(Dataset):
 
     def get_pil_image(self, item):
         im_path = self.get_image_path(item)
-        print(im_path)
         return Image.open(im_path).convert('RGB')
 
     def get_image_path(self, item):
@@ -186,6 +186,7 @@ class MichalskiTrainDataset(Dataset):
             return len(self.attribute_classes)
         else:
             raise ValueError(f'unknown y_val {self.y_val}')
+
     def get_output_dim(self):
         if self.y_val == 'direction':
             return len(self.labels)
@@ -193,6 +194,8 @@ class MichalskiTrainDataset(Dataset):
             return len(self.attributes)
         else:
             raise ValueError(f'unknown y_val {self.y_val}')
+
+
 def get_datasets(base_scene, raw_trains, train_vis, ds_size, ds_path, y_val='direction', class_rule='theoryx',
                  resize=False, noise=0):
     """

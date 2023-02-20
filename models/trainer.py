@@ -22,6 +22,7 @@ from itertools import product
 from torchvision.models import ResNet18_Weights, ResNet50_Weights, ResNet101_Weights
 
 from ds_helper.michalski_3d import get_datasets
+from TrainGenerator.michalski_trains.michalskitraindataset import get_datasets as get_michalski_ds
 from models.mlp.mlp import MLP
 from models.multi_label_nn import MultiLabelNeuralNetwork, print_train, show_torch_im
 from models.multioutput_regression.pos_net import PositionNetwork
@@ -51,6 +52,8 @@ class Trainer:
         #                             X_val=self.X_val)
         self.full_ds = get_datasets(base_scene, self.train_col, self.train_vis, ds_size, ds_path=ds_path, y_val=y_val,
                                     class_rule=class_rule, resize=resize)
+        m_df = get_michalski_ds(base_scene, self.train_col, self.train_vis, ds_size, ds_path=ds_path,
+                                class_rule=class_rule, resize=resize)
         # model setup
         self.model_name = model_name
         self.optimizer_name, self.loss_name = optimizer_, loss
@@ -462,8 +465,8 @@ def do_train(base_scene, train_col, y_val, device, out_path, model_name, model, 
                     if phase == 'train':
                         loss.backward()
                         optimizer.step()
-                print_train(outputs)
-                show_torch_im(inputs)
+                # print_train(outputs)
+                # show_torch_im(inputs)
 
                 # to numpy
                 labels, preds = labels.to("cpu"), preds.to("cpu")

@@ -51,8 +51,8 @@ def main():
     sys.path.insert(0, 'ilp/rdm-master/')
 
     if command == 'vis':
-        from TrainGenerator.michalski_trains import m_train_dataset
-        full_ds = m_train_dataset.get_datasets(base_scene, raw_trains, train_vis, 10, class_rule=class_rule,
+        from ds_helper.michalski_3d import get_datasets
+        full_ds = get_datasets(base_scene, raw_trains, train_vis, 10, class_rule=class_rule,
                                                ds_path=ds_path)
         from visualization.vis import show_masked_im
         show_masked_im(full_ds)
@@ -137,8 +137,8 @@ def main():
         model_name = 'resnet18'
         batch_size = 1
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
-                          y_val='attribute', resume=True, batch_size=batch_size)
-        trainer.val(2)
+                          y_val='attribute', resume=False, batch_size=batch_size)
+        trainer.train()
 
 
 if __name__ == '__main__':

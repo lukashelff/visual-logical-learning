@@ -362,7 +362,7 @@ def plot_label_acc_over_epochs(out_path):
         scenes = data['scene'].unique()
         im_count = data['number of images'].unique()
         train_col = 'RandomTrains' if 'RandomTrains' in out_path else 'MichalskiTrains'
-        from michalski_trains.m_train_dataset import get_datasets
+        from michalski_trains.michalskitraindataset import get_datasets
         dataset = get_datasets('base_scene', train_col, 10000, y_val='attribute')
         baselines = get_baseline(dataset)
         data.loc[data['label'] == 'load_1', 'label'] = 'load_obj'
