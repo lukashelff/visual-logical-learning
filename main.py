@@ -127,7 +127,8 @@ def main():
         noises = [0, 0.1, 0.3]
         visualizations = ['Trains', 'SimpleObjects']
         scenes = ['base_scene', 'desert_scene', 'sky_scene', 'fisheye_scene']
-        min_cars = 7
+        min_car = 7
+        min_car, max_car = 2, 4
 
         if model_name == 'EfficientNet':
             batch_size = 25
@@ -135,11 +136,11 @@ def main():
             resize = True
             lr = 0.00001
 
-        trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
+        trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=12000,
                           setup_model=False, setup_ds=False, batch_size=batch_size, resize=resize, lr=lr, resume=True,
-                          min_car=min_cars, max_car=min_cars)
-        trainer.update_out_path(prefix=True, im_count=10000, suffix=f'it_{0}/')
-        trainer.val(ds_size=2000)
+                          min_car=min_car, max_car=max_car)
+        pth = trainer.update_model_path(prefix=True, im_count=10000, suffix=f'it_{0}/')
+        trainer.train()
 
 
     if command == 'cnn_plot':

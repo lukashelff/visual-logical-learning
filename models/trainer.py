@@ -60,7 +60,7 @@ class Trainer:
         # training hyper parameter
         self.image_count, self.batch_size, self.num_worker, self.lr, self.step_size, self.gamma, self.momentum, self.num_epochs = \
             train_samples, batch_size, num_worker, lr, step_size, gamma, momentum, num_epochs
-        self.out_path = self.update_out_path()
+        self.out_path = self.update_model_path()
 
     def cross_val_train(self, train_size=None, noises=None, rules=None, visualizations=None, scenes=None, n_splits=5,
                         model_path=None, save_models=False, replace=False):
@@ -93,7 +93,7 @@ class Trainer:
                 y = np.concatenate([self.full_ds.get_direction(item) for item in range(self.full_ds.__len__())])
 
                 for fold, (tr_idx, val_idx) in enumerate(cv.split(np.zeros(len(y)), y)):
-                    self.out_path = self.update_out_path(prefix=True, suffix=f'it_{fold}/')
+                    self.out_path = self.update_model_path(prefix=True, suffix=f'it_{fold}/')
                     if not os.path.isfile(self.out_path + 'metrics.json') or replace:
                         print('====' * 10)
                         print(f'training iteration {tr_it} of {tr_max}')
@@ -116,14 +116,14 @@ class Trainer:
                               )
         torch.cuda.empty_cache()
 
-    def val(self, ds_size=None, set_up=True):
+    def val(self, ds_size=None, set_up=True, model_path=None):
         eps = self.num_epochs
         self.num_epochs = 1
         if set_up:
             if ds_size is not None:
                 self.image_count = ds_size
             self.setup_ds(val_size=ds_size)
-            self.setup_model(self.resume)
+            self.setup_model(self.resume, path=model_path)
         self.model = do_train(self.base_scene, self.train_col, self.y_val, self.device, self.out_path, self.model_name,
                               self.model, self.full_ds, self.dl, self.checkpoint, self.optimizer, self.scheduler,
                               self.criteria, num_epochs=self.num_epochs, lr=self.lr, step_size=self.step_size,
@@ -206,12 +206,12 @@ class Trainer:
         if models is None:
             models = [self.model_name]
         print('plotting  cross validated performance')
-        path = self.update_out_path()
+        path = self.update_model_path()
         model_scene_imcount_comparison(self.train_col, models, self.y_val, path)
         if tex_table:
             csv_to_tex_table(path + 'mean_variance_comparison.csv')
 
-    def update_out_path(self, prefix=False, suffix='', im_count=None):
+    def update_model_path(self, prefix=False, suffix='', im_count=None):
         pre = '_pretrained' if self.pretrained else ''
         im_count = self.image_count if im_count is None else im_count
         ds_settings = f'{self.train_vis}_{self.class_rule}_{self.train_col}_{self.base_scene}'
@@ -248,7 +248,7 @@ class Trainer:
                     rtpt.step()
                     torch.cuda.memory_summary(device=None, abbreviated=False)
 
-                    self.out_path = self.update_out_path(prefix=f'cv/', suffix=f'it_{fold}/')
+                    self.out_path = self.update_model_path(prefix=f'cv/', suffix=f'it_{fold}/')
                     del self.model
                     self.setup_model(resume=True)
                     self.model.eval()
@@ -324,7 +324,7 @@ class Trainer:
             accs = []
             for fold in range(5):
 
-                path = self.update_out_path(prefix=f'cv/', suffix=f'it_{fold}/')
+                path = self.update_model_path(prefix=f'cv/', suffix=f'it_{fold}/')
                 self.setup_model(path=path, resume=True)
 
                 self.model.eval()  # Set model to evaluate mode
