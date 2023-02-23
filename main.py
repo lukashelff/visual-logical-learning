@@ -52,9 +52,9 @@ def main():
 
     if command == 'vis':
         from ds_helper.michalski_3d import get_datasets
-        full_ds = get_datasets(base_scene, raw_trains, train_vis, 10, class_rule=class_rule,
-                                               ds_path=ds_path)
-        from visualization.vis import show_masked_im
+        full_ds = get_datasets(base_scene, raw_trains, train_vis, 10, class_rule=class_rule, ds_path=ds_path)
+        from visualization.vis_image import show_masked_im
+
         show_masked_im(full_ds)
 
     if command == 'ct':
@@ -113,8 +113,34 @@ def main():
 
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
                           setup_model=False, setup_ds=False, batch_size=batch_size, resize=resize, lr=lr)
+
         trainer.cross_val_train(train_size=train_size, noises=noises, rules=rules, replace=False, save_models=True)
         # trainer.plt_cross_val_performance(True, models=['resnet18', 'EfficientNet', 'VisionTransformer'])
+
+    if command == 'cnn_generalization':
+        from models.trainer import Trainer
+        resize = False
+        batch_size = 25
+        lr = 0.001
+        rules = ['theoryx', 'numerical', 'complex']
+        train_size = [100, 1000, 10000]
+        noises = [0, 0.1, 0.3]
+        visualizations = ['Trains', 'SimpleObjects']
+        scenes = ['base_scene', 'desert_scene', 'sky_scene', 'fisheye_scene']
+        min_cars = 7
+
+        if model_name == 'EfficientNet':
+            batch_size = 25
+        elif model_name == 'VisionTransformer':
+            resize = True
+            lr = 0.00001
+
+        trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
+                          setup_model=False, setup_ds=False, batch_size=batch_size, resize=resize, lr=lr, resume=True,
+                          min_car=min_cars, max_car=min_cars)
+        trainer.update_out_path(prefix=True, im_count=10000, suffix=f'it_{0}/')
+        trainer.val(ds_size=2000)
+
 
     if command == 'cnn_plot':
         out_path = 'output/model_comparison/'
@@ -138,6 +164,8 @@ def main():
         ilp_pth = 'output/ilp'
 
         vis_ilp_and_neural(out_path, ilp_pth)
+
+
 
     if command == 'perception':
         from models.trainer import Trainer

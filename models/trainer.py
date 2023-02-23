@@ -21,8 +21,7 @@ from itertools import product
 
 from torchvision.models import ResNet18_Weights, ResNet50_Weights, ResNet101_Weights
 
-from ds_helper.michalski_3d import get_datasets
-from TrainGenerator.michalski_trains.michalskitraindataset import get_datasets as get_michalski_ds
+from michalski_trains.dataset import get_datasets
 from models.mlp.mlp import MLP
 from models.multi_label_nn import MultiLabelNeuralNetwork, print_train, show_torch_im
 from models.multioutput_regression.pos_net import PositionNetwork
@@ -35,7 +34,7 @@ from visualization.vis_model_comparison import model_scene_imcount_comparison, c
 
 class Trainer:
     def __init__(self, base_scene, train_col, train_vis, device, model_name, class_rule, ds_path,
-                 X_val='image', y_val='direction',
+                 X_val='image', y_val='direction', max_car=4, min_car=2,
                  resume=False, pretrained=True, resize=False, optimizer_='ADAM', loss='CrossEntropyLoss',
                  train_samples=10000, ds_size=10000, noise=0,
                  batch_size=50, num_worker=4, lr=0.001, step_size=5, gamma=.8, momentum=0.9,
@@ -44,16 +43,17 @@ class Trainer:
         # ds_val setup
         self.base_scene, self.train_col, self.train_vis, self.class_rule = base_scene, train_col, train_vis, class_rule
         self.ds_path, self.ds_size = ds_path, ds_size
+        self.max_car, self.min_car = max_car, min_car
         self.device = device
         self.X_val, self.y_val = X_val, y_val
         self.pretrained, self.resume, self.save_model = pretrained, resume, save_model
         self.resize, self.noise = resize, noise
         # self.full_ds = get_datasets(self.base_scene, self.train_col, 10000, self.y_val, resize=resize,
         #                             X_val=self.X_val)
-        self.full_ds = get_datasets(base_scene, self.train_col, self.train_vis, ds_size, ds_path=ds_path, y_val=y_val,
+        self.full_ds = get_datasets(base_scene, self.train_col, self.train_vis, ds_size=ds_size, ds_path=ds_path,
+                                    y_val=y_val, max_car=self.max_car, min_car=self.min_car,
                                     class_rule=class_rule, resize=resize)
-        m_df = get_michalski_ds(base_scene, self.train_col, self.train_vis, ds_size, ds_path=ds_path,
-                                class_rule=class_rule, resize=resize)
+
         # model setup
         self.model_name = model_name
         self.optimizer_name, self.loss_name = optimizer_, loss
@@ -63,8 +63,7 @@ class Trainer:
         self.out_path = self.update_out_path()
 
     def cross_val_train(self, train_size=None, noises=None, rules=None, visualizations=None, scenes=None, n_splits=5,
-                        model_path=None, save_models=False,
-                        replace=False):
+                        model_path=None, save_models=False, replace=False):
         if train_size is None:
             train_size = [self.image_count]
         if noises is None:
@@ -82,8 +81,9 @@ class Trainer:
         tr_max = n_splits * len(train_size) * len(noises) * len(rules) * len(visualizations) * len(scenes)
         for noise, rule, visualization, scene in product(noises, rules, visualizations, scenes):
             self.noise, self.class_rule, self.train_vis, self.base_scene = noise, rule, visualization, scene
-            self.full_ds = get_datasets(self.base_scene, self.train_col, self.train_vis, self.ds_size, noise=self.noise,
-                                        ds_path=self.ds_path, class_rule=rule, resize=self.resize)
+            self.full_ds = get_datasets(self.base_scene, self.train_col, self.train_vis, class_rule=rule,
+                                        ds_size=self.ds_size, max_car=self.max_car, min_car=self.min_car,
+                                        noise=self.noise, ds_path=self.ds_path, resize=self.resize)
             for t_size in train_size:
                 self.image_count = t_size
                 self.noise = noise
