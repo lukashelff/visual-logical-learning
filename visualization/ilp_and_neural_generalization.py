@@ -9,7 +9,7 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 
 
-def vis_ilp_and_neural(neural_path, ilp_pth, vis='Trains'):
+def vis_generalization_ilp_and_neural(neural_path, ilp_pth, vis='Trains', min_cars=7, max_cars=7):
     ilp_stats_path = f'{ilp_pth}/stats'
 
     dirs = glob.glob(ilp_stats_path + '/*.csv')
@@ -20,20 +20,25 @@ def vis_ilp_and_neural(neural_path, ilp_pth, vis='Trains'):
     ilp_data = pd.concat(ilp_data, ignore_index=True)
     ilp_models = sorted(ilp_data['Methods'].unique())
 
+    with open(neural_path + f'/cnn_generalization_{min_cars}_{max_cars}.csv', 'r') as f:
+        data_gen = pd.read_csv(f)
+    data_gen = data_gen.rename({'number of images': 'training samples'}, axis='columns')
+
     with open(neural_path + '/label_acc_over_epoch.csv', 'r') as f:
         data = pd.read_csv(f)
-        data = data.loc[data['epoch'] == 24].loc[data['visualization'] == vis].loc[data['noise'] == 0]
+        data = data.loc[data['epoch'] == 24].loc[data['visualization'] == vis].loc[data['number of images'] == 10000]
     data = data.rename({'number of images': 'training samples'}, axis='columns')
     neural_models = sorted(data['Methods'].unique())
 
-    data = pd.concat([ilp_data, data])
+    # data = pd.concat([ilp_data, data, data_gen])
+    data = pd.concat([data, data_gen])
+    data = data.loc[data['noise'] == 0]
 
     scenes = data['scene'].unique()
     im_count = sorted(data['training samples'].unique())
     rules = data['rule'].unique()
     noise = data['noise'].unique()
-    # models = np.append(neural_models, ilp_models)
-    models = neural_models
+    models = np.append(neural_models, ilp_models)
     colors_s = sns.color_palette()[:len(im_count) + 1]
     colors = {10000: colors_s[2], 1000: colors_s[1], 100: colors_s[0]}
     rules = ['theoryx', 'numerical', 'complex']
@@ -58,7 +63,7 @@ def vis_ilp_and_neural(neural_path, ilp_pth, vis='Trains'):
         data_t = data.loc[data['rule'] == rule]
         for model in models:
             data_temp = data_t.loc[data['Methods'] == model]
-            sns.barplot(x='Methods', y='Validation acc', hue='generalization', data=data_temp,
+            sns.barplot(x='Methods', y='Validation acc', hue='training samples', data=data_temp,
                         palette="dark", alpha=.7, ax=ax, orient='v', hatch=mt[model], order=models
                         )
         ax.get_legend().remove()

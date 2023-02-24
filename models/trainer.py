@@ -92,8 +92,9 @@ class Trainer:
                 y = np.concatenate([self.full_ds.get_direction(item) for item in range(self.full_ds.__len__())])
 
                 for fold, (tr_idx, val_idx) in enumerate(cv.split(np.zeros(len(y)), y)):
-                    self.out_path = self.get_model_path(prefix=True, suffix=f'it_{fold}/')
-                    if not os.path.isfile(self.out_path + 'metrics.json') or replace:
+                    self.out_path = self.get_model_path(prefix=True, suffix=f'it_{fold}/', im_count=t_size)
+                    if not (os.path.isfile(self.out_path + 'metrics.json') and os.path.isfile(
+                            self.out_path + 'model.pth')) or replace:
                         print('====' * 10)
                         print(f'training iteration {tr_it} of {tr_max}')
                         self.setup_model(resume=self.resume, path=model_path)
@@ -121,13 +122,16 @@ class Trainer:
             ds_size = ds_size if ds_size is not None else self.ds_size
             self.setup_ds(val_size=ds_size)
             self.setup_model(self.resume, path=model_path)
-        self.model = do_train(self.base_scene, self.train_col, self.y_val, self.device, self.out_path, self.model_name,
-                              self.model, self.full_ds, self.dl, self.checkpoint, self.optimizer, self.scheduler,
-                              self.criteria, num_epochs=self.num_epochs, lr=self.lr, step_size=self.step_size,
-                              gamma=self.gamma, save_model=self.save_model, train='val'
-                              )
+        acc, precision, recall = do_train(self.base_scene, self.train_col, self.y_val, self.device, self.out_path,
+                                          self.model_name,
+                                          self.model, self.full_ds, self.dl, self.checkpoint, self.optimizer,
+                                          self.scheduler,
+                                          self.criteria, num_epochs=self.num_epochs, lr=self.lr,
+                                          step_size=self.step_size,
+                                          gamma=self.gamma, save_model=False, train='val')
         torch.cuda.empty_cache()
         self.num_epochs = eps
+        return acc, precision, recall
 
     def setup_model(self, resume=False, path=None):
         # set path
@@ -208,7 +212,8 @@ class Trainer:
         if tex_table:
             csv_to_tex_table(path + 'mean_variance_comparison.csv')
 
-    def get_model_path(self, prefix=False, suffix='', im_count=None):
+    def get_model_path(self, prefix=False, suffix='', im_count=None, model_name=None):
+        model_name = self.model_name if model_name is None else model_name
         pre = '_pretrained' if self.pretrained else ''
         im_count = self.ds_size if im_count is None else im_count
         ds_settings = f'{self.train_vis}_{self.class_rule}_{self.train_col}_{self.base_scene}'
@@ -221,7 +226,7 @@ class Trainer:
             pref = 'cv/'
         else:
             pref = ''
-        out_path = f'output/models/{self.model_name}/{self.y_val}_classification/{ds_settings}/{pref}{train_config}/{suffix}'
+        out_path = f'output/models/{model_name}/{self.y_val}_classification/{ds_settings}/{pref}{train_config}/{suffix}'
         return out_path
 
     def transfer_classification(self, train_size, n_splits=5, batch_size=None):
@@ -374,7 +379,6 @@ def do_train(base_scene, train_col, y_val, device, out_path, model_name, model, 
     epoch_init = 0
     phases = ['train', 'val'] if train == 'train' else ['val']
     print(f'{train} settings: {out_path}')
-    print('-' * 10)
 
     if checkpoint is not None:
         epoch_init = checkpoint['epoch']
@@ -477,8 +481,6 @@ def do_train(base_scene, train_col, y_val, device, out_path, model_name, model, 
                 # statistics
                 running_loss += loss.item() * inputs.size(0) / labels.shape[0]
 
-            print(f'TP + TN: {np.sum(all_labels == all_preds)}')
-            print(f'FP + FN: {np.sum(all_labels != all_preds)}')
             if phase == 'train':
                 scheduler.step()
             epoch_loss[phase][epoch] = running_loss / dataset_sizes[phase]
@@ -501,35 +503,42 @@ def do_train(base_scene, train_col, y_val, device, out_path, model_name, model, 
                 best_model_wts = copy.deepcopy(model.state_dict())
         print(f'{model_name} training Epoch {epoch + 1}/{num_epochs}, ' +
               f'elapsed time: {int(time_elapsed // 60)}m {int(time_elapsed % 60)}s, ' +
-              f'val Loss: {round(epoch_loss["val"][epoch], 4)} Acc: {round(epoch_acum_accs["val"]["acc"][epoch] * 100, 2)}% ' +
+              f'val Loss: {round(epoch_loss["val"][epoch], 4)} Acc: {round(epoch_acum_accs["val"]["acc"][epoch] * 100, 2)}%, ' +
               f'train Loss: {round(epoch_loss["train"][epoch], 4)} Acc: {round(epoch_acum_accs["train"]["acc"][epoch] * 100, 2)}%' if 'train' in phases else ''
               )
 
     print('Best val Acc: {:4f}'.format(best_acc))
     os.makedirs(out_path, exist_ok=True)
 
-    # load best model weights
-    model.load_state_dict(best_model_wts)
-    statistics = {
-        'epoch_label_accs': epoch_label_accs,
-        'epoch_acum_accs': epoch_acum_accs,
-        'epoch_loss': epoch_loss
-    }
+    if train == 'train':
 
-    if save_model:
-        torch.save({
-            'epoch': num_epochs + epoch_init,
-            'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict(),
-            'loss': loss
-        }, out_path + 'model.pth')
+        # load best model weights
+        model.load_state_dict(best_model_wts)
+        statistics = {
+            'epoch_label_accs': epoch_label_accs,
+            'epoch_acum_accs': epoch_acum_accs,
+            'epoch_loss': epoch_loss
+        }
 
-    if checkpoint is not None and os.path.isfile(out_path + 'metrics.json'):
-        with open(out_path + 'metrics.json', 'r') as fp:
-            stat_init = json.load(fp)
-            statistics = merge(stat_init.copy(), statistics)
-    with open(out_path + 'metrics.json', 'w+') as fp:
-        json.dump(statistics, fp)
+        if save_model:
+            torch.save({
+                'epoch': num_epochs + epoch_init,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'loss': loss
+            }, out_path + 'model.pth')
+
+        if checkpoint is not None and os.path.isfile(out_path + 'metrics.json'):
+            with open(out_path + 'metrics.json', 'r') as fp:
+                stat_init = json.load(fp)
+                statistics = merge(stat_init.copy(), statistics)
+        with open(out_path + 'metrics.json', 'w+') as fp:
+            json.dump(statistics, fp)
+    elif train == 'val':
+        print(f'TP + TN: {np.sum(all_labels == all_preds)}, FP + FN: {np.sum(all_labels != all_preds)}, '
+              f'precision: {precision}, recall: {recall}')
+        return best_acc, precision, recall
+    print('-' * 10)
     return model.to('cpu')
 
 

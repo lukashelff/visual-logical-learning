@@ -2,7 +2,6 @@ import argparse
 import sys
 import torch
 
-
 def parse():
     # Instantiate the parser
     parser = argparse.ArgumentParser(description='The Michalski Train Problem')
@@ -109,6 +108,7 @@ def main():
         rules = ['theoryx', 'numerical', 'complex']
         train_size = [100, 1000, 10000]
         noises = [0, 0.1, 0.3]
+        noises = [0]
         visualizations = ['Trains', 'SimpleObjects']
         scenes = ['base_scene', 'desert_scene', 'sky_scene', 'fisheye_scene']
         if model_name == 'EfficientNet':
@@ -124,30 +124,11 @@ def main():
         # trainer.plt_cross_val_performance(True, models=['resnet18', 'EfficientNet', 'VisionTransformer'])
 
     if command == 'cnn_generalization':
-        from models.trainer import Trainer
-        resize = False
-        batch_size = 25
-        lr = 0.001
-        rules = ['theoryx', 'numerical', 'complex']
-        train_size = [100, 1000, 10000]
-        noises = [0, 0.1, 0.3]
-        visualizations = ['Trains', 'SimpleObjects']
-        scenes = ['base_scene', 'desert_scene', 'sky_scene', 'fisheye_scene']
         # min_car = 7
         # min_car, max_car = 2, 4
         ds_size = 2000
-
-        if model_name == 'EfficientNet':
-            batch_size = 25
-        elif model_name == 'VisionTransformer':
-            resize = True
-            lr = 0.00001
-
-        trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
-                          setup_model=False, setup_ds=False, batch_size=batch_size, resize=resize, lr=lr, resume=True,
-                          min_car=min_cars, max_car=max_cars)
-        pth = trainer.get_model_path(prefix=True, im_count=10000, suffix=f'it_{1}/')
-        trainer.val(model_path=pth)
+        from models.eval import generalization_test
+        generalization_test(min_cars, max_cars, base_scene, raw_trains, train_vis, device, ds_path, ds_size=None)
 
     if command == 'cnn_plot':
         out_path = 'output/model_comparison/'
