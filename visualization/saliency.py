@@ -39,7 +39,7 @@ def explain_model_decision(device):
     for train_size in [100,1000,8000]:
         out_path = f'output/saliency/train_size_{train_size}/'
         os.makedirs(out_path, exist_ok=True)
-        path = trainer.update_model_path(prefix='cv/', suffix='it_0/', im_count=train_size)
+        path = trainer.get_model_path(prefix='cv/', suffix='it_0/', im_count=train_size)
         trainer.setup_model(resume=True, path=path)
         model = trainer.model
         for i in range(30):

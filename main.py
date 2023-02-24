@@ -1,7 +1,5 @@
 import argparse
 import sys
-from itertools import product
-
 import torch
 
 
@@ -11,15 +9,21 @@ def parse():
     parser.add_argument('--dataset_size', type=int, default=12000, help='Size of the dataset')
     parser.add_argument('--ds_path', type=str, default="TrainGenerator/output/image_generator",
                         help='path to the dataset directories')
-    parser.add_argument('--classification_rule', type=str, default='theoryx',
+
+    # dataset settings
+    parser.add_argument('--rule', type=str, default='theoryx',
                         help='the classification rule of the dataset, possible options: '
                              '\'theoryx\', \'easy\', \'color\', \'numerical\', \'multi\', \'complex\', \'custom\'')
     parser.add_argument('--description', type=str, default='MichalskiTrains',
                         help='type of descriptions either \'MichalskiTrains\' or \'RandomTrains\'')
     parser.add_argument('--visualization', type=str, default='Trains', help='Visualization typ of the dataset: '
                                                                             '\'Trains\' or \'SimpleObjects\'')
-    parser.add_argument('--background_scene', type=str, default='base_scene',
+    parser.add_argument('--background', type=str, default='base_scene',
                         help='dataset Scene: base_scene, desert_scene, sky_scene or fisheye_scene')
+    parser.add_argument('--max_train_length', type=int, default=4, help='max number of cars a train can have')
+    parser.add_argument('--min_train_length', type=int, default=2, help='min number of cars a train can have')
+
+    # model settings
     parser.add_argument('--model_name', type=str, default='resnet18',
                         help='model to use for training: \'tesnet18\', \'VisionTransformer\' or \'EfficientNet\'')
 
@@ -40,19 +44,21 @@ def main():
     # michalski train dataset settings
     raw_trains = args.description
     train_vis = args.visualization
-    base_scene = args.background_scene
+    base_scene = args.background
     ds_path = args.ds_path
-    class_rule = args.classification_rule
+    class_rule = args.rule
     ds_size = args.dataset_size
     model_name = args.model_name
     command = args.command
+    max_cars = args.max_train_length
+    min_cars = args.min_train_length
 
     sys.path.insert(0, 'TrainGenerator/')
     sys.path.insert(0, 'ilp/rdm-master/')
 
     if command == 'vis':
-        from ds_helper.michalski_3d import get_datasets
-        full_ds = get_datasets(base_scene, raw_trains, train_vis, 10, class_rule=class_rule, ds_path=ds_path)
+        from michalski_trains.dataset import get_datasets
+        full_ds = get_datasets(base_scene, raw_trains, train_vis, ds_size=10, class_rule=class_rule, ds_path=ds_path)
         from visualization.vis_image import show_masked_im
 
         show_masked_im(full_ds)
@@ -127,8 +133,9 @@ def main():
         noises = [0, 0.1, 0.3]
         visualizations = ['Trains', 'SimpleObjects']
         scenes = ['base_scene', 'desert_scene', 'sky_scene', 'fisheye_scene']
-        min_car = 7
-        min_car, max_car = 2, 4
+        # min_car = 7
+        # min_car, max_car = 2, 4
+        ds_size = 2000
 
         if model_name == 'EfficientNet':
             batch_size = 25
@@ -136,12 +143,11 @@ def main():
             resize = True
             lr = 0.00001
 
-        trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=12000,
+        trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
                           setup_model=False, setup_ds=False, batch_size=batch_size, resize=resize, lr=lr, resume=True,
-                          min_car=min_car, max_car=max_car)
-        pth = trainer.update_model_path(prefix=True, im_count=10000, suffix=f'it_{0}/')
-        trainer.train()
-
+                          min_car=min_cars, max_car=max_cars)
+        pth = trainer.get_model_path(prefix=True, im_count=10000, suffix=f'it_{1}/')
+        trainer.val(model_path=pth)
 
     if command == 'cnn_plot':
         out_path = 'output/model_comparison/'
@@ -165,8 +171,6 @@ def main():
         ilp_pth = 'output/ilp'
 
         vis_ilp_and_neural(out_path, ilp_pth)
-
-
 
     if command == 'perception':
         from models.trainer import Trainer

@@ -58,14 +58,14 @@ class Trainer:
         self.model_name = model_name
         self.optimizer_name, self.loss_name = optimizer_, loss
         # training hyper parameter
-        self.image_count, self.batch_size, self.num_worker, self.lr, self.step_size, self.gamma, self.momentum, self.num_epochs = \
-            train_samples, batch_size, num_worker, lr, step_size, gamma, momentum, num_epochs
-        self.out_path = self.update_model_path()
+        self.batch_size, self.num_worker, self.lr, self.step_size, self.gamma, self.momentum, self.num_epochs = \
+            batch_size, num_worker, lr, step_size, gamma, momentum, num_epochs
+        self.out_path = self.get_model_path()
 
     def cross_val_train(self, train_size=None, noises=None, rules=None, visualizations=None, scenes=None, n_splits=5,
                         model_path=None, save_models=False, replace=False):
         if train_size is None:
-            train_size = [self.image_count]
+            train_size = [10000]
         if noises is None:
             noises = [self.noise]
         if rules is None:
@@ -85,7 +85,6 @@ class Trainer:
                                         ds_size=self.ds_size, max_car=self.max_car, min_car=self.min_car,
                                         noise=self.noise, ds_path=self.ds_path, resize=self.resize)
             for t_size in train_size:
-                self.image_count = t_size
                 self.noise = noise
                 self.full_ds.predictions_im_count = t_size
                 cv = StratifiedShuffleSplit(train_size=t_size, test_size=test_size, random_state=random_state,
@@ -93,7 +92,7 @@ class Trainer:
                 y = np.concatenate([self.full_ds.get_direction(item) for item in range(self.full_ds.__len__())])
 
                 for fold, (tr_idx, val_idx) in enumerate(cv.split(np.zeros(len(y)), y)):
-                    self.out_path = self.update_model_path(prefix=True, suffix=f'it_{fold}/')
+                    self.out_path = self.get_model_path(prefix=True, suffix=f'it_{fold}/')
                     if not os.path.isfile(self.out_path + 'metrics.json') or replace:
                         print('====' * 10)
                         print(f'training iteration {tr_it} of {tr_max}')
@@ -105,8 +104,7 @@ class Trainer:
 
     def train(self, rtpt_extra=0, ds_size=None, set_up=True):
         if set_up:
-            if ds_size is not None:
-                self.image_count = ds_size
+            self.ds_size = ds_size if ds_size is not None else self.ds_size
             self.setup_ds()
             self.setup_model(self.resume)
         self.model = do_train(self.base_scene, self.train_col, self.y_val, self.device, self.out_path, self.model_name,
@@ -120,8 +118,7 @@ class Trainer:
         eps = self.num_epochs
         self.num_epochs = 1
         if set_up:
-            if ds_size is not None:
-                self.image_count = ds_size
+            ds_size = ds_size if ds_size is not None else self.ds_size
             self.setup_ds(val_size=ds_size)
             self.setup_model(self.resume, path=model_path)
         self.model = do_train(self.base_scene, self.train_col, self.y_val, self.device, self.out_path, self.model_name,
@@ -175,12 +172,12 @@ class Trainer:
     def setup_ds(self, tr_idx=None, val_idx=None, train_size=None, val_size=None):
         if tr_idx is None or val_idx is None:
             if train_size is None and val_size is None:
-                train_size = int(0.8 * self.image_count)
-                val_size = int(0.2 * self.image_count)
+                train_size = int(0.8 * self.ds_size)
+                val_size = int(0.2 * self.ds_size)
             elif train_size is None:
                 train_size = 0
             else:
-                val_size = int(0.2 * self.image_count)
+                val_size = int(0.2 * self.ds_size)
             tr_idx = arange(train_size)
             val_idx = arange(train_size, train_size + val_size)
         set_up_txt = f'setup ds with {len(tr_idx)} images for training and {len(val_idx)} images for validation'
@@ -206,14 +203,14 @@ class Trainer:
         if models is None:
             models = [self.model_name]
         print('plotting  cross validated performance')
-        path = self.update_model_path()
+        path = self.get_model_path()
         model_scene_imcount_comparison(self.train_col, models, self.y_val, path)
         if tex_table:
             csv_to_tex_table(path + 'mean_variance_comparison.csv')
 
-    def update_model_path(self, prefix=False, suffix='', im_count=None):
+    def get_model_path(self, prefix=False, suffix='', im_count=None):
         pre = '_pretrained' if self.pretrained else ''
-        im_count = self.image_count if im_count is None else im_count
+        im_count = self.ds_size if im_count is None else im_count
         ds_settings = f'{self.train_vis}_{self.class_rule}_{self.train_col}_{self.base_scene}'
         train_config = f'imcount_{im_count}_X_val_{self.X_val}{pre}_lr_{self.lr}_step_{self.step_size}_gamma{self.gamma}'
         if self.noise > 0:
@@ -242,13 +239,12 @@ class Trainer:
                               ds_path=self.ds_path)
             dl = DataLoader(ds, batch_size=batch_size, num_workers=self.num_worker)
             for training_size in train_size:
-                self.image_count = training_size
                 accs = []
                 for fold in range(n_splits):
                     rtpt.step()
                     torch.cuda.memory_summary(device=None, abbreviated=False)
 
-                    self.out_path = self.update_model_path(prefix=f'cv/', suffix=f'it_{fold}/')
+                    self.out_path = self.get_model_path(prefix=f'cv/', suffix=f'it_{fold}/')
                     del self.model
                     self.setup_model(resume=True)
                     self.model.eval()
@@ -282,7 +278,7 @@ class Trainer:
 
                     print(f'{self.model_name} trained on base scene with {training_size} images (cv iteration {fold})'
                           f' achieves an accuracy of {acc} when classifying {scene} images')
-                    li = [self.model_name, self.image_count, fold, acc, scene]
+                    li = [self.model_name, training_size, fold, acc, scene]
                     _df = pd.DataFrame([li], columns=['Methods', 'number of images', 'cv iteration', 'Validation acc',
                                                       'scene'])
                     data_cv = pd.concat([data_cv, _df], ignore_index=True)
@@ -317,14 +313,13 @@ class Trainer:
         for im_count in im_counts:
             out_path = f'output/models/{self.model_name}/attribute_classification/{self.train_col}/{self.base_scene}/predicted_descriptions/{im_count}'
 
-            self.image_count = im_count
             print(
                 f'{self.model_name} trained on {im_count}{self.train_col} images predicting train descriptions for the'
                 f' {train_col} trains in {self.base_scene}')
             accs = []
             for fold in range(5):
 
-                path = self.update_model_path(prefix=f'cv/', suffix=f'it_{fold}/')
+                path = self.get_model_path(prefix=f'cv/', suffix=f'it_{fold}/')
                 self.setup_model(path=path, resume=True)
 
                 self.model.eval()  # Set model to evaluate mode
@@ -378,7 +373,7 @@ def do_train(base_scene, train_col, y_val, device, out_path, model_name, model, 
     rtpt.start()
     epoch_init = 0
     phases = ['train', 'val'] if train == 'train' else ['val']
-    print(f'training settings: {out_path}')
+    print(f'{train} settings: {out_path}')
     print('-' * 10)
 
     if checkpoint is not None:
