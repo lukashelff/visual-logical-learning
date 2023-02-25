@@ -128,7 +128,12 @@ def main():
         # min_car, max_car = 2, 4
         ds_size = 2000
         from models.eval import generalization_test
-        generalization_test(min_cars, max_cars, base_scene, raw_trains, train_vis, device, ds_path, ds_size=None)
+        # generalization_test(min_cars, max_cars, base_scene, raw_trains, train_vis, device, ds_path, ds_size=None)
+        from visualization.ilp_and_neural_generalization import vis_generalization_ilp_and_neural
+        neural_path = 'output/model_comparison/'
+        ilp_pt = 'output/ilp'
+        vis_generalization_ilp_and_neural(neural_path, ilp_pt)
+
 
     if command == 'cnn_plot':
         out_path = 'output/model_comparison/'

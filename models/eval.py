@@ -9,7 +9,7 @@ def generalization_test(min_cars, max_cars, base_scene, raw_trains, train_vis, d
         columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'cv iteration', 'label',
                  'Validation acc', "precision", "recall"])
     for model, rule in product(['resnet18', 'EfficientNet', 'VisionTransformer'],
-                               ['theoryx', 'numerical', 'complex']):
+                               ['theoryx', 'numerical', 'complex', 'dataset']):
         model_name = model
         resize = False
         batch_size = 25

@@ -537,6 +537,7 @@ def do_train(base_scene, train_col, y_val, device, out_path, model_name, model, 
     elif train == 'val':
         print(f'TP + TN: {np.sum(all_labels == all_preds)}, FP + FN: {np.sum(all_labels != all_preds)}, '
               f'precision: {precision}, recall: {recall}')
+        print('-' * 10)
         return best_acc, precision, recall
     print('-' * 10)
     return model.to('cpu')
