@@ -23,7 +23,11 @@ def vis_generalization_ilp_and_neural(neural_path, ilp_pth, vis='Trains', min_ca
     ilp_data = ilp_data.loc[ilp_data['training samples'] == 10000].loc[ilp_data['noise'] == 0]
     ilp_models = sorted(ilp_data['Methods'].unique())
 
-    with open(neural_path + f'/cnn_generalization_{min_cars}_{max_cars}.csv', 'r') as f:
+    with open(neural_path + f'/generalization/ilp_generalization_{min_cars}_{max_cars}.csv', 'r') as f:
+        data_gen_ilp = pd.read_csv(f)
+    data_gen_ilp['Train length'] = '7'
+
+    with open(neural_path + f'/generalization/cnn_generalization_{min_cars}_{max_cars}.csv', 'r') as f:
         data_gen = pd.read_csv(f)
     data_gen = data_gen.rename({'number of images': 'training samples'}, axis='columns')
     data_gen['Train length'] = '7'
@@ -36,7 +40,8 @@ def vis_generalization_ilp_and_neural(neural_path, ilp_pth, vis='Trains', min_ca
     neural_models = sorted(data['Methods'].unique())
 
     # data = pd.concat([ilp_data, data, data_gen])
-    data = pd.concat([ilp_data, data, data_gen])
+    data = pd.concat([ilp_data, data_gen_ilp, data, data_gen], ignore_index=True)
+    # data = data[~data.index.duplicated()]
 
     scenes = data['scene'].unique()
     im_count = sorted(data['training samples'].unique())
@@ -48,7 +53,7 @@ def vis_generalization_ilp_and_neural(neural_path, ilp_pth, vis='Trains', min_ca
     colors = {datasets[0]: colors_s[0], datasets[1]: colors_s[1]}
     rules = ['theoryx', 'numerical', 'complex']
 
-    out_path = f'{neural_path}/ilp_and_neural_generalization'
+    out_path = f'{neural_path}generalization'
     materials_s = ["///", "//", '/', '\\', '\\\\']
     mt = {model: materials_s[n] for n, model in enumerate(models)}
     sns.set_theme(style="whitegrid")
@@ -102,6 +107,6 @@ def vis_generalization_ilp_and_neural(neural_path, ilp_pth, vis='Trains', min_ca
             hpack.get_children()[0].set_width(0)
 
     os.makedirs(out_path, exist_ok=True)
-    plt.savefig(out_path + f'/generalization_task.png', bbox_inches='tight', dpi=400)
+    plt.savefig(out_path + f'/generalization.png', bbox_inches='tight', dpi=400)
 
     plt.close()

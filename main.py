@@ -2,6 +2,7 @@ import argparse
 import sys
 import torch
 
+
 def parse():
     # Instantiate the parser
     parser = argparse.ArgumentParser(description='The Michalski Train Problem')
@@ -123,17 +124,17 @@ def main():
         trainer.cross_val_train(train_size=train_size, noises=noises, rules=rules, replace=False, save_models=True)
         # trainer.plt_cross_val_performance(True, models=['resnet18', 'EfficientNet', 'VisionTransformer'])
 
-    if command == 'cnn_generalization':
-        # min_car = 7
+    if command == 'generalization':
+        min_car, max_car = 7, 7
         # min_car, max_car = 2, 4
         ds_size = 2000
-        from models.eval import generalization_test
+        from models.eval import generalization_test, ilp_generalization_test
         # generalization_test(min_cars, max_cars, base_scene, raw_trains, train_vis, device, ds_path, ds_size=None)
+        ilp_pt = 'output/ilp'
+        ilp_generalization_test(ilp_pt, min_car, max_car)
         from visualization.ilp_and_neural_generalization import vis_generalization_ilp_and_neural
         neural_path = 'output/model_comparison/'
-        ilp_pt = 'output/ilp'
         vis_generalization_ilp_and_neural(neural_path, ilp_pt)
-
 
     if command == 'cnn_plot':
         out_path = 'output/model_comparison/'
