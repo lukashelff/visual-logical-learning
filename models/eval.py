@@ -1,4 +1,5 @@
 import glob
+import os
 from itertools import product
 import pandas as pd
 from models.trainer import Trainer
@@ -11,7 +12,7 @@ def generalization_test(min_cars, max_cars, base_scene, raw_trains, train_vis, d
         columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'cv iteration', 'label',
                  'Validation acc', "precision", "recall"])
     for model, rule, tr_samples in product(['resnet18', 'EfficientNet', 'VisionTransformer'],
-                               ['theoryx', 'numerical', 'complex'], [100, 1000, 10000]):
+                                           ['theoryx', 'numerical', 'complex'], [100, 1000, 10000]):
         model_name = model
         resize = False
         batch_size = 25
@@ -32,6 +33,7 @@ def generalization_test(min_cars, max_cars, base_scene, raw_trains, train_vis, d
             _df = pd.DataFrame(frame, columns=['Methods', 'number of images', 'rule', 'visualization', 'scene',
                                                'cv iteration', 'label', 'Validation acc', "precision", "recall"])
             data = pd.concat([data, _df], ignore_index=True)
+    os.makedirs(f'output/model_comparison/generalization', exist_ok=True)
     data.to_csv(f'output/model_comparison/generalization/cnn_generalization_{min_cars}_{max_cars}.csv')
 
 
@@ -53,8 +55,11 @@ def ilp_generalization_test(ilp_pth, min_cars, max_cars):
                  "recall"])
     for model_name, rule, cv, tr_sample in product(['popper', 'aleph'], ['theoryx', 'numerical', 'complex'],
                                                    [*range(5)], [100, 1000, 10000]):
-        theory = ilp_data.loc[ilp_data['Methods'] == model_name].loc[ilp_data['rule'] == rule].loc[
-            ilp_data['cv iteration'] == cv].iloc[0]['theory'].loc[ilp_data['training samples'] == tr_sample]
+        f = ilp_data.loc[ilp_data['Methods'] == model_name].loc[ilp_data['training samples'] == tr_sample].loc[
+            ilp_data['rule'] == rule].loc[ilp_data['cv iteration'] == cv]
+        if f.empty:
+            continue
+        theory = f.iloc[0]['theory']
         val_path = f'TrainGenerator/output/image_generator/dataset_descriptions/{rule}/MichalskiTrains_car_length_{min_cars}-{max_cars}.txt'
         TP, FN, TN, FP, TP_train, FN_train, TN_train, FP_train = eval_rule(theory=theory, ds_val=val_path,
                                                                            ds_train=None, dir='TrainGenerator/',
@@ -66,4 +71,5 @@ def ilp_generalization_test(ilp_pth, min_cars, max_cars):
         _df = pd.DataFrame(frame, columns=['Methods', 'training samples', 'rule',
                                            'cv iteration', 'label', 'Validation acc', "precision", "recall"])
         data = pd.concat([data, _df], ignore_index=True)
+    os.makedirs(f'output/model_comparison/generalization', exist_ok=True)
     data.to_csv(f'output/model_comparison/generalization/ilp_generalization_{min_cars}_{max_cars}.csv')

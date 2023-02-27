@@ -126,20 +126,31 @@ def main():
         # trainer.plt_cross_val_performance(True, models=['resnet18', 'EfficientNet', 'VisionTransformer'])
 
     if command == 'generalization':
-        min_car, max_car = 7, 7
+        min_cars, max_cars = 7, 7
         # min_car, max_car = 2, 4
         ds_size = 2000
+        train_vis = 'Trains'
         from visualization.ilp_and_neural_generalization import vis_generalization_ilp_and_neural
-        from models.eval import generalization_test, ilp_generalization_test
-        generalization_test(min_cars, max_cars, base_scene, raw_trains, train_vis, device, ds_path, ds_size=None)
+        from models.eval import ilp_generalization_test
         ilp_pt = 'output/ilp'
         neural_path = 'output/model_comparison'
-        ilp_generalization_test(ilp_pt, min_car, max_car)
-        vis_generalization_ilp_and_neural(neural_path, ilp_pt)
+        # get generalization results for neural networks
+        # generalization_test(min_cars, max_cars, base_scene, raw_trains, train_vis, device, ds_path, ds_size=None)
+        # get generalization results for ilp
+        # ilp_generalization_test(ilp_pt, min_cars, max_cars)
+        for s in [100, 1000, 10000]:
+            vis_generalization_ilp_and_neural(neural_path, ilp_pt, tr_samples=s)
 
     if command == 'noise':
         from visualization.ilp_and_neural_noise import vis_noise
         ilp_pt = 'output/ilp'
+        neural_path = 'output/model_comparison'
+        for s in [100, 1000, 10000]:
+            vis_noise(neural_path, ilp_pt, training_samples=s)
+
+    if command == 'noise_att':
+        from visualization.ilp_attr_noise import vis_noise
+        ilp_pt = 'output/ilp/attr_noise'
         neural_path = 'output/model_comparison'
         for s in [100, 1000, 10000]:
             vis_noise(neural_path, ilp_pt, training_samples=s)
@@ -161,10 +172,8 @@ def main():
         # rule_comparison(out_path)
         from visualization.vis_bar import plot_rules_bar
         plot_rules_bar(out_path, vis='Trains')
-
         from visualization.ilp_and_neural_rules import vis_ilp_and_neural
         ilp_pth = 'output/ilp'
-
         vis_ilp_and_neural(out_path, ilp_pth)
 
     if command == 'perception':
