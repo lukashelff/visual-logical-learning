@@ -127,11 +127,14 @@ def main():
 
     if command == 'generalization':
         min_car, max_car = 7, 7
-        from models.eval import ilp_generalization_test
-        ilp_pt = 'output/ilp'
-        ilp_generalization_test(ilp_pt, min_car, max_car)
+        # min_car, max_car = 2, 4
+        ds_size = 2000
         from visualization.ilp_and_neural_generalization import vis_generalization_ilp_and_neural
+        from models.eval import generalization_test, ilp_generalization_test
+        generalization_test(min_cars, max_cars, base_scene, raw_trains, train_vis, device, ds_path, ds_size=None)
+        ilp_pt = 'output/ilp'
         neural_path = 'output/model_comparison'
+        ilp_generalization_test(ilp_pt, min_car, max_car)
         vis_generalization_ilp_and_neural(neural_path, ilp_pt)
 
     if command == 'noise':

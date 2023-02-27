@@ -10,8 +10,8 @@ def generalization_test(min_cars, max_cars, base_scene, raw_trains, train_vis, d
     data = pd.DataFrame(
         columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'cv iteration', 'label',
                  'Validation acc', "precision", "recall"])
-    for model, rule in product(['resnet18', 'EfficientNet', 'VisionTransformer'],
-                               ['theoryx', 'numerical', 'complex']):
+    for model, rule, tr_samples in product(['resnet18', 'EfficientNet', 'VisionTransformer'],
+                               ['theoryx', 'numerical', 'complex'], [100, 1000, 10000]):
         model_name = model
         resize = False
         batch_size = 25
@@ -26,9 +26,9 @@ def generalization_test(min_cars, max_cars, base_scene, raw_trains, train_vis, d
                           ds_size=ds_size, setup_model=False, setup_ds=False, batch_size=batch_size, resize=resize,
                           lr=lr, resume=True, min_car=min_cars, max_car=max_cars)
         for cv in range(5):
-            pth = trainer.get_model_path(prefix=True, im_count=10000, suffix=f'it_{cv}/', model_name=model_name)
+            pth = trainer.get_model_path(prefix=True, im_count=tr_samples, suffix=f'it_{cv}/', model_name=model_name)
             acc, precision, recall = trainer.val(model_path=pth)
-            frame = [[model_name, 10000, rule, train_vis, base_scene, cv, 'direction', acc, precision, recall]]
+            frame = [[model_name, tr_samples, rule, train_vis, base_scene, cv, 'direction', acc, precision, recall]]
             _df = pd.DataFrame(frame, columns=['Methods', 'number of images', 'rule', 'visualization', 'scene',
                                                'cv iteration', 'label', 'Validation acc', "precision", "recall"])
             data = pd.concat([data, _df], ignore_index=True)

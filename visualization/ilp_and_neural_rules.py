@@ -83,7 +83,7 @@ def vis_ilp_and_neural(neural_path, ilp_pth, vis='Trains'):
         white + color_markers + white*3 + handels,
         ['Training samples:'] + im_count + ['']*2 + ['Models:'] + [m.title() for m in models],
         loc='lower left',
-        bbox_to_anchor=(.515, 0.248),
+        bbox_to_anchor=(.515, 0.21),
         frameon=True,
         handletextpad=0,
         ncol=2, handleheight=1.2, handlelength=2.5
