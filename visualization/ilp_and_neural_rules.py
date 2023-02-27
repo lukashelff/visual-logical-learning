@@ -42,7 +42,7 @@ def vis_ilp_and_neural(neural_path, ilp_pth, vis='Trains'):
     materials_s = ["///", "//", '/', '\\', '\\\\']
     mt = {model: materials_s[n] for n, model in enumerate(models)}
     sns.set_theme(style="whitegrid")
-    fig = plt.figure(figsize=(14, 7))
+    fig = plt.figure(figsize=(16, 7))
     gs = fig.add_gridspec(2, 2, wspace=.05, hspace=.15)
     axes = gs.subplots(sharex=True, sharey=True, )
     axes = axes if isinstance(axes, np.ndarray) else [axes]
@@ -83,10 +83,10 @@ def vis_ilp_and_neural(neural_path, ilp_pth, vis='Trains'):
         white + color_markers + white*3 + handels,
         ['Training samples:'] + im_count + ['']*2 + ['Models:'] + [m.title() for m in models],
         loc='lower left',
-        bbox_to_anchor=(.515, 0.21),
+        bbox_to_anchor=(.515, 0.248),
         frameon=True,
         handletextpad=0,
-        ncol=2, handleheight=1.2, handlelength=2.2
+        ncol=2, handleheight=1.2, handlelength=2.5
     )
     for vpack in leg._legend_handle_box.get_children():
         for hpack in vpack.get_children()[:1]:

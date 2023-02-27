@@ -45,15 +45,16 @@ def ilp_generalization_test(ilp_pth, min_cars, max_cars):
             ilp_data.append(pd.read_csv(f))
     ilp_data = pd.concat(ilp_data, ignore_index=True)
     ilp_data['Train length'] = '2-4'
-    ilp_data = ilp_data.loc[ilp_data['training samples'] == 10000].loc[ilp_data['noise'] == 0]
+    ilp_data = ilp_data.loc[ilp_data['noise'] == 0]
     ilp_models = sorted(ilp_data['Methods'].unique())
 
     data = pd.DataFrame(
         columns=['Methods', 'training samples', 'rule', 'cv iteration', 'label', 'Validation acc', "precision",
                  "recall"])
-    for model_name, rule, cv in product(['popper', 'aleph'], ['theoryx', 'numerical', 'complex'], [*range(5)]):
+    for model_name, rule, cv, tr_sample in product(['popper', 'aleph'], ['theoryx', 'numerical', 'complex'],
+                                                   [*range(5)], [100, 1000, 10000]):
         theory = ilp_data.loc[ilp_data['Methods'] == model_name].loc[ilp_data['rule'] == rule].loc[
-            ilp_data['cv iteration'] == cv].iloc[0]['theory']
+            ilp_data['cv iteration'] == cv].iloc[0]['theory'].loc[ilp_data['training samples'] == tr_sample]
         val_path = f'TrainGenerator/output/image_generator/dataset_descriptions/{rule}/MichalskiTrains_car_length_{min_cars}-{max_cars}.txt'
         TP, FN, TN, FP, TP_train, FN_train, TN_train, FP_train = eval_rule(theory=theory, ds_val=val_path,
                                                                            ds_train=None, dir='TrainGenerator/',
@@ -61,7 +62,7 @@ def ilp_generalization_test(ilp_pth, min_cars, max_cars):
         acc = (TP + TN) / (TP + TN + FP + FN)
         precision = TP / (TP + FP)
         recall = TP / (TP + FN)
-        frame = [[model_name, 10000, rule, cv, 'direction', acc, precision, recall]]
+        frame = [[model_name, tr_sample, rule, cv, 'direction', acc, precision, recall]]
         _df = pd.DataFrame(frame, columns=['Methods', 'training samples', 'rule',
                                            'cv iteration', 'label', 'Validation acc', "precision", "recall"])
         data = pd.concat([data, _df], ignore_index=True)

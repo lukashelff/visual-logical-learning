@@ -3,6 +3,7 @@ import sys
 import torch
 
 
+
 def parse():
     # Instantiate the parser
     parser = argparse.ArgumentParser(description='The Michalski Train Problem')
@@ -93,8 +94,8 @@ def main():
         ilp_att_noise_pth = 'output/ilp_att_noise'
         from ilp.visualization.noise import plot_noise_robustness
         plot_noise_robustness(ilp_pth)
-        from ilp.visualization.vis_bar import plot_ilp_bar
-        plot_ilp_bar(ilp_pth)
+        # from ilp.visualization.vis_bar import plot_ilp_bar
+        # plot_ilp_bar(ilp_pth)
 
     if command == 'split_ds':
         from ilp.setup import setup_alpha_ilp_ds
@@ -126,15 +127,19 @@ def main():
 
     if command == 'generalization':
         min_car, max_car = 7, 7
-        # min_car, max_car = 2, 4
-        ds_size = 2000
-        from models.eval import generalization_test, ilp_generalization_test
-        # generalization_test(min_cars, max_cars, base_scene, raw_trains, train_vis, device, ds_path, ds_size=None)
+        from models.eval import ilp_generalization_test
         ilp_pt = 'output/ilp'
         ilp_generalization_test(ilp_pt, min_car, max_car)
         from visualization.ilp_and_neural_generalization import vis_generalization_ilp_and_neural
-        neural_path = 'output/model_comparison/'
+        neural_path = 'output/model_comparison'
         vis_generalization_ilp_and_neural(neural_path, ilp_pt)
+
+    if command == 'noise':
+        from visualization.ilp_and_neural_noise import vis_noise
+        ilp_pt = 'output/ilp'
+        neural_path = 'output/model_comparison'
+        for s in [100, 1000, 10000]:
+            vis_noise(neural_path, ilp_pt, training_samples=s)
 
     if command == 'cnn_plot':
         out_path = 'output/model_comparison/'
@@ -154,7 +159,7 @@ def main():
         from visualization.vis_bar import plot_rules_bar
         plot_rules_bar(out_path, vis='Trains')
 
-        from visualization.ilp_and_neural import vis_ilp_and_neural
+        from visualization.ilp_and_neural_rules import vis_ilp_and_neural
         ilp_pth = 'output/ilp'
 
         vis_ilp_and_neural(out_path, ilp_pth)
