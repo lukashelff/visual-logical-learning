@@ -131,7 +131,8 @@ def main():
         ds_size = 2000
         train_vis = 'Trains'
         from visualization.ilp_and_neural_generalization import vis_generalization_ilp_and_neural
-        from models.eval import ilp_generalization_test
+        from models.eval import ilp_generalization_test, generalization_test
+
         ilp_pt = 'output/ilp'
         neural_path = 'output/model_comparison'
         # get generalization results for neural networks

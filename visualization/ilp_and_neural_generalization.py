@@ -20,7 +20,7 @@ def vis_generalization_ilp_and_neural(neural_path, ilp_pth, vis='Trains', min_ca
             ilp_data.append(pd.read_csv(f))
     ilp_data = pd.concat(ilp_data, ignore_index=True)
     ilp_data['Train length'] = '2-4'
-    ilp_data = ilp_data.loc[ilp_data['training samples'] == tr_samples].loc[ilp_data['noise'] == 0]
+    ilp_data = ilp_data.loc[ilp_data['noise'] == 0]
     ilp_models = sorted(ilp_data['Methods'].unique())
 
     with open(neural_path + f'/generalization/ilp_generalization_{min_cars}_{max_cars}.csv', 'r') as f:
@@ -34,14 +34,13 @@ def vis_generalization_ilp_and_neural(neural_path, ilp_pth, vis='Trains', min_ca
 
     with open(neural_path + '/label_acc_over_epoch.csv', 'r') as f:
         data = pd.read_csv(f)
-        data = data.loc[data['epoch'] == 24].loc[data['visualization'] == vis].loc[data['number of images'] == tr_samples].loc[data['noise'] == 0]
+        data = data.loc[data['epoch'] == 24].loc[data['visualization'] == vis].loc[data['noise'] == 0]
     data = data.rename({'number of images': 'training samples'}, axis='columns')
     data['Train length'] = '2-4'
     neural_models = sorted(data['Methods'].unique())
 
-    # data = pd.concat([ilp_data, data, data_gen])
     data = pd.concat([ilp_data, data_gen_ilp, data, data_gen], ignore_index=True)
-    # data = data[~data.index.duplicated()]
+    data = data.loc[data['training samples'] == tr_samples]
 
     scenes = data['scene'].unique()
     im_count = sorted(data['training samples'].unique())
