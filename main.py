@@ -142,6 +142,15 @@ def main():
         for s in [100, 1000, 10000]:
             vis_generalization_ilp_and_neural(neural_path, ilp_pt, tr_samples=s)
 
+    if command == 'zoom':
+        ds_p = ds_path + '/zoom7'
+        from models.eval import zoom_test
+        zoom_test(min_cars, max_cars, base_scene, raw_trains, train_vis, device, ds_p, ds_size=12000)
+        neural_path = 'output/model_comparison'
+        for s in [100, 1000, 10000]:
+            from visualization.neural_zoom import vis_zoom
+            vis_zoom(neural_path, tr_samples=s)
+
     if command == 'noise':
         from visualization.ilp_and_neural_noise import vis_noise
         ilp_pt = 'output/ilp'

@@ -11,7 +11,7 @@ import torchvision.models as models
 from matplotlib import pyplot as plt
 from numpy import arange
 from rtpt.rtpt import RTPT
-from sklearn.metrics import balanced_accuracy_score, accuracy_score, recall_score, precision_score
+from sklearn.metrics import balanced_accuracy_score, accuracy_score, recall_score, precision_score, confusion_matrix
 from sklearn.model_selection import StratifiedShuffleSplit, KFold, ShuffleSplit
 from tabulate import tabulate
 from torch.optim import lr_scheduler
@@ -50,6 +50,7 @@ class Trainer:
         self.resize, self.noise = resize, noise
         # self.full_ds = get_datasets(self.base_scene, self.train_col, 10000, self.y_val, resize=resize,
         #                             X_val=self.X_val)
+
         self.full_ds = get_datasets(base_scene, self.train_col, self.train_vis, ds_size=ds_size, ds_path=ds_path,
                                     y_val=y_val, max_car=self.max_car, min_car=self.min_car,
                                     class_rule=class_rule, resize=resize)
@@ -115,12 +116,12 @@ class Trainer:
                               )
         torch.cuda.empty_cache()
 
-    def val(self, ds_size=None, set_up=True, model_path=None):
+    def val(self, val_size=None, set_up=True, model_path=None):
         eps = self.num_epochs
         self.num_epochs = 1
         if set_up:
-            ds_size = ds_size if ds_size is not None else self.ds_size
-            self.setup_ds(val_size=ds_size)
+            val_size = val_size if val_size is not None else self.ds_size
+            self.setup_ds(val_size=val_size)
             self.setup_model(self.resume, path=model_path)
         acc, precision, recall = do_train(self.base_scene, self.train_col, self.y_val, self.device, self.out_path,
                                           self.model_name,
@@ -141,7 +142,7 @@ class Trainer:
         if resume and os.path.isfile(path + 'model.pth') and os.path.isfile(path + 'metrics.json'):
             self.checkpoint = torch.load(path + 'model.pth', map_location=self.device)
             set_up_txt += ': loaded from ' + path
-        else:
+        else:  # no checkpoint found
             if resume:
                 raise AssertionError(f'no pretrained model or metrics found at {path}\n please train model first')
             self.checkpoint = None
@@ -184,8 +185,9 @@ class Trainer:
                 val_size = int(0.2 * self.ds_size)
             tr_idx = arange(train_size)
             val_idx = arange(train_size, train_size + val_size)
-        set_up_txt = f'setup ds with {len(tr_idx)} images for training and {len(val_idx)} images for validation'
-        print(set_up_txt)
+        if len(tr_idx) > 0:
+            set_up_txt = f'setup ds with {len(tr_idx)} images for training and {len(val_idx)} images for validation'
+            print(set_up_txt)
 
         self.ds = {
             'train': Subset(self.full_ds, tr_idx),
@@ -378,7 +380,8 @@ def do_train(base_scene, train_col, y_val, device, out_path, model_name, model, 
     rtpt.start()
     epoch_init = 0
     phases = ['train', 'val'] if train == 'train' else ['val']
-    print(f'{train} settings: {out_path}')
+    if train == 'train':
+        print(f'{train} settings: {out_path}')
 
     if checkpoint is not None:
         epoch_init = checkpoint['epoch']
@@ -485,8 +488,15 @@ def do_train(base_scene, train_col, y_val, device, out_path, model_name, model, 
                 scheduler.step()
             epoch_loss[phase][epoch] = running_loss / dataset_sizes[phase]
 
-            recall = recall_score(all_labels.flatten(), all_preds.flatten(), average=None, zero_division=0)
-            precision = precision_score(all_labels.flatten(), all_preds.flatten(), average=None, zero_division=0)
+            # recall = recall_score(all_labels.flatten(), all_preds.flatten(), average=None, zero_division=0)
+            # precision = precision_score(all_labels.flatten(), all_preds.flatten(), average=None, zero_division=0)
+            cm = confusion_matrix(all_labels.flatten(), all_preds.flatten(), )
+            FP = cm.sum(axis=0) - np.diag(cm)
+            FN = cm.sum(axis=1) - np.diag(cm)
+            TP = np.diag(cm)
+            TN = cm.sum() - (FP + FN + TP)
+            recall = TP / (TP + FN)
+            precision = TP / (TP + FP)
             for re, pre, class_name in zip(recall, precision, class_names):
                 epoch_label_accs[phase]['recall'][class_name][epoch] = re
                 epoch_label_accs[phase]['precision'][class_name][epoch] = pre
@@ -501,17 +511,16 @@ def do_train(base_scene, train_col, y_val, device, out_path, model_name, model, 
             if phase == 'val' and epoch_acum_accs[phase]['acc'][epoch] > best_acc:
                 best_acc = epoch_acum_accs[phase]['acc'][epoch]
                 best_model_wts = copy.deepcopy(model.state_dict())
-        print(f'{model_name} training Epoch {epoch + 1}/{num_epochs}, ' +
-              f'elapsed time: {int(time_elapsed // 60)}m {int(time_elapsed % 60)}s, ' +
-              f'val Loss: {round(epoch_loss["val"][epoch], 4)} Acc: {round(epoch_acum_accs["val"]["acc"][epoch] * 100, 2)}%, ' +
-              f'train Loss: {round(epoch_loss["train"][epoch], 4)} Acc: {round(epoch_acum_accs["train"]["acc"][epoch] * 100, 2)}%' if 'train' in phases else ''
-              )
+        if 'train' in phases:
+            print(f'{model_name} training Epoch {epoch + 1}/{num_epochs}, ' +
+                  f'elapsed time: {int(time_elapsed // 60)}m {int(time_elapsed % 60)}s, ' +
+                  f'val Loss: {round(epoch_loss["val"][epoch], 4)} Acc: {round(epoch_acum_accs["val"]["acc"][epoch] * 100, 2)}%, ' +
+                  f'train Loss: {round(epoch_loss["train"][epoch], 4)} Acc: {round(epoch_acum_accs["train"]["acc"][epoch] * 100, 2)}%')
 
-    print('Best val Acc: {:4f}'.format(best_acc))
     os.makedirs(out_path, exist_ok=True)
-
+    print_text = f'Best val Acc: {round(100 * best_acc, 2)}%'
     if train == 'train':
-
+        print(print_text)
         # load best model weights
         model.load_state_dict(best_model_wts)
         statistics = {
@@ -535,8 +544,9 @@ def do_train(base_scene, train_col, y_val, device, out_path, model_name, model, 
         with open(out_path + 'metrics.json', 'w+') as fp:
             json.dump(statistics, fp)
     elif train == 'val':
-        print(f'TP + TN: {np.sum(all_labels == all_preds)}, FP + FN: {np.sum(all_labels != all_preds)}, '
-              f'precision: {precision}, recall: {recall}')
+        print_text += f', TP: {TP[0]} TN: {TN[0]} FP: {FP[0]} FN: {FN[0]}, precision: {TP[0] / (TP[0] + FP[0])},' \
+                      f' recall: {TP[0] / (TP[0] + FN[0])}'
+        print(print_text)
         print('-' * 10)
         return best_acc, precision, recall
     print('-' * 10)
