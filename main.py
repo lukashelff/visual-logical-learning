@@ -145,7 +145,7 @@ def main():
     if command == 'zoom':
         ds_p = ds_path + '/zoom7'
         from models.eval import zoom_test
-        zoom_test(min_cars, max_cars, base_scene, raw_trains, train_vis, device, ds_p, ds_size=12000)
+        zoom_test(min_cars, max_cars, base_scene, raw_trains, train_vis, device, ds_p, ds_size=2000)
         neural_path = 'output/model_comparison'
         for s in [100, 1000, 10000]:
             from visualization.neural_zoom import vis_zoom
@@ -156,7 +156,9 @@ def main():
         ilp_pt = 'output/ilp'
         neural_path = 'output/model_comparison'
         for s in [100, 1000, 10000]:
-            vis_noise(neural_path, ilp_pt, training_samples=s)
+            # vis_noise(neural_path, ilp_pt, training_samples=s)
+            from visualization.ilp_and_neural_noise import vis_noise_acc_loss
+            vis_noise_acc_loss(neural_path, ilp_pt, training_samples=s)
 
     if command == 'noise_att':
         from visualization.ilp_attr_noise import vis_noise
