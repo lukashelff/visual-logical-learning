@@ -51,7 +51,7 @@ def create_datasets(rules, num_samples, train_description, folds, ds_total_size,
     print(f'total of {n_ds} ds: found {n_ds - gen_ds} existing ds, generated {gen_ds} remaining ds')
 
 
-def create_bk(ds_path, out_path, ds_size=None, noise=0):
+def create_bk(ds_path, out_path, ds_size=None, noise=0, noise_type='label'):
     train_c = 0
     path_1 = f'{out_path}/popper/gt1'
     path_2 = f'{out_path}/popper/gt2'
@@ -91,7 +91,7 @@ def create_bk(ds_path, out_path, ds_size=None, noise=0):
             popper_bk2.write(f'train(t{train_c}).\n')
             popper_bk3.write(f'train(t{train_c}).\n')
             label = 'pos' if label == 'east' else 'neg'
-            if ns < noise:
+            if ns < noise and noise_type == 'label':
                 label = 'pos' if label == 'neg' else 'neg'
             exs_file.write(f'{label}(eastbound(t{train_c})).\n')
 
@@ -106,28 +106,27 @@ def create_bk(ds_path, out_path, ds_size=None, noise=0):
                 # add car to bk if car color is not none
                 # car_label_names = np.array(ds_val.attribute_classes)[car.to(dtype=torch.int32).tolist()]
                 # color, length, walls, roofs, wheel_count, load_obj1, load_obj2, load_obj3 = car_label_names
-                # if ns < noise:
-                #     car_number = car.get_car_number()
-                #
-                #     color = ['yellow', 'green', 'grey', 'red', 'blue'][np.random.randint(5)]
-                #     length = ['short', 'long'][np.random.randint(2)]
-                #     walls = ["braced_wall", 'solid_wall'][np.random.randint(2)]
-                #     roofs = ["roof_foundation", 'solid_roof', 'braced_roof', 'peaked_roof'][np.random.randint(4)]
-                #     wheel_count = ['2_wheels', '3_wheels'][np.random.randint(2)]
-                #     l_shape = ["box", "golden_vase", 'barrel', 'diamond', 'metal_pot', 'oval_vase'][
-                #         np.random.randint(6)]
-                #     l_num = np.random.randint(4)
-                #     load_obj1, load_obj2, load_obj3 = [l_shape] * l_num + ['none'] * (3 - l_num)
-                # else:
-                color = car.get_blender_car_color()
-                length = car.get_car_length()
-                walls = car.get_blender_wall()
-                roofs = car.get_blender_roof()
-                wheel_count = car.get_car_wheels()
-                l_shape = car.get_blender_payload()
-                l_num = car.get_load_number()
-                load_obj1, load_obj2, load_obj3 = [l_shape] * l_num + ['none'] * (3 - l_num)
-                car_number = car.get_car_number()
+                if ns < noise and noise_type == 'attribute':
+                    car_number = car.get_car_number()
+                    color = ['yellow', 'green', 'grey', 'red', 'blue'][np.random.randint(5)]
+                    length = ['short', 'long'][np.random.randint(2)]
+                    walls = ["braced_wall", 'solid_wall'][np.random.randint(2)]
+                    roofs = ["roof_foundation", 'solid_roof', 'braced_roof', 'peaked_roof'][np.random.randint(4)]
+                    wheel_count = ['2_wheels', '3_wheels'][np.random.randint(2)]
+                    l_shape = ["box", "golden_vase", 'barrel', 'diamond', 'metal_pot', 'oval_vase'][
+                        np.random.randint(6)]
+                    l_num = np.random.randint(4)
+                    load_obj1, load_obj2, load_obj3 = [l_shape] * l_num + ['none'] * (3 - l_num)
+                else:
+                    car_number = car.get_car_number()
+                    color = car.get_blender_car_color()
+                    length = car.get_car_length()
+                    walls = car.get_blender_wall()
+                    roofs = car.get_blender_roof()
+                    wheel_count = car.get_car_wheels()
+                    l_shape = car.get_blender_payload()
+                    l_num = car.get_load_number()
+                    load_obj1, load_obj2, load_obj3 = [l_shape] * l_num + ['none'] * (3 - l_num)
 
                 payload_num = 3 - [load_obj1, load_obj2, load_obj3].count('none')
                 payload_n = ['zero', 'one', 'two', 'three'][payload_num]
@@ -234,8 +233,8 @@ def sort_file(file):
 
 
 def setup_alpha_ilp_ds(base_scene, raw_trains, train_vis, ds_size, ds_path, class_rule):
-    from michalski_trains.michalskitraindataset import get_datasets
     import shutil
+    from michalski_trains.dataset import get_datasets
     ds = get_datasets(base_scene, raw_trains, train_vis, ds_size, ds_path=ds_path, class_rule=class_rule)
     path_train_true = f'output/alphailp-images/{class_rule}/train/true'
     path_test_true = f'output/alphailp-images/{class_rule}/test/true'

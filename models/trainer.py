@@ -36,7 +36,7 @@ class Trainer:
     def __init__(self, base_scene, train_col, train_vis, device, model_name, class_rule, ds_path,
                  X_val='image', y_val='direction', max_car=4, min_car=2,
                  resume=False, pretrained=True, resize=False, optimizer_='ADAM', loss='CrossEntropyLoss',
-                 train_samples=10000, ds_size=10000, noise=0,
+                 train_samples=10000, ds_size=10000, image_noise=0, label_noise=0,
                  batch_size=50, num_worker=4, lr=0.001, step_size=5, gamma=.8, momentum=0.9,
                  num_epochs=25, setup_model=True, setup_ds=True, save_model=True):
 
@@ -47,28 +47,35 @@ class Trainer:
         self.device = device
         self.X_val, self.y_val = X_val, y_val
         self.pretrained, self.resume, self.save_model = pretrained, resume, save_model
-        self.resize, self.noise = resize, noise
+        self.resize, self.image_noise, self.label_noise = resize, image_noise, label_noise
         # self.full_ds = get_datasets(self.base_scene, self.train_col, 10000, self.y_val, resize=resize,
         #                             X_val=self.X_val)
 
-        self.full_ds = get_datasets(base_scene, self.train_col, self.train_vis, ds_size=ds_size, ds_path=ds_path,
-                                    y_val=y_val, max_car=self.max_car, min_car=self.min_car,
-                                    class_rule=class_rule, resize=resize)
+        if setup_ds:
+            self.full_ds = get_datasets(base_scene, self.train_col, self.train_vis, ds_size=ds_size, ds_path=ds_path,
+                                        y_val=y_val, max_car=self.max_car, min_car=self.min_car,
+                                        class_rule=class_rule, resize=resize)
+        else:
+            self.full_ds = None
 
         # model setup
         self.model_name = model_name
         self.optimizer_name, self.loss_name = optimizer_, loss
+        if setup_model:
+            self.model = self.setup_model(resume=resume)
         # training hyper parameter
         self.batch_size, self.num_worker, self.lr, self.step_size, self.gamma, self.momentum, self.num_epochs = \
             batch_size, num_worker, lr, step_size, gamma, momentum, num_epochs
         self.out_path = self.get_model_path()
 
-    def cross_val_train(self, train_size=None, noises=None, rules=None, visualizations=None, scenes=None, n_splits=5,
-                        model_path=None, save_models=False, replace=False):
+    def cross_val_train(self, train_size=None, label_noise=None, rules=None, visualizations=None, scenes=None,
+                        n_splits=5, model_path=None, save_models=False, replace=False, image_noise=None):
         if train_size is None:
             train_size = [10000]
-        if noises is None:
-            noises = [self.noise]
+        if label_noise is None:
+            label_noise = [self.label_noise]
+        if image_noise is None:
+            image_noise = [self.image_noise]
         if rules is None:
             rules = [self.class_rule]
         if visualizations is None:
@@ -79,14 +86,16 @@ class Trainer:
         test_size = 2000
         self.save_model = save_models
         tr_it = 0
-        tr_max = n_splits * len(train_size) * len(noises) * len(rules) * len(visualizations) * len(scenes)
-        for noise, rule, visualization, scene in product(noises, rules, visualizations, scenes):
-            self.noise, self.class_rule, self.train_vis, self.base_scene = noise, rule, visualization, scene
+        tr_max = n_splits * len(train_size) * len(label_noise) * len(image_noise) * len(rules) * len(
+            visualizations) * len(scenes)
+        for l_noise, i_noise, rule, visualization, scene in product(label_noise, image_noise, rules, visualizations,
+                                                                    scenes):
+            self.label_noise, self.image_noise, self.class_rule, self.train_vis, self.base_scene = l_noise, i_noise, rule, visualization, scene
             self.full_ds = get_datasets(self.base_scene, self.train_col, self.train_vis, class_rule=rule,
                                         ds_size=self.ds_size, max_car=self.max_car, min_car=self.min_car,
-                                        noise=self.noise, ds_path=self.ds_path, resize=self.resize)
+                                        label_noise=self.label_noise, image_noise=self.image_noise, ds_path=self.ds_path,
+                                        resize=self.resize)
             for t_size in train_size:
-                self.noise = noise
                 self.full_ds.predictions_im_count = t_size
                 cv = StratifiedShuffleSplit(train_size=t_size, test_size=test_size, random_state=random_state,
                                             n_splits=n_splits)
@@ -220,14 +229,23 @@ class Trainer:
         im_count = self.ds_size if im_count is None else im_count
         ds_settings = f'{self.train_vis}_{self.class_rule}_{self.train_col}_{self.base_scene}'
         train_config = f'imcount_{im_count}_X_val_{self.X_val}{pre}_lr_{self.lr}_step_{self.step_size}_gamma{self.gamma}'
-        if self.noise > 0:
-            train_config += f'noise_{self.noise}'
-        if prefix and self.noise > 0:
-            pref = f'cv_{self.noise}noise/'
-        elif prefix:
-            pref = 'cv/'
-        else:
-            pref = ''
+        pref = '' if not prefix else 'cv'
+        if self.label_noise > 0:
+            pref += f'_{self.label_noise}noise'
+        if self.image_noise > 0:
+            pref += f'_{self.image_noise}im_noise'
+        pref += '/'
+
+        # if self.label_noise > 0:
+        #     train_config += f'noise_{self.label_noise}'
+        # if self.image_noise > 0:
+        #     train_config += f'im_noise_{self.image_noise}'
+        # if prefix and self.label_noise > 0:
+        #     pref = f'cv_{self.label_noise}noise/'
+        # elif prefix:
+        #     pref = 'cv/'
+        # else:
+        #     pref = ''
         out_path = f'output/models/{model_name}/{self.y_val}_classification/{ds_settings}/{pref}{train_config}/{suffix}'
         return out_path
 

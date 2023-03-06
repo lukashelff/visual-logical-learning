@@ -26,7 +26,7 @@ def parse():
 
     # model settings
     parser.add_argument('--model_name', type=str, default='resnet18',
-                        help='model to use for training: \'tesnet18\', \'VisionTransformer\' or \'EfficientNet\'')
+                        help='model to use for training: \'resnet18\', \'VisionTransformer\' or \'EfficientNet\'')
 
     parser.add_argument('--cuda', type=int, default=0, help='Which cuda device to use or cpu if -1')
     parser.add_argument('--command', type=str, default='cnn',
@@ -118,10 +118,8 @@ def main():
         elif model_name == 'VisionTransformer':
             resize = True
             lr = 0.00001
-
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
                           setup_model=False, setup_ds=False, batch_size=batch_size, resize=resize, lr=lr)
-
         trainer.cross_val_train(train_size=train_size, noises=noises, rules=rules, replace=False, save_models=True)
         # trainer.plt_cross_val_performance(True, models=['resnet18', 'EfficientNet', 'VisionTransformer'])
 
@@ -132,7 +130,6 @@ def main():
         train_vis = 'Trains'
         from visualization.ilp_and_neural_generalization import vis_generalization_ilp_and_neural
         from models.eval import ilp_generalization_test, generalization_test
-
         ilp_pt = 'output/ilp'
         neural_path = 'output/model_comparison'
         # get generalization results for neural networks
@@ -141,6 +138,13 @@ def main():
         # ilp_generalization_test(ilp_pt, min_cars, max_cars)
         for s in [100, 1000, 10000]:
             vis_generalization_ilp_and_neural(neural_path, ilp_pt, tr_samples=s)
+
+    if command == 'elementary_vs_realistic':
+        ilp_pt = 'output/ilp'
+        neural_path = 'output/model_comparison'
+        for s in [100, 1000, 10000]:
+            from visualization.ilp_and_neural_elementary_vs_realistic import elementary_vs_realistic
+            elementary_vs_realistic(neural_path, ilp_pt, tr_samples=s)
 
     if command == 'zoom':
         ds_p = ds_path + '/zoom7'
@@ -155,7 +159,8 @@ def main():
         from visualization.ilp_and_neural_noise import vis_noise
         ilp_pt = 'output/ilp'
         neural_path = 'output/model_comparison'
-        for s in [100, 1000, 10000]:
+        for s in [10000]:
+        # for s in [100, 1000, 10000]:
             # vis_noise(neural_path, ilp_pt, training_samples=s)
             from visualization.ilp_and_neural_noise import vis_noise_acc_loss
             vis_noise_acc_loss(neural_path, ilp_pt, training_samples=s)
@@ -167,7 +172,34 @@ def main():
         for s in [100, 1000, 10000]:
             vis_noise(neural_path, ilp_pt, training_samples=s)
 
-    if command == 'cnn_plot':
+    if command == 'image_noise':
+        from models.trainer import Trainer
+        resize = False
+        batch_size = 25
+        lr = 0.001
+        rules = ['theoryx', 'numerical', 'complex']
+        train_size = [100, 1000, 10000]
+        noises = [0, 0.1, 0.3]
+        noises = [0.1, 0.3]
+        visualizations = ['Trains', 'SimpleObjects']
+        scenes = ['base_scene', 'desert_scene', 'sky_scene', 'fisheye_scene']
+        if model_name == 'EfficientNet':
+            batch_size = 25
+        elif model_name == 'VisionTransformer':
+            resize = True
+            lr = 0.00001
+        trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
+                          setup_model=False, setup_ds=False, batch_size=batch_size, resize=resize, lr=lr)
+        trainer.cross_val_train(train_size=train_size, image_noise=noises, rules=rules, replace=False, save_models=False)
+
+
+        # from visualization.ilp_and_neural_image_noise import vis_noise
+        # ilp_pt = 'output/ilp'
+        # neural_path = 'output/model_comparison'
+        # for s in [100, 1000, 10000]:
+        #     vis_noise(neural_path, ilp_pt, training_samples=s)
+
+    if command == 'rules':
         out_path = 'output/model_comparison/'
         class_rules = ['numerical', 'theoryx', 'complex']
         visuals = ['SimpleObjects', 'Trains']

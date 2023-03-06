@@ -66,7 +66,7 @@ def vis_noise(neural_path, ilp_pth, training_samples=1000, vis='Trains'):
     handels = [mpatches.Patch(facecolor='grey', hatch=mt[m]) for m in ilp_models]
     leg = fig.legend(
         white + color_markers + white * 1 + handels,
-        ['Label Noise:'] + noise + ['Models:'] + [m.title() for m in ilp_models],
+        ['Concept Noise:'] + noise + ['Models:'] + [m.title() for m in ilp_models],
         loc='lower left',
         bbox_to_anchor=(.515, 0.315),
         frameon=True,
