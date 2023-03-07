@@ -3,7 +3,6 @@ import sys
 import torch
 
 
-
 def parse():
     # Instantiate the parser
     parser = argparse.ArgumentParser(description='The Michalski Train Problem')
@@ -29,7 +28,8 @@ def parse():
                         help='model to use for training: \'resnet18\', \'VisionTransformer\' or \'EfficientNet\'')
 
     parser.add_argument('--cuda', type=int, default=0, help='Which cuda device to use or cpu if -1')
-    parser.add_argument('--command', type=str, default='cnn',
+    parser.add_argument('--action', type=str, default='plot', )
+    parser.add_argument('--command', type=str, default='train',
                         help='command ot execute: \'compare_models\' \'cnn\', \'vis\', \'ilp\' or \'ct\'')
 
     args = parser.parse_args()
@@ -51,18 +51,15 @@ def main():
     ds_size = args.dataset_size
     model_name = args.model_name
     command = args.command
-    max_cars = args.max_train_length
-    min_cars = args.min_train_length
+    action = args.action
 
     sys.path.insert(0, 'TrainGenerator/')
     sys.path.insert(0, 'ilp/rdm-master/')
 
-    if command == 'vis':
-        from michalski_trains.dataset import get_datasets
-        full_ds = get_datasets(base_scene, raw_trains, train_vis, ds_size=10, class_rule=class_rule, ds_path=ds_path)
-        from visualization.vis_image import show_masked_im
-
-        show_masked_im(full_ds)
+    if action == 'plot':
+        from visualization.plotter import plot
+        plot(args)
+        return
 
     if command == 'ct':
         from raw.concept_tester import eval_rule
@@ -85,17 +82,6 @@ def main():
         model = 'popper'
         class_rule = 'theoryx'
         trainer.train(model, raw_trains, class_rule, train_size, val_size, noise=0.3, train_log=True)
-
-    if command == "ilp_plot":
-        # from ilp.trainer import Ilp_trainer
-        # trainer = Ilp_trainer()
-        # trainer.plot_ilp_crossval()
-        ilp_pth = 'output/ilp'
-        ilp_att_noise_pth = 'output/ilp_att_noise'
-        from ilp.visualization.noise import plot_noise_robustness
-        plot_noise_robustness(ilp_pth)
-        # from ilp.visualization.vis_bar import plot_ilp_bar
-        # plot_ilp_bar(ilp_pth)
 
     if command == 'split_ds':
         from ilp.setup import setup_alpha_ilp_ds
@@ -120,57 +106,8 @@ def main():
             lr = 0.00001
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
                           setup_model=False, setup_ds=False, batch_size=batch_size, resize=resize, lr=lr)
-        trainer.cross_val_train(train_size=train_size, noises=noises, rules=rules, replace=False, save_models=True)
+        trainer.cross_val_train(train_size=train_size, label_noise=noises, rules=rules, replace=False, save_models=True)
         # trainer.plt_cross_val_performance(True, models=['resnet18', 'EfficientNet', 'VisionTransformer'])
-
-    if command == 'generalization':
-        min_cars, max_cars = 7, 7
-        # min_car, max_car = 2, 4
-        ds_size = 2000
-        train_vis = 'Trains'
-        from visualization.ilp_and_neural_generalization import vis_generalization_ilp_and_neural
-        from models.eval import ilp_generalization_test, generalization_test
-        ilp_pt = 'output/ilp'
-        neural_path = 'output/model_comparison'
-        # get generalization results for neural networks
-        # generalization_test(min_cars, max_cars, base_scene, raw_trains, train_vis, device, ds_path, ds_size=None)
-        # get generalization results for ilp
-        # ilp_generalization_test(ilp_pt, min_cars, max_cars)
-        for s in [100, 1000, 10000]:
-            vis_generalization_ilp_and_neural(neural_path, ilp_pt, tr_samples=s)
-
-    if command == 'elementary_vs_realistic':
-        ilp_pt = 'output/ilp'
-        neural_path = 'output/model_comparison'
-        for s in [100, 1000, 10000]:
-            from visualization.ilp_and_neural_elementary_vs_realistic import elementary_vs_realistic
-            elementary_vs_realistic(neural_path, ilp_pt, tr_samples=s)
-
-    if command == 'zoom':
-        ds_p = ds_path + '/zoom7'
-        from models.eval import zoom_test
-        zoom_test(min_cars, max_cars, base_scene, raw_trains, train_vis, device, ds_p, ds_size=2000)
-        neural_path = 'output/model_comparison'
-        for s in [100, 1000, 10000]:
-            from visualization.neural_zoom import vis_zoom
-            vis_zoom(neural_path, tr_samples=s)
-
-    if command == 'noise':
-        from visualization.ilp_and_neural_noise import vis_noise
-        ilp_pt = 'output/ilp'
-        neural_path = 'output/model_comparison'
-        for s in [10000]:
-        # for s in [100, 1000, 10000]:
-            # vis_noise(neural_path, ilp_pt, training_samples=s)
-            from visualization.ilp_and_neural_noise import vis_noise_acc_loss
-            vis_noise_acc_loss(neural_path, ilp_pt, training_samples=s)
-
-    if command == 'noise_att':
-        from visualization.ilp_attr_noise import vis_noise
-        ilp_pt = 'output/ilp/attr_noise'
-        neural_path = 'output/model_comparison'
-        for s in [100, 1000, 10000]:
-            vis_noise(neural_path, ilp_pt, training_samples=s)
 
     if command == 'image_noise':
         from models.trainer import Trainer
@@ -190,35 +127,8 @@ def main():
             lr = 0.00001
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
                           setup_model=False, setup_ds=False, batch_size=batch_size, resize=resize, lr=lr)
-        trainer.cross_val_train(train_size=train_size, image_noise=noises, rules=rules, replace=False, save_models=False)
-
-
-        # from visualization.ilp_and_neural_image_noise import vis_noise
-        # ilp_pt = 'output/ilp'
-        # neural_path = 'output/model_comparison'
-        # for s in [100, 1000, 10000]:
-        #     vis_noise(neural_path, ilp_pt, training_samples=s)
-
-    if command == 'rules':
-        out_path = 'output/model_comparison/'
-        class_rules = ['numerical', 'theoryx', 'complex']
-        visuals = ['SimpleObjects', 'Trains']
-        from visualization.vis_model_comparison import rule_comparison
-        from visualization.vis_bar import plot_sinlge_box, plot_multi_box
-        from visualization.data_handler import get_cv_data
-        # get_cv_data(f'{out_path}/', 'direction')
-        # for rule, vis in product(class_rules, visuals):
-        #     plot_sinlge_box(rule, vis, out_path)
-        # for rule in class_rules:
-        #     plot_multi_box(rule, visuals, out_path)
-        # from visualization.vis_point import plot_neural_noise
-        # plot_neural_noise(out_path)
-        # rule_comparison(out_path)
-        from visualization.vis_bar import plot_rules_bar
-        plot_rules_bar(out_path, vis='Trains')
-        from visualization.ilp_and_neural_rules import vis_ilp_and_neural
-        ilp_pth = 'output/ilp'
-        vis_ilp_and_neural(out_path, ilp_pth)
+        trainer.cross_val_train(train_size=train_size, image_noise=noises, rules=rules, replace=False,
+                                save_models=False)
 
     if command == 'perception':
         from models.trainer import Trainer
