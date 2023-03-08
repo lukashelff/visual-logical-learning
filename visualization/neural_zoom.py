@@ -9,7 +9,7 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 
 
-def vis_zoom(neural_path, vis='Trains', min_cars=2, max_cars=4, tr_samples=10000):
+def zoom_plot(neural_path, vis='Trains', min_cars=2, max_cars=4, tr_samples=10000):
 
     with open(neural_path + f'/generalization/cnn_zoom_{min_cars}_{max_cars}.csv', 'r') as f:
         data_gen = pd.read_csv(f)
@@ -36,7 +36,7 @@ def vis_zoom(neural_path, vis='Trains', min_cars=2, max_cars=4, tr_samples=10000
     colors = {datasets[0]: colors_s[0], datasets[1]: colors_s[1]}
     rules = ['theoryx', 'numerical', 'complex']
 
-    out_path = f'{neural_path}/generalization'
+    out_path = f'{neural_path}/zoom'
     materials_s = ["///", "//", '/', '\\', '\\\\']
     mt = {model: materials_s[n] for n, model in enumerate(models)}
     sns.set_theme(style="whitegrid")

@@ -97,3 +97,39 @@ def get_cv_data(out_path, y_val):
     data.to_csv(out_path + 'label_acc_over_epoch.csv')
     data_acum_acc.to_csv(out_path + 'mean_acc_over_epoch.csv')
     data_ev.to_csv(out_path + 'mean_variance_comparison.csv')
+
+
+def get_ilp_neural_data(ilp_stats_path, neural_stats_path, vis='Train'):
+    dirs = glob.glob(ilp_stats_path + '/*.csv')
+    if ilp_stats_path is None:
+        ilp_data = pd.DataFrame(
+            columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'cv iteration', 'epoch',
+                     'Validation acc', 'noise'])
+        ilp_models = []
+    else:
+        ilp_data = []
+        for dir in dirs:
+            with open(dir, 'r') as f:
+                ilp_data.append(pd.read_csv(f))
+        ilp_data = pd.concat(ilp_data, ignore_index=True)
+        ilp_data['visualization'] = 'Trains'
+        ilp_models = sorted(ilp_data['Methods'].unique())
+
+    if neural_stats_path is None:
+        neur_data = pd.DataFrame(
+            columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'cv iteration', 'epoch',
+                     'Validation acc', 'noise'])
+        neural_models = []
+    else:
+        with open(neural_stats_path, 'r') as f:
+            neur_data = pd.read_csv(f)
+            neur_data = neur_data.loc[neur_data['epoch'] == 24]
+            if vis is not None and vis != 'all':
+                neur_data = neur_data.loc[neur_data['visualization'] == vis]
+        neur_data = neur_data.rename({'number of images': 'training samples'}, axis='columns')
+        neural_models = sorted(neur_data['Methods'].unique())
+
+    data = pd.concat([ilp_data, neur_data], ignore_index=True)
+    data['Validation acc'] = data['Validation acc'].apply(lambda x: x * 100)
+    data.reset_index(drop=True, inplace=True)
+    return data, ilp_models, neural_models

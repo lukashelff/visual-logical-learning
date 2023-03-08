@@ -8,39 +8,33 @@ import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
 
+from visualization.data_handler import get_ilp_neural_data
+from visualization.vis_util import make_3_im_legend
 
-def vis_generalization_ilp_and_neural(neural_path, ilp_pth, vis='Trains', min_cars=7, max_cars=7, tr_samples=10000):
 
-    ilp_stats_path = f'{ilp_pth}/stats'
-
-    dirs = glob.glob(ilp_stats_path + '/*.csv')
-    ilp_data = []
-    for dir in dirs:
-        with open(dir, 'r') as f:
-            ilp_data.append(pd.read_csv(f))
-    ilp_data = pd.concat(ilp_data, ignore_index=True)
-    ilp_data['Train length'] = '2-4'
-    ilp_data = ilp_data.loc[ilp_data['noise'] == 0]
-    ilp_models = sorted(ilp_data['Methods'].unique())
+def generalization_plot(neural_path, ilp_pth, vis='Trains', min_cars=7, max_cars=7, tr_samples=10000):
+    labelsize, fontsize = 15, 20
 
     with open(neural_path + f'/generalization/ilp_generalization_{min_cars}_{max_cars}.csv', 'r') as f:
         data_gen_ilp = pd.read_csv(f)
     data_gen_ilp['Train length'] = '7'
+    data_gen_ilp['noise'] = 0
+    data_gen_ilp['Validation acc'] = data_gen_ilp['Validation acc'].apply(lambda x: x * 100)
 
     with open(neural_path + f'/generalization/cnn_generalization_{min_cars}_{max_cars}.csv', 'r') as f:
         data_gen = pd.read_csv(f)
     data_gen = data_gen.rename({'number of images': 'training samples'}, axis='columns')
     data_gen['Train length'] = '7'
+    data_gen['noise'] = 0
+    data_gen['Validation acc'] = data_gen['Validation acc'].apply(lambda x: x * 100)
 
-    with open(neural_path + '/label_acc_over_epoch.csv', 'r') as f:
-        data = pd.read_csv(f)
-        data = data.loc[data['epoch'] == 24].loc[data['visualization'] == vis].loc[data['noise'] == 0]
-    data = data.rename({'number of images': 'training samples'}, axis='columns')
+    neural_stats_path = neural_path + '/label_acc_over_epoch.csv'
+    ilp_stats_path = f'{ilp_pth}/stats'
+    data, ilp_models, neural_models = get_ilp_neural_data(ilp_stats_path, neural_stats_path, vis)
     data['Train length'] = '2-4'
-    neural_models = sorted(data['Methods'].unique())
 
-    data = pd.concat([ilp_data, data_gen_ilp, data, data_gen], ignore_index=True)
-    data = data.loc[data['training samples'] == tr_samples]
+    data = pd.concat([data, data_gen_ilp, data_gen], ignore_index=True)
+    data = data.loc[data['training samples'] == tr_samples].loc[data['noise'] == 0]
 
     scenes = data['scene'].unique()
     im_count = sorted(data['training samples'].unique())
@@ -49,7 +43,8 @@ def vis_generalization_ilp_and_neural(neural_path, ilp_pth, vis='Trains', min_ca
     noise = data['noise'].unique()
     models = np.append(neural_models, ilp_models)
     colors_s = sns.color_palette()[:len(datasets)]
-    colors = {datasets[0]: colors_s[0], datasets[1]: colors_s[1]}
+    colors = {ds: colors_s[n] for n, ds in enumerate(datasets)}
+
     rules = ['theoryx', 'numerical', 'complex']
 
     out_path = f'{neural_path}/generalization'
@@ -64,8 +59,8 @@ def vis_generalization_ilp_and_neural(neural_path, ilp_pth, vis='Trains', min_ca
     for c, rule in enumerate(rules):
         ax = axes[c // 2, c % 2]
         ax.grid(axis='x')
-        ax.title.set_text(rule.title())
-        ax.tick_params(bottom=False, left=False)
+        ax.set_title(rule.title(), fontsize=fontsize)
+        ax.tick_params(bottom=False, left=False, labelsize=labelsize)
         for spine in ax.spines.values():
             spine.set_edgecolor('gray')
         data_t = data.loc[data['rule'] == rule]
@@ -75,36 +70,14 @@ def vis_generalization_ilp_and_neural(neural_path, ilp_pth, vis='Trains', min_ca
                         palette="dark", alpha=.7, ax=ax, orient='v', hatch=mt[model], order=models
                         )
         ax.get_legend().remove()
-        ax.set_ylim([0.5, 1])
+        ax.set_ylim([50, 100])
         ax.get_xaxis().set_visible(False)
         if c % 2:
-            # ax.get_yaxis().set_visible(False)
             ax.set_ylabel('')
-            # ax.set_yticklabels([''] * 9)
         else:
-            ax.set_ylabel('Accuracy')
+            ax.set_ylabel('Accuracy', fontsize=fontsize)
 
-
-    axes[1, 1].set_axis_off()
-    color_markers = [mlines.Line2D([], [], color=colors[c], marker='d', linestyle='None', markersize=5) for c in
-                     datasets]
-    white = [mlines.Line2D([], [], color='white', marker='X', linestyle='None', markersize=0)]
-    plt.rcParams.update({'hatch.color': 'black'})
-
-    handels = [mpatches.Patch(facecolor='grey', hatch=mt[m]) for m in models]
-    leg = fig.legend(
-        white + color_markers + white*4 + handels,
-        ['Train length'] + datasets + ['']*3 + ['Models:'] + [m.title() for m in models],
-        loc='lower left',
-        bbox_to_anchor=(.515, 0.248),
-        frameon=True,
-        handletextpad=0,
-        ncol=2, handleheight=1.2, handlelength=2.5
-    )
-    for vpack in leg._legend_handle_box.get_children():
-        for hpack in vpack.get_children()[:1]:
-            hpack.get_children()[0].set_width(0)
-
+    make_3_im_legend(fig, axes, datasets, 'Train length', models, colors, mt)
     os.makedirs(out_path, exist_ok=True)
     plt.savefig(out_path + f'/generalization_{tr_samples}_tr_samples.png', bbox_inches='tight', dpi=400)
 
