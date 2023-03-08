@@ -52,6 +52,21 @@ def create_datasets(rules, num_samples, train_description, folds, ds_total_size,
 
 
 def create_bk(ds_path, out_path, ds_size=None, noise=0, noise_type='label'):
+    ''' creates a bk for a given dataset, ds_size is the number of trains to use for the bk
+    noise is the percentage of noise to add to the bk
+    noise_type is the type of noise to add, can be 'label' or 'attribute'
+
+    the bk is created in the following format:
+    popper: bk.pl, exs.pl, bias.pl
+    aleph: train.b, train.f, train.n
+    dilp: positive.dilp, negative.dilp, facts.dilp
+
+    the bk is created by randomly selecting ds_size trains from the dataset and adding them to the bk
+    if noise is not 0, noise% of the trains are randomly selected and their labels are flipped
+    if noise_type is 'attribute', noise% of the trains are randomly selected and their attributes are flipped
+
+
+    '''
     train_c = 0
     path_1 = f'{out_path}/popper/gt1'
     path_2 = f'{out_path}/popper/gt2'
