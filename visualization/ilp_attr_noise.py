@@ -75,8 +75,9 @@ def get_baselines(theory):
         ds_path = f'output/ilp/datasets/{theory}/MichalskiTrains10000_{noise}noise/cv_0/train_samples.txt'
         acc = get_baseline(theory, ds_path, noise)
         baselines.append(acc)
-        print(f'{theory} {noise} noise: Accuracy = {round(acc * 100,2)}%')
+        print(f'{theory} {noise} noise: Accuracy = {round(acc * 100, 2)}%')
     return baselines
+
 
 def get_baseline(theory, ds_path, noise):
     rules = {
