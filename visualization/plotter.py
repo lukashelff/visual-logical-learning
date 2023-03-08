@@ -20,10 +20,10 @@ def plot(args):
     if command == 'label_noise':
         ilp_pt = 'output/ilp'
         neural_path = 'output/model_comparison'
-        for s in [10000]:
-            # for s in [100, 1000, 10000]:
+        # for s in [10000]:
+        for s in [100, 1000, 10000]:
             from visualization.ilp_and_neural_noise import label_noise_plot, label_noise_degradation_plot
-            # label_noise_plot(neural_path, ilp_pt, training_samples=s)
+            label_noise_plot(neural_path, ilp_pt, training_samples=s)
             label_noise_degradation_plot(neural_path, ilp_pt, training_samples=s)
 
     if command == 'attribute_noise':
@@ -50,18 +50,10 @@ def plot(args):
             elementary_vs_realistic_plot(neural_path, ilp_pt, tr_samples=s)
 
     if command == 'generalization':
-        min_cars, max_cars = 7, 7
-        # min_car, max_car = 2, 4
-        ds_size = 2000
         train_vis = 'Trains'
         from visualization.ilp_and_neural_generalization import generalization_plot
-        from models.eval import ilp_generalization_test, generalization_test
         ilp_pt = 'output/ilp'
         neural_path = 'output/model_comparison'
-        # get generalization results for neural networks
-        # generalization_test(min_cars, max_cars, base_scene, raw_trains, train_vis, device, ds_path, ds_size=None)
-        # get generalization results for ilp
-        # ilp_generalization_test(ilp_pt, min_cars, max_cars)
         for s in [100, 1000, 10000]:
             generalization_plot(neural_path, ilp_pt, tr_samples=s)
 

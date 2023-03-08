@@ -75,6 +75,19 @@ def main():
         trainer.cross_val(raw_trains, folds=5, rules=rules, models=models, train_count=train_count, noise=noise,
                           log=False, complete_run=True)
 
+    if command == 'eval_generalization':
+        min_cars, max_cars = 7, 7
+        # min_car, max_car = 2, 4
+        ds_size = 2000
+        train_vis = 'Trains'
+        from models.eval import ilp_generalization_test, generalization_test
+        ilp_pt = 'output/ilp'
+        neural_path = 'output/model_comparison'
+        # get generalization results for neural networks
+        generalization_test(min_cars, max_cars, base_scene, raw_trains, train_vis, device, ds_path, ds_size=None)
+        # get generalization results for ilp
+        ilp_generalization_test(ilp_pt, min_cars, max_cars)
+
     if command == 'ilp':
         from ilp.trainer import Ilp_trainer
         trainer = Ilp_trainer()

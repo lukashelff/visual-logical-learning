@@ -77,7 +77,7 @@ def generalization_plot(neural_path, ilp_pth, vis='Trains', min_cars=7, max_cars
         else:
             ax.set_ylabel('Accuracy', fontsize=fontsize)
 
-    make_3_im_legend(fig, axes, datasets, 'Train length', models, colors, mt)
+    make_3_im_legend(fig, axes, datasets, 'Train Length', models, colors, mt)
     os.makedirs(out_path, exist_ok=True)
     plt.savefig(out_path + f'/generalization_{tr_samples}_tr_samples.png', bbox_inches='tight', dpi=400)
 
