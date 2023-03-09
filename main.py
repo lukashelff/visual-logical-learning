@@ -24,13 +24,17 @@ def parse():
     parser.add_argument('--min_train_length', type=int, default=2, help='min number of cars a train can have')
 
     # model settings
-    parser.add_argument('--model_name', type=str, default='resnet18',
+    parser.add_argument('--model', type=str, default='resnet18',
                         help='model to use for training: \'resnet18\', \'VisionTransformer\' or \'EfficientNet\'')
 
     parser.add_argument('--cuda', type=int, default=0, help='Which cuda device to use or cpu if -1')
-    parser.add_argument('--action', type=str, default='train', )
+    parser.add_argument('--action', type=str, default='train',
+                        help='command ot execute: \'plot\',\'train\'')
     parser.add_argument('--command', type=str, default='train',
-                        help='command ot execute: \'compare_models\' \'cnn\', \'vis\', \'ilp\' or \'ct\'')
+                        help='specific command to execute: \'train\', \'eval\', \'ilp\', \'ilp_crossval\', \'split_ds\','
+                             ' \'eval_generalization\' or \'ct\'')
+    parser.add_argument('--y_val', type=str, default='direction',
+                        help='y value to predict: \'direction\', \'mask\', \'attribute\'')
 
     args = parser.parse_args()
 
@@ -49,33 +53,29 @@ def main():
     ds_path = args.ds_path
     class_rule = args.rule
     ds_size = args.dataset_size
-    model_name = args.model_name
+    model_name = args.model
     command = args.command
     action = args.action
+    y_val = args.y_val
 
     sys.path.insert(0, 'TrainGenerator/')
     sys.path.insert(0, 'ilp/rdm-master/')
 
     if action == 'plot':
-        from visualization.plotter import plot
+        from plotter import plot
         plot(args)
         return
 
-    if command == 'ct':
+    if action == 'train':
+        from train import train
+        train(args)
+        return
+
+    if action == 'ct':
         from raw.concept_tester import eval_rule
         eval_rule()
 
-    if command == 'ilp_crossval':
-        from ilp.trainer import Ilp_trainer
-        trainer = Ilp_trainer()
-        rules = ['theoryx', 'numerical', 'complex']
-        models = [args.model_name] if args.model_name == 'popper' or args.model_name == 'aleph' else ['popper', 'aleph']
-        train_count = [100, 1000, 10000]
-        noise = [0, 0.1, 0.3]
-        trainer.cross_val(raw_trains, folds=5, rules=rules, models=models, train_count=train_count, noise=noise,
-                          log=False, complete_run=True)
-
-    if command == 'eval_generalization':
+    if action == 'eval_generalization':
         min_cars, max_cars = 7, 7
         # min_car, max_car = 2, 4
         ds_size = 2000
@@ -88,68 +88,10 @@ def main():
         # get generalization results for ilp
         ilp_generalization_test(ilp_pt, min_cars, max_cars)
 
-    if command == 'ilp':
-        from ilp.trainer import Ilp_trainer
-        trainer = Ilp_trainer()
-        train_size, val_size = 1000, 2000
-        model = 'popper'
-        class_rule = 'theoryx'
-        trainer.train(model, raw_trains, class_rule, train_size, val_size, noise=0.3, train_log=True)
-
-    if command == 'split_ds':
+    if action == 'split_ds':
         from ilp.setup import setup_alpha_ilp_ds
         for rule in ['theoryx', 'numerical', 'complex']:
             setup_alpha_ilp_ds(base_scene, raw_trains, train_vis, ds_size, ds_path, rule)
-
-    if command == 'cnn':
-        from models.trainer import Trainer
-        resize = False
-        batch_size = 25
-        lr = 0.001
-        rules = ['theoryx', 'numerical', 'complex']
-        train_size = [100, 1000, 10000]
-        noises = [0, 0.1, 0.3]
-        noises = [0]
-        visualizations = ['Trains', 'SimpleObjects']
-        scenes = ['base_scene', 'desert_scene', 'sky_scene', 'fisheye_scene']
-        if model_name == 'EfficientNet':
-            batch_size = 25
-        elif model_name == 'VisionTransformer':
-            resize = True
-            lr = 0.00001
-        trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
-                          setup_model=False, setup_ds=False, batch_size=batch_size, resize=resize, lr=lr)
-        trainer.cross_val_train(train_size=train_size, label_noise=noises, rules=rules, replace=False, save_models=True)
-        # trainer.plt_cross_val_performance(True, models=['resnet18', 'EfficientNet', 'VisionTransformer'])
-
-    if command == 'image_noise':
-        from models.trainer import Trainer
-        resize = False
-        batch_size = 25
-        lr = 0.001
-        rules = ['theoryx', 'numerical', 'complex']
-        train_size = [100, 1000, 10000]
-        noises = [0, 0.1, 0.3]
-        noises = [0.1, 0.3]
-        visualizations = ['Trains', 'SimpleObjects']
-        scenes = ['base_scene', 'desert_scene', 'sky_scene', 'fisheye_scene']
-        if model_name == 'EfficientNet':
-            batch_size = 25
-        elif model_name == 'VisionTransformer':
-            resize = True
-            lr = 0.00001
-        trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
-                          setup_model=False, setup_ds=False, batch_size=batch_size, resize=resize, lr=lr)
-        trainer.cross_val_train(train_size=train_size, image_noise=noises, rules=rules, replace=False,
-                                save_models=False)
-
-    if command == 'perception':
-        from models.trainer import Trainer
-        # model_name = 'resnet18'
-        batch_size = 1
-        trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
-                          y_val='mask', resume=False, batch_size=batch_size)
-        trainer.train()
 
 
 if __name__ == '__main__':

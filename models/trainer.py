@@ -60,9 +60,8 @@ class Trainer:
         # setup model and dataset
         self.model = self.setup_model(resume=resume) if setup_model else None
         self.full_ds = get_datasets(base_scene, self.train_col, self.train_vis, ds_size=ds_size, ds_path=ds_path,
-                                    y_val=y_val, max_car=self.max_car, min_car=self.min_car,
-                                    class_rule=class_rule, resize=resize,
-                                    preprocessing=self.preprocess) if setup_ds else None
+                                    y_val=y_val, max_car=self.max_car, min_car=self.min_car, class_rule=class_rule,
+                                    resize=resize, preprocessing=self.preprocess) if setup_ds else None
 
     def cross_val_train(self, train_size=None, label_noise=None, rules=None, visualizations=None, scenes=None,
                         n_splits=5, model_path=None, save_models=False, replace=False, image_noise=None):
@@ -115,7 +114,7 @@ class Trainer:
             self.full_ds = get_datasets(self.base_scene, self.train_col, self.train_vis, class_rule=self.class_rule,
                                         ds_size=self.ds_size, max_car=self.max_car, min_car=self.min_car,
                                         label_noise=self.label_noise, image_noise=self.image_noise,
-                                        ds_path=self.ds_path,
+                                        ds_path=self.ds_path, y_val=self.y_val,
                                         resize=self.resize)
         if set_up:
             self.ds_size = ds_size if ds_size is not None else self.ds_size
@@ -227,7 +226,7 @@ class Trainer:
             model = timm.create_model('tf_efficientnetv2_l_in21k', pretrained=pretrained, num_classes=2)
         elif model_name == 'set_transformer':
             model = SetTransformer(dim_input=32, dim_output=num_output * num_class)
-        elif model_name == 'faster_rcnn':
+        elif model_name == 'rcnn':
             weights = models.detection.FasterRCNN_ResNet50_FPN_V2_Weights.DEFAULT
             model = models.detection.fasterrcnn_resnet50_fpn_v2(weights=weights, box_score_thresh=0.9)
             self.preprocess = weights.transforms()
@@ -277,7 +276,7 @@ class Trainer:
             pref += f'_{self.label_noise}noise'
         if self.image_noise > 0:
             pref += f'_{self.image_noise}im_noise'
-        pref += '/'
+        pref = pref if pref == '' else f'{pref}/'
 
         # if self.label_noise > 0:
         #     train_config += f'noise_{self.label_noise}'
