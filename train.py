@@ -9,7 +9,7 @@ def train(args):
     ds_path = args.ds_path
     class_rule = args.rule
     ds_size = args.dataset_size
-    model_name = args.model_name
+    model_name = args.model
     command = args.command
     max_cars = args.max_train_length
     min_cars = args.min_train_length
