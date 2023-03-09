@@ -28,7 +28,7 @@ def parse():
                         help='model to use for training: \'resnet18\', \'VisionTransformer\' or \'EfficientNet\'')
 
     parser.add_argument('--cuda', type=int, default=0, help='Which cuda device to use or cpu if -1')
-    parser.add_argument('--action', type=str, default='plot', )
+    parser.add_argument('--action', type=str, default='train', )
     parser.add_argument('--command', type=str, default='train',
                         help='command ot execute: \'compare_models\' \'cnn\', \'vis\', \'ilp\' or \'ct\'')
 
@@ -145,10 +145,10 @@ def main():
 
     if command == 'perception':
         from models.trainer import Trainer
-        model_name = 'resnet18'
+        # model_name = 'resnet18'
         batch_size = 1
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
-                          y_val='attribute', resume=False, batch_size=batch_size)
+                          y_val='mask', resume=False, batch_size=batch_size)
         trainer.train()
 
 

@@ -48,25 +48,21 @@ class Trainer:
         self.X_val, self.y_val = X_val, y_val
         self.pretrained, self.resume, self.save_model = pretrained, resume, save_model
         self.resize, self.image_noise, self.label_noise = resize, image_noise, label_noise
-        # self.full_ds = get_datasets(self.base_scene, self.train_col, 10000, self.y_val, resize=resize,
-        #                             X_val=self.X_val)
-
-        if setup_ds:
-            self.full_ds = get_datasets(base_scene, self.train_col, self.train_vis, ds_size=ds_size, ds_path=ds_path,
-                                        y_val=y_val, max_car=self.max_car, min_car=self.min_car,
-                                        class_rule=class_rule, resize=resize)
-        else:
-            self.full_ds = None
-
         # model setup
         self.model_name = model_name
         self.optimizer_name, self.loss_name = optimizer_, loss
-        if setup_model:
-            self.model = self.setup_model(resume=resume)
+        # preprocessing needed for faster rcnn
+        self.preprocess = None
         # training hyper parameter
         self.batch_size, self.num_worker, self.lr, self.step_size, self.gamma, self.momentum, self.num_epochs = \
             batch_size, num_worker, lr, step_size, gamma, momentum, num_epochs
         self.out_path = self.get_model_path()
+        # setup model and dataset
+        self.model = self.setup_model(resume=resume) if setup_model else None
+        self.full_ds = get_datasets(base_scene, self.train_col, self.train_vis, ds_size=ds_size, ds_path=ds_path,
+                                    y_val=y_val, max_car=self.max_car, min_car=self.min_car,
+                                    class_rule=class_rule, resize=resize,
+                                    preprocessing=self.preprocess) if setup_ds else None
 
     def cross_val_train(self, train_size=None, label_noise=None, rules=None, visualizations=None, scenes=None,
                         n_splits=5, model_path=None, save_models=False, replace=False, image_noise=None):
@@ -93,7 +89,8 @@ class Trainer:
             self.label_noise, self.image_noise, self.class_rule, self.train_vis, self.base_scene = l_noise, i_noise, rule, visualization, scene
             self.full_ds = get_datasets(self.base_scene, self.train_col, self.train_vis, class_rule=rule,
                                         ds_size=self.ds_size, max_car=self.max_car, min_car=self.min_car,
-                                        label_noise=self.label_noise, image_noise=self.image_noise, ds_path=self.ds_path,
+                                        label_noise=self.label_noise, image_noise=self.image_noise,
+                                        ds_path=self.ds_path,
                                         resize=self.resize)
             for t_size in train_size:
                 self.full_ds.predictions_im_count = t_size
@@ -114,10 +111,16 @@ class Trainer:
                     tr_it += 1
 
     def train(self, rtpt_extra=0, ds_size=None, set_up=True):
+        if self.full_ds is None:
+            self.full_ds = get_datasets(self.base_scene, self.train_col, self.train_vis, class_rule=self.class_rule,
+                                        ds_size=self.ds_size, max_car=self.max_car, min_car=self.min_car,
+                                        label_noise=self.label_noise, image_noise=self.image_noise,
+                                        ds_path=self.ds_path,
+                                        resize=self.resize)
         if set_up:
             self.ds_size = ds_size if ds_size is not None else self.ds_size
-            self.setup_ds()
             self.setup_model(self.resume)
+            self.setup_ds()
         self.model = do_train(self.base_scene, self.train_col, self.y_val, self.device, self.out_path, self.model_name,
                               self.model, self.full_ds, self.dl, self.checkpoint, self.optimizer, self.scheduler,
                               self.criteria, num_epochs=self.num_epochs, lr=self.lr, step_size=self.step_size,
@@ -157,13 +160,14 @@ class Trainer:
             self.checkpoint = None
 
         print(set_up_txt)
-        dim_out = self.full_ds.get_output_dim()
+        dim_out = get_output_dim(self.y_val)
+        class_dim = get_class_dim(self.y_val)
         if self.loss_name == 'MSELoss':
             loss_fn = nn.MSELoss()
         else:
             loss_fn = nn.CrossEntropyLoss()
         self.criteria = [loss_fn] * dim_out
-        self.model = get_model(self.model_name, self.pretrained, dim_out, self.full_ds.get_class_dim())
+        self.model = self.get_model(self.model_name, self.pretrained, dim_out, class_dim)
 
         if self.checkpoint is not None:
             self.model.load_state_dict(self.checkpoint['model_state_dict'])
@@ -206,6 +210,45 @@ class Trainer:
             'train': DataLoader(self.ds['train'], batch_size=self.batch_size, num_workers=self.num_worker),
             'val': DataLoader(self.ds['val'], batch_size=self.batch_size, num_workers=self.num_worker)
         }
+
+    def get_model(self, model_name, pretrained, num_output, num_class):
+        if model_name == 'resnet18':
+            model = models.resnet18(weights=ResNet18_Weights.DEFAULT)
+        elif model_name == 'resnet50':
+            model = models.resnet50(weights=ResNet50_Weights.DEFAULT)
+        elif model_name == 'resnet101':
+            model = models.resnet101(weights=ResNet101_Weights.DEFAULT)
+        elif model_name == 'VisionTransformer':
+            model = timm.create_model('vit_large_patch16_224', pretrained=pretrained, num_classes=2)
+        elif model_name == 'EfficientNet':
+            # model = models.efficientnet_b7(pretrained=pretrained, num_classes=2)
+            # model = timm.create_model('efficientnet_b0', pretrained=pretrained, num_classes=2)
+            # model = timm.create_model('tf_efficientnet_b7_ns', pretrained=pretrained, num_classes=2)
+            model = timm.create_model('tf_efficientnetv2_l_in21k', pretrained=pretrained, num_classes=2)
+        elif model_name == 'set_transformer':
+            model = SetTransformer(dim_input=32, dim_output=num_output * num_class)
+        elif model_name == 'faster_rcnn':
+            weights = models.detection.FasterRCNN_ResNet50_FPN_V2_Weights.DEFAULT
+            model = models.detection.fasterrcnn_resnet50_fpn_v2(weights=weights, box_score_thresh=0.9)
+            self.preprocess = weights.transforms()
+        elif model_name == 'attr_predictor':
+            model = AttributeNetwork(dim_input=32)
+        elif model_name == 'pos_predictor':
+            model = PositionNetwork(dim_input=4, dim_output=num_output)
+        elif model_name == 'MLP':
+            model = MLP(dim_in=4 * 32, dim_out=num_output * num_class)
+        else:
+            raise AssertionError('select valid model')
+
+        if 'resnet' in model_name:
+            if num_class == 2:
+                num_ftrs = model.fc.in_features
+                # Here the size of each output sample is set to 2.
+                # Alternatively, it can be generalized to nn.Linear(num_ftrs, len(class_names)).
+                model.fc = nn.Linear(num_ftrs, num_class)
+            else:
+                model = MultiLabelNeuralNetwork(model, num_output)
+        return model
 
     def plt_accuracy(self):
         visualize_statistics(self.train_col, self.base_scene, self.y_val, self.ds, self.out_path, self.model_name)
@@ -571,42 +614,6 @@ def do_train(base_scene, train_col, y_val, device, out_path, model_name, model, 
     return model.to('cpu')
 
 
-def get_model(model_name, pretrained, num_output, num_class):
-    if model_name == 'resnet18':
-        model = models.resnet18(weights=ResNet18_Weights.DEFAULT)
-    elif model_name == 'resnet50':
-        model = models.resnet50(weights=ResNet50_Weights.DEFAULT)
-    elif model_name == 'resnet101':
-        model = models.resnet101(weights=ResNet101_Weights.DEFAULT)
-    elif model_name == 'VisionTransformer':
-        model = timm.create_model('vit_large_patch16_224', pretrained=pretrained, num_classes=2)
-    elif model_name == 'EfficientNet':
-        # model = models.efficientnet_b7(pretrained=pretrained, num_classes=2)
-        # model = timm.create_model('efficientnet_b0', pretrained=pretrained, num_classes=2)
-        # model = timm.create_model('tf_efficientnet_b7_ns', pretrained=pretrained, num_classes=2)
-        model = timm.create_model('tf_efficientnetv2_l_in21k', pretrained=pretrained, num_classes=2)
-    elif model_name == 'set_transformer':
-        model = SetTransformer(dim_input=32, dim_output=num_output * num_class)
-    elif model_name == 'attr_predictor':
-        model = AttributeNetwork(dim_input=32)
-    elif model_name == 'pos_predictor':
-        model = PositionNetwork(dim_input=4, dim_output=num_output)
-    elif model_name == 'MLP':
-        model = MLP(dim_in=4 * 32, dim_out=num_output * num_class)
-    else:
-        raise AssertionError('select valid model')
-
-    if 'resnet' in model_name:
-        if num_class == 2:
-            num_ftrs = model.fc.in_features
-            # Here the size of each output sample is set to 2.
-            # Alternatively, it can be generalized to nn.Linear(num_ftrs, len(class_names)).
-            model.fc = nn.Linear(num_ftrs, num_class)
-        else:
-            model = MultiLabelNeuralNetwork(model, num_output)
-    return model
-
-
 # copied from https://discuss.pytorch.org/t/moving-optimizer-from-cpu-to-gpu/96068
 def optimizer_to(optim, device):
     for param in optim.state.values():
@@ -621,3 +628,55 @@ def optimizer_to(optim, device):
                     subparam.data = subparam.data.to(device)
                     if subparam._grad is not None:
                         subparam._grad.data = subparam._grad.data.to(device)
+
+
+def get_class_dim(y_val):
+    '''
+    Get the number of classes for each label
+    :param y_val: type of y_val
+    :return: number of classes for each label
+    '''
+    # ds labels
+    labels = ['direction']
+    label_classes = ['west', 'east']
+    attributes = ['color', 'length', 'walls', 'roofs', 'wheel_count', 'load_obj1', 'load_obj2',
+                  'load_obj3'] * 4
+    color = ['yellow', 'green', 'grey', 'red', 'blue']
+    length = ['short', 'long']
+    walls = ["braced_wall", 'solid_wall']
+    roofs = ["roof_foundation", 'solid_roof', 'braced_roof', 'peaked_roof']
+    wheel_count = ['2_wheels', '3_wheels']
+    load_obj = ["box", "golden_vase", 'barrel', 'diamond', 'metal_pot', 'oval_vase']
+    attribute_classes = ['none'] + color + length + walls + roofs + wheel_count + load_obj
+    output = {
+        'direction': len(label_classes),
+        'attributes': len(attribute_classes),
+        'mask': len(attribute_classes),
+    }
+    return output[y_val]
+
+
+def get_output_dim(y_val):
+    '''
+    Get number of labels
+    :param y_val: type of y_val
+    :return: number of labels
+    '''
+    # ds labels
+    labels = ['direction']
+    label_classes = ['west', 'east']
+    attributes = ['color', 'length', 'walls', 'roofs', 'wheel_count', 'load_obj1', 'load_obj2',
+                  'load_obj3'] * 4
+    color = ['yellow', 'green', 'grey', 'red', 'blue']
+    length = ['short', 'long']
+    walls = ["braced_wall", 'solid_wall']
+    roofs = ["roof_foundation", 'solid_roof', 'braced_roof', 'peaked_roof']
+    wheel_count = ['2_wheels', '3_wheels']
+    load_obj = ["box", "golden_vase", 'barrel', 'diamond', 'metal_pot', 'oval_vase']
+    attribute_classes = ['none'] + color + length + walls + roofs + wheel_count + load_obj
+    output = {
+        'direction': len(labels),
+        'attributes': len(attributes),
+        'mask': len(attributes),
+    }
+    return output[y_val]
