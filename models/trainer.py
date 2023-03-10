@@ -1,32 +1,24 @@
-import copy
-import json
-import time
+from itertools import product
 
-import numpy as np
-import pandas as pd
 import timm
 import torch.nn as nn
 import torch.optim as optim
 import torchvision.models as models
-from matplotlib import pyplot as plt
 from numpy import arange
-from rtpt.rtpt import RTPT
-from sklearn.metrics import balanced_accuracy_score, accuracy_score, recall_score, precision_score, confusion_matrix
-from sklearn.model_selection import StratifiedShuffleSplit, KFold, ShuffleSplit
-from tabulate import tabulate
+from sklearn.model_selection import StratifiedShuffleSplit
 from torch.optim import lr_scheduler
-from torch.utils.data import Subset
 from torch.utils.data import DataLoader
-from itertools import product
-
+from torch.utils.data import Subset
 from torchvision.models import ResNet18_Weights, ResNet50_Weights, ResNet101_Weights
 
 from michalski_trains.dataset import get_datasets
 from models.mlp.mlp import MLP
-from models.multi_label_nn import MultiLabelNeuralNetwork, print_train, show_torch_im
+from models.multi_label_nn import MultiLabelNeuralNetwork
 from models.multioutput_regression.pos_net import PositionNetwork
+from models.rcnn.train import train_rcnn
 from models.set_transformer import SetTransformer
 from models.spacial_attr_net.attr_net import AttributeNetwork
+from models.train import do_train
 from util import *
 from visualization.vis_model import visualize_statistics, vis_confusion_matrix
 from visualization.vis_model_comparison import model_scene_imcount_comparison, csv_to_tex_table
@@ -120,11 +112,20 @@ class Trainer:
             self.ds_size = ds_size if ds_size is not None else self.ds_size
             self.setup_model(self.resume)
             self.setup_ds()
-        self.model = do_train(self.base_scene, self.train_col, self.y_val, self.device, self.out_path, self.model_name,
-                              self.model, self.full_ds, self.dl, self.checkpoint, self.optimizer, self.scheduler,
-                              self.criteria, num_epochs=self.num_epochs, lr=self.lr, step_size=self.step_size,
-                              gamma=self.gamma, save_model=self.save_model, rtpt_extra=rtpt_extra
-                              )
+        if self.model_name == 'rcnn':
+            self.model = train_rcnn(self.base_scene, self.train_col, self.y_val, self.device, self.out_path,
+                                    self.model_name, self.model, self.full_ds, self.dl, self.checkpoint, self.optimizer,
+                                    self.scheduler, self.criteria, num_epochs=self.num_epochs, lr=self.lr,
+                                    step_size=self.step_size, gamma=self.gamma, save_model=self.save_model,
+                                    rtpt_extra=rtpt_extra
+                                    )
+        else:
+            self.model = do_train(self.base_scene, self.train_col, self.y_val, self.device, self.out_path,
+                                  self.model_name, self.model, self.full_ds, self.dl, self.checkpoint, self.optimizer,
+                                  self.scheduler, self.criteria, num_epochs=self.num_epochs, lr=self.lr,
+                                  step_size=self.step_size, gamma=self.gamma, save_model=self.save_model,
+                                  rtpt_extra=rtpt_extra
+                                  )
         torch.cuda.empty_cache()
 
     def val(self, val_size=None, set_up=True, model_path=None):
@@ -134,13 +135,22 @@ class Trainer:
             val_size = val_size if val_size is not None else self.ds_size
             self.setup_ds(val_size=val_size)
             self.setup_model(self.resume, path=model_path)
-        acc, precision, recall = do_train(self.base_scene, self.train_col, self.y_val, self.device, self.out_path,
-                                          self.model_name,
-                                          self.model, self.full_ds, self.dl, self.checkpoint, self.optimizer,
-                                          self.scheduler,
-                                          self.criteria, num_epochs=self.num_epochs, lr=self.lr,
-                                          step_size=self.step_size,
-                                          gamma=self.gamma, save_model=False, train='val')
+        if self.model_name == 'rcnn':
+            acc, precision, recall = train_rcnn(self.base_scene, self.train_col, self.y_val, self.device, self.out_path,
+                                                self.model_name,
+                                                self.model, self.full_ds, self.dl, self.checkpoint, self.optimizer,
+                                                self.scheduler,
+                                                self.criteria, num_epochs=self.num_epochs, lr=self.lr,
+                                                step_size=self.step_size,
+                                                gamma=self.gamma, save_model=False, train='val')
+        else:
+            acc, precision, recall = do_train(self.base_scene, self.train_col, self.y_val, self.device, self.out_path,
+                                              self.model_name,
+                                              self.model, self.full_ds, self.dl, self.checkpoint, self.optimizer,
+                                              self.scheduler,
+                                              self.criteria, num_epochs=self.num_epochs, lr=self.lr,
+                                              step_size=self.step_size,
+                                              gamma=self.gamma, save_model=False, train='val')
         torch.cuda.empty_cache()
         self.num_epochs = eps
         return acc, precision, recall
@@ -205,10 +215,18 @@ class Trainer:
             'train': Subset(self.full_ds, tr_idx),
             'val': Subset(self.full_ds, val_idx)
         }
-        self.dl = {
-            'train': DataLoader(self.ds['train'], batch_size=self.batch_size, num_workers=self.num_worker),
-            'val': DataLoader(self.ds['val'], batch_size=self.batch_size, num_workers=self.num_worker)
-        }
+        # collate = {
+        #     'rcnn':
+        # }
+
+        if self.model_name == 'rcnn':
+            self.dl = {'train': DataLoader(self.ds['train'], batch_size=self.batch_size, num_workers=self.num_worker,
+                                           collate_fn=collate_fn_rcnn),
+                       'val': DataLoader(self.ds['val'], batch_size=self.batch_size, num_workers=self.num_worker,
+                                         collate_fn=collate_fn_rcnn)}
+        else:
+            self.dl = {'train': DataLoader(self.ds['train'], batch_size=self.batch_size, num_workers=self.num_worker),
+                       'val': DataLoader(self.ds['val'], batch_size=self.batch_size, num_workers=self.num_worker)}
 
     def get_model(self, model_name, pretrained, num_output, num_class):
         if model_name == 'resnet18':
@@ -291,327 +309,6 @@ class Trainer:
         out_path = f'output/models/{model_name}/{self.y_val}_classification/{ds_settings}/{pref}{train_config}/{suffix}'
         return out_path
 
-    def transfer_classification(self, train_size, n_splits=5, batch_size=None):
-        print(f'transfer classification: {self.model_name} trained on base scene to predict other scenes')
-        data = pd.DataFrame(columns=['methods', 'number of images', 'scenes', 'mean', 'variance', 'std'])
-        data_cv = pd.DataFrame(columns=['Methods', 'number of images', 'cv iteration', 'Validation acc', 'scene'])
-        train_size = [100, 1000, 8000] if train_size is None else train_size
-        batch_size = self.batch_size if batch_size is None else batch_size
-
-        rtpt = RTPT(name_initials='LH', experiment_name=f'trans', max_iterations=n_splits * 4 * len(train_size))
-        rtpt.start()
-
-        for scene in ['base_scene', 'desert_scene', 'sky_scene', 'fisheye_scene']:
-            ds = get_datasets(scene, self.train_col, self.train_vis, 10000, resize=False,
-                              ds_path=self.ds_path)
-            dl = DataLoader(ds, batch_size=batch_size, num_workers=self.num_worker)
-            for training_size in train_size:
-                accs = []
-                for fold in range(n_splits):
-                    rtpt.step()
-                    torch.cuda.memory_summary(device=None, abbreviated=False)
-
-                    self.out_path = self.get_model_path(prefix=f'cv/', suffix=f'it_{fold}/')
-                    del self.model
-                    self.setup_model(resume=True)
-                    self.model.eval()
-
-                    all_labels = np.empty(0, int)
-                    all_preds = np.empty(0, int)
-                    # Iterate over data.
-                    for inputs, labels in dl:
-                        print(torch.cuda.memory_summary(device=None, abbreviated=False))
-                        inputs = inputs.to(self.device)
-                        labels = labels.to(self.device)
-                        self.model.to(self.device)
-                        labels = torch.t(labels)
-                        torch.cuda.empty_cache()
-                        torch.cuda.synchronize()
-                        print(torch.cuda.memory_summary(device=None, abbreviated=False))
-
-                        outputs = self.model(inputs)
-                        if outputs.dim() < 3:
-                            outputs = outputs.unsqueeze(dim=1)
-                        outputs = torch.moveaxis(outputs, 0, 1)
-
-                        preds = torch.max(outputs, dim=2)[1]
-
-                        labels, preds = labels.to("cpu"), preds.to("cpu")
-                        labels, preds = labels.detach().numpy(), preds.detach().numpy()
-                        all_labels = np.hstack((all_labels, labels.flatten()))
-                        all_preds = np.hstack((all_preds, preds.flatten()))
-                    acc = accuracy_score(all_labels, all_preds) * 100
-                    accs.append(acc)
-
-                    print(f'{self.model_name} trained on base scene with {training_size} images (cv iteration {fold})'
-                          f' achieves an accuracy of {acc} when classifying {scene} images')
-                    li = [self.model_name, training_size, fold, acc, scene]
-                    _df = pd.DataFrame([li], columns=['Methods', 'number of images', 'cv iteration', 'Validation acc',
-                                                      'scene'])
-                    data_cv = pd.concat([data_cv, _df], ignore_index=True)
-                mean = sum(accs) / len(accs)
-                variance = sum((xi - mean) ** 2 for xi in accs) / len(accs)
-                std = np.sqrt(variance)
-                li = [self.model_name, training_size, scene, mean, variance, std]
-                _df = pd.DataFrame([li], columns=['methods', 'number of images', 'scenes', 'mean', 'variance', 'std'])
-                data = pd.concat([data, _df], ignore_index=True)
-        print(tabulate(data, headers='keys', tablefmt='psql'))
-        path = f'output/models/{self.model_name}/{self.y_val}_classification/{self.train_col}/{self.base_scene}/'
-        os.makedirs(path, exist_ok=True)
-        data.to_csv(path + 'transfer_classification.csv')
-        data_cv.to_csv(path + 'transfer_classification_cv.csv')
-        # csv_to_tex_table(path + 'transfer_classification.csv', )
-
-    def predict_train_description(self, use_transfer_trained_model=False, im_counts=None):
-
-        # model_pred1 = 'attr_predictor'
-        # model_pred2 = 'resnet18'
-        # out_path = f'output/models/{model_pred2}/attribute_classification/RandomTrains/{self.base_scene}'
-        # config = f'imcount_10000_X_val_predicted_mask_lr_0.001_step_5_gamma0.8'
-        train_col = self.train_col
-        dl = DataLoader(self.full_ds, batch_size=self.batch_size, shuffle=False, num_workers=4)
-        if im_counts is None: im_counts = [100, 1000, 8000]
-        if not use_transfer_trained_model:
-            self.train_col = 'RandomTrains'
-            im_counts = [8000]
-
-        # self.X_val = 'gt_mask'
-
-        for im_count in im_counts:
-            out_path = f'output/models/{self.model_name}/attribute_classification/{self.train_col}/{self.base_scene}/predicted_descriptions/{im_count}'
-
-            print(
-                f'{self.model_name} trained on {im_count}{self.train_col} images predicting train descriptions for the'
-                f' {train_col} trains in {self.base_scene}')
-            accs = []
-            for fold in range(5):
-
-                path = self.get_model_path(prefix=f'cv/', suffix=f'it_{fold}/')
-                self.setup_model(path=path, resume=True)
-
-                self.model.eval()  # Set model to evaluate mode
-                self.model.to(self.device)
-
-                rtpt = RTPT(name_initials='LH', experiment_name=f'Pred_desc_{self.base_scene[:3]}',
-                            max_iterations=self.full_ds.__len__() / self.batch_size)
-                rtpt.start()
-
-                with torch.no_grad():
-
-                    all_labels = np.empty([0, 32], dtype=int)
-                    all_preds = np.empty([0, 32], dtype=int)
-
-                    # Iterate over data.
-                    for inputs, labels in dl:
-                        # for item in range(self.full_ds.__len__()):
-
-                        inputs = inputs.to(self.device)
-                        labels = labels.to(self.device)
-                        self.model.to(self.device)
-
-                        outputs = self.model(inputs)
-                        if outputs.dim() < 3:
-                            outputs = outputs.unsqueeze(dim=1)
-
-                        preds = torch.max(outputs, dim=2)[1]
-
-                        labels, preds = labels.to("cpu"), preds.to("cpu")
-                        labels, preds = labels.detach().numpy(), preds.detach().numpy()
-
-                        all_labels = np.vstack((all_labels, labels))
-                        all_preds = np.vstack((all_preds, preds))
-                        rtpt.step()
-                acc = accuracy_score(all_labels.flatten(), all_preds.flatten())
-                print(f'fold {fold} acc score: {acc}')
-                os.makedirs(out_path, exist_ok=True)
-                # print('acc score: ' + str(acc))
-                accs.append(acc)
-
-                np.save(out_path + f'/fold_{fold}.npy', all_preds, allow_pickle=True)
-                del self.model
-            print('average acc score: ' + str(np.mean(accs)))
-
-
-def do_train(base_scene, train_col, y_val, device, out_path, model_name, model, full_ds, dl,
-             checkpoint, optimizer, scheduler, criteria, num_epochs=25, lr=0.001, step_size=5, gamma=.8,
-             save_model=True, rtpt_extra=0, train='train'):
-    rtpt = RTPT(name_initials='LH', experiment_name=f'train_{base_scene[:3]}_{train_col[0]}',
-                max_iterations=num_epochs + rtpt_extra)
-    rtpt.start()
-    epoch_init = 0
-    phases = ['train', 'val'] if train == 'train' else ['val']
-    if train == 'train':
-        print(f'{train} settings: {out_path}')
-
-    if checkpoint is not None:
-        epoch_init = checkpoint['epoch']
-        loss = checkpoint['loss']
-
-    label_names = full_ds.get_ds_labels()
-    class_names = full_ds.get_ds_classes()
-    unique_label_names = list(set(label_names))
-    since = time.time()
-    best_model_wts = copy.deepcopy(model.state_dict())
-    best_acc = 0.0
-
-    dataset_sizes = {
-        'train': len(dl['train'].dataset),
-        'val': len(dl['val'].dataset)
-    }
-
-    epoch_loss = {
-        'train': [0] * num_epochs,
-        'val': [0] * num_epochs
-    }
-    performance_metrics = ['bal_acc', 'acc', 'precision', 'recall']
-    epoch_label_accs = {}
-    epoch_acum_accs = {}
-    for phase in ['train', 'val']:
-        epoch_acum_accs[phase] = {}
-        for metric in ['bal_acc', 'acc']:
-            epoch_acum_accs[phase][metric] = [0] * num_epochs
-        epoch_label_accs[phase] = {}
-
-        for label in label_names:
-            epoch_label_accs[phase][label] = {}
-            for metric in ['bal_acc', 'acc']:
-                epoch_label_accs[phase][label][metric] = [0] * num_epochs
-
-        for metric in ['precision', 'recall']:
-            epoch_label_accs[phase][metric] = {}
-            for l_class in class_names:
-                epoch_label_accs[phase][metric][l_class] = [0] * num_epochs
-
-    for epoch in range(num_epochs):
-        rtpt.step()
-        time_elapsed = time.time() - since
-
-        # Each epoch has a training and validation phase
-        for phase in phases:
-            if phase == 'train':
-                model.train()  # Set model to training mode
-            else:
-                model.eval()  # Set model to evaluate mode
-
-            running_loss = 0.0
-            all_labels = np.empty((len(unique_label_names), 0), int)
-            all_preds = np.empty((len(unique_label_names), 0), int)
-
-            # Iterate over data.
-            for inputs, labels in dl[phase]:
-                inputs = inputs.to(device)
-                labels = labels.to(device)
-                model.to(device)
-                # input_labes = (inputs.amax(dim=(2, 3)) * 22).round().type(torch.int)
-                # assert (input_labes - labels).sum() == 0
-                labels = torch.t(labels)
-
-                # zero the parameter gradients
-                optimizer.zero_grad()
-
-                # forward
-                # track history if only in train
-                with torch.set_grad_enabled(phase == 'train'):
-                    outputs = model(inputs)
-                    if outputs.dim() < 3:
-                        # if model only has 1 output add dimension
-                        outputs = outputs.unsqueeze(dim=1)
-                    # move multi output axis to front
-                    outputs = torch.moveaxis(outputs, 0, 1)
-                    # preds = torch.stack([torch.max(output, 1)[1] for output in outputs]).to(device)
-                    preds = torch.max(outputs, dim=2)[1]
-
-                    losses = [criterion(output, label) for label, output, criterion in zip(labels, outputs, criteria)]
-                    loss = sum(losses)
-                    # backward + optimize only if in training phase
-                    if phase == 'train':
-                        loss.backward()
-                        optimizer.step()
-                # print_train(outputs)
-                # show_torch_im(inputs)
-
-                # to numpy
-                labels, preds = labels.to("cpu"), preds.to("cpu")
-                labels, preds = labels.detach().numpy(), preds.detach().numpy()
-                # print_train(labels)
-                # print_train(preds)
-                # combine the same attributes (labels) to a collective list e.g. color of car 3 and 4
-                for i in range(len(label_names) // len(unique_label_names)):
-                    all_labels = np.hstack(
-                        (all_labels, labels[len(unique_label_names) * i:len(unique_label_names) * (i + 1)]))
-                    all_preds = np.hstack(
-                        (all_preds, preds[len(unique_label_names) * i:len(unique_label_names) * (i + 1)]))
-                # statistics
-                running_loss += loss.item() * inputs.size(0) / labels.shape[0]
-
-            if phase == 'train':
-                scheduler.step()
-            epoch_loss[phase][epoch] = running_loss / dataset_sizes[phase]
-
-            # recall = recall_score(all_labels.flatten(), all_preds.flatten(), average=None, zero_division=0)
-            # precision = precision_score(all_labels.flatten(), all_preds.flatten(), average=None, zero_division=0)
-            cm = confusion_matrix(all_labels.flatten(), all_preds.flatten(), )
-            FP = cm.sum(axis=0) - np.diag(cm)
-            FN = cm.sum(axis=1) - np.diag(cm)
-            TP = np.diag(cm)
-            TN = cm.sum() - (FP + FN + TP)
-            recall = TP / (TP + FN)
-            precision = TP / (TP + FP)
-            for re, pre, class_name in zip(recall, precision, class_names):
-                epoch_label_accs[phase]['recall'][class_name][epoch] = re
-                epoch_label_accs[phase]['precision'][class_name][epoch] = pre
-
-            for label, pred, label_name in zip(all_labels, all_preds, label_names):
-                bal_acc = balanced_accuracy_score(label, pred)
-                acc = accuracy_score(label, pred)
-                for acc_type, metric_name in zip([bal_acc, acc], ['bal_acc', 'acc']):
-                    epoch_label_accs[phase][label_name][metric_name][epoch] += acc_type
-                    epoch_acum_accs[phase][metric_name][epoch] += acc_type / len(unique_label_names)
-            # deep copy the model
-            if phase == 'val' and epoch_acum_accs[phase]['acc'][epoch] > best_acc:
-                best_acc = epoch_acum_accs[phase]['acc'][epoch]
-                best_model_wts = copy.deepcopy(model.state_dict())
-        if 'train' in phases:
-            print(f'{model_name} training Epoch {epoch + 1}/{num_epochs}, ' +
-                  f'elapsed time: {int(time_elapsed // 60)}m {int(time_elapsed % 60)}s, ' +
-                  f'val Loss: {round(epoch_loss["val"][epoch], 4)} Acc: {round(epoch_acum_accs["val"]["acc"][epoch] * 100, 2)}%, ' +
-                  f'train Loss: {round(epoch_loss["train"][epoch], 4)} Acc: {round(epoch_acum_accs["train"]["acc"][epoch] * 100, 2)}%')
-
-    os.makedirs(out_path, exist_ok=True)
-    print_text = f'Best val Acc: {round(100 * best_acc, 2)}%'
-    if train == 'train':
-        print(print_text)
-        # load best model weights
-        model.load_state_dict(best_model_wts)
-        statistics = {
-            'epoch_label_accs': epoch_label_accs,
-            'epoch_acum_accs': epoch_acum_accs,
-            'epoch_loss': epoch_loss
-        }
-
-        if save_model:
-            torch.save({
-                'epoch': num_epochs + epoch_init,
-                'model_state_dict': model.state_dict(),
-                'optimizer_state_dict': optimizer.state_dict(),
-                'loss': loss
-            }, out_path + 'model.pth')
-
-        if checkpoint is not None and os.path.isfile(out_path + 'metrics.json'):
-            with open(out_path + 'metrics.json', 'r') as fp:
-                stat_init = json.load(fp)
-                statistics = merge(stat_init.copy(), statistics)
-        with open(out_path + 'metrics.json', 'w+') as fp:
-            json.dump(statistics, fp)
-    elif train == 'val':
-        print_text += f', TP: {TP[0]} TN: {TN[0]} FP: {FP[0]} FN: {FN[0]}, precision: {TP[0] / (TP[0] + FP[0])},' \
-                      f' recall: {TP[0] / (TP[0] + FN[0])}'
-        print(print_text)
-        print('-' * 10)
-        return best_acc, precision, recall
-    print('-' * 10)
-    return model.to('cpu')
-
 
 # copied from https://discuss.pytorch.org/t/moving-optimizer-from-cpu-to-gpu/96068
 def optimizer_to(optim, device):
@@ -679,3 +376,11 @@ def get_output_dim(y_val):
         'mask': len(attributes),
     }
     return output[y_val]
+
+
+def collate_fn_rcnn(batch):
+    """
+    To handle the data loading as different images may have different number
+    of objects and to handle varying size tensors as well.
+    """
+    return tuple(zip(*batch))
