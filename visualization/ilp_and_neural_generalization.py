@@ -12,7 +12,7 @@ from visualization.data_handler import get_ilp_neural_data
 from visualization.vis_util import make_3_im_legend
 
 
-def generalization_plot(neural_path, ilp_pth, vis='Trains', min_cars=7, max_cars=7, tr_samples=10000):
+def generalization_plot(neural_path, ilp_pth, outpath, vis='Trains', min_cars=7, max_cars=7, tr_samples=10000):
     labelsize, fontsize = 15, 20
 
     with open(neural_path + f'/generalization/ilp_generalization_{min_cars}_{max_cars}.csv', 'r') as f:
@@ -47,7 +47,7 @@ def generalization_plot(neural_path, ilp_pth, vis='Trains', min_cars=7, max_cars
 
     rules = ['theoryx', 'numerical', 'complex']
 
-    out_path = f'{neural_path}/generalization'
+    out_path = f'{outpath}/generalization'
     materials_s = ["///", "//", '/', '\\', '\\\\']
     mt = {model: materials_s[n] for n, model in enumerate(models)}
     sns.set_theme(style="whitegrid")

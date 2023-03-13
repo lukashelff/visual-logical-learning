@@ -11,7 +11,7 @@ from matplotlib import pyplot as plt
 from visualization.data_handler import get_ilp_neural_data
 
 
-def rule_complexity_plot(neural_path, ilp_pth, vis='Trains', im_count=1000):
+def rule_complexity_plot(neural_path, ilp_pth, outpath, vis='Trains', im_count=1000):
     labelsize, fontsize = 15, 20
     ilp_stats_path = f'{ilp_pth}/stats'
     neural_stats_path = neural_path + '/label_acc_over_epoch.csv'
@@ -24,7 +24,7 @@ def rule_complexity_plot(neural_path, ilp_pth, vis='Trains', im_count=1000):
     noise = data['noise'].unique()
     rules = ['theoryx', 'numerical', 'complex']
 
-    out_path = f'{neural_path}/rule_complexity'
+    out_path = f'{outpath}/rule_complexity'
     materials_s = ["///", "//", '/', '\\', '\\\\']
     mt = {model: materials_s[n] for n, model in enumerate(models)}
     sns.set_theme(style="whitegrid")

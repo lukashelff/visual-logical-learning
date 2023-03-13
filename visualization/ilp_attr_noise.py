@@ -13,7 +13,7 @@ from visualization.data_handler import get_ilp_neural_data
 from visualization.vis_util import make_3_im_legend
 
 
-def attribute_noise_plot(neural_path, ilp_pth, training_samples=1000, vis='Trains'):
+def attribute_noise_plot(neural_path, ilp_pth, outpath, training_samples=1000, vis='Trains'):
     labelsize, fontsize = 15, 20
 
     ilp_stats_path = f'{ilp_pth}/attr_noise/stats'

@@ -9,12 +9,12 @@ import pandas as pd
 def get_cv_data(out_path, y_val):
     data = pd.DataFrame(
         columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'cv iteration', 'label', 'epoch',
-                 'Validation acc', 'noise'])
+                 'Validation acc', 'noise', 'noise type'])
     data_acum_acc = pd.DataFrame(
         columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'cv iteration', 'epoch',
-                 'Validation acc', 'Train acc', 'noise'])
+                 'Validation acc', 'Train acc', 'noise', 'noise type'])
     data_ev = pd.DataFrame(
-        columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'mean', 'variance', 'std', 'noise'])
+        columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'mean', 'variance', 'std', 'noise', 'noise type'])
     models = os.listdir('output/models/')
     if 'old' in models:
         models.remove('old')
@@ -40,10 +40,15 @@ def get_cv_data(out_path, y_val):
             for noise in noises:
                 path3 = path2 + f'{noise}/'
                 ns = 0 if len(noise) == 2 else float(noise.split('_')[1][:3])
+                if 'im_noise' in noise:
+                    noise_type = 'image noise'
+                elif 'noise' in noise:
+                    noise_type = 'label noise'
+                else:
+                    noise_type = 'no noise'
                 configs = os.listdir(path3)
                 configs.insert(0, configs.pop())
                 for config in configs:
-
                     conf = config.split('_')
                     imcount = int(conf[1])
                     cv_paths = glob.glob(path3 + config + '/*/metrics.json')
@@ -55,6 +60,7 @@ def get_cv_data(out_path, y_val):
                             epoch_acum_accs = statistics['epoch_acum_accs']
                             epoch_loss = statistics['epoch_loss']['val']
                             num_epochs = len(epoch_loss)
+                            # final_acc.append(max(epoch_acum_accs['val']['acc']))
                             final_acc.append(epoch_acum_accs['val']['acc'][-1])
                             labels = [key for key in epoch_label_accs][:-2]
                             for label in labels:
@@ -64,11 +70,11 @@ def get_cv_data(out_path, y_val):
                                     acc = val_acc['acc'][epoch]
                                     li.append(
                                         [model_name, imcount, rule, visualization, scene, iteration, label, epoch, acc,
-                                         ns])
+                                         ns, noise_type])
                                 _df = pd.DataFrame(li, columns=['Methods', 'number of images', 'rule', 'visualization',
                                                                 'scene',
                                                                 'cv iteration', 'label', 'epoch', 'Validation acc',
-                                                                'noise'])
+                                                                'noise', 'noise type'])
                                 data = pd.concat([data, _df], ignore_index=True)
                                 li = []
                                 for epoch in range(num_epochs):
@@ -76,27 +82,27 @@ def get_cv_data(out_path, y_val):
                                     acc_train = epoch_acum_accs['train']['acc'][epoch]
                                     li.append(
                                         [model_name, imcount, rule, visualization, scene, iteration, epoch, acc,
-                                         acc_train, ns])
+                                         acc_train, ns, noise_type])
                                 _df = pd.DataFrame(li, columns=['Methods', 'number of images', 'rule', 'visualization',
                                                                 'scene',
                                                                 'cv iteration', 'epoch', 'Validation acc', 'Train acc',
-                                                                'noise'])
+                                                                'noise', 'noise type'])
                                 data_acum_acc = pd.concat([data_acum_acc, _df], ignore_index=True)
                     if len(final_acc) > 0:
                         final_acc = np.array(final_acc) * 100
                         mean = sum(final_acc) / len(final_acc)
                         variance = sum((xi - mean) ** 2 for xi in final_acc) / len(final_acc)
                         std = np.sqrt(variance)
-                        li = [model_name, imcount, rule, visualization, scene, mean, variance, std, ns]
+                        li = [model_name, imcount, rule, visualization, scene, mean, variance, std, ns, noise_type]
                         _df = pd.DataFrame([li],
                                            columns=['Methods', 'number of images', 'rule', 'visualization', 'scene',
                                                     'mean',
-                                                    'variance', 'std', 'noise'])
+                                                    'variance', 'std', 'noise', 'noise type'])
                         data_ev = pd.concat([data_ev, _df], ignore_index=True)
     os.makedirs(out_path, exist_ok=True)
-    data.to_csv(out_path + 'label_acc_over_epoch.csv')
-    data_acum_acc.to_csv(out_path + 'mean_acc_over_epoch.csv')
-    data_ev.to_csv(out_path + 'mean_variance_comparison.csv')
+    data.to_csv(out_path + '/label_acc_over_epoch.csv')
+    data_acum_acc.to_csv(out_path + '/mean_acc_over_epoch.csv')
+    data_ev.to_csv(out_path + '/mean_variance_comparison.csv')
 
 
 def get_ilp_neural_data(ilp_stats_path, neural_stats_path, vis='Train'):
@@ -113,12 +119,14 @@ def get_ilp_neural_data(ilp_stats_path, neural_stats_path, vis='Train'):
                 ilp_data.append(pd.read_csv(f))
         ilp_data = pd.concat(ilp_data, ignore_index=True)
         ilp_data['visualization'] = 'Trains'
+        ilp_data['noise type'] = 'label noise'
+        ilp_data.loc[ilp_data['noise'] == 0, 'noise type'] = 'no noise'
         ilp_models = sorted(ilp_data['Methods'].unique())
 
     if neural_stats_path is None:
         neur_data = pd.DataFrame(
             columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'cv iteration', 'epoch',
-                     'Validation acc', 'noise'])
+                     'Validation acc', 'noise', 'noise type'])
         neural_models = []
     else:
         with open(neural_stats_path, 'r') as f:

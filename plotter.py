@@ -11,7 +11,7 @@ def plot(args):
     ds_path = args.ds_path
     class_rule = args.rule
     ds_size = args.dataset_size
-    model_name = args.model_name
+    model = args.model
     command = args.command
     max_cars = args.max_train_length
     min_cars = args.min_train_length
@@ -19,62 +19,74 @@ def plot(args):
 
     if command == 'label_noise':
         ilp_pt = 'output/ilp'
-        neural_path = 'output/model_comparison'
+        neural_path = 'output/neural'
+        out_path = 'output/model_comparison'
         # for s in [10000]:
         for s in [100, 1000, 10000]:
-            from visualization.ilp_and_neural_noise import label_noise_plot, label_noise_degradation_plot
-            label_noise_plot(neural_path, ilp_pt, training_samples=s)
-            label_noise_degradation_plot(neural_path, ilp_pt, training_samples=s)
+            from visualization.ilp_and_neural_label_noise import label_noise_plot, label_noise_degradation_plot
+            label_noise_plot(neural_path, ilp_pt, out_path, training_samples=s)
+            label_noise_degradation_plot(neural_path, ilp_pt, out_path, training_samples=s)
+
+    if command == 'image_noise':
+        ilp_pt = 'output/ilp'
+        neural_path = 'output/neural'
+        out_path = 'output/model_comparison'
+        # for s in [10000]:
+        y_val = 'direction'
+        from visualization.data_handler import get_cv_data
+        get_cv_data(neural_path, y_val)
+        for s in [100, 1000, 10000]:
+            from visualization.ilp_and_neural_image_noise import image_noise_plot
+            image_noise_plot(neural_path, ilp_pt, out_path, training_samples=s)
 
     if command == 'attribute_noise':
         from visualization.ilp_attr_noise import attribute_noise_plot
         ilp_pt = 'output/ilp'
-        neural_path = 'output/model_comparison'
+        neural_path = 'output/neural'
+        out_path = 'output/model_comparison'
         for s in [100, 1000, 10000][:1]:
-            attribute_noise_plot(neural_path, ilp_pt, training_samples=s)
+            attribute_noise_plot(neural_path, ilp_pt, out_path, training_samples=s)
 
     if command == 'zoom':
         ds_p = ds_path + '/zoom7'
         from models.eval import zoom_test
         # zoom_test(min_cars, max_cars, base_scene, raw_trains, train_vis, device, ds_p, ds_size=2000)
-        neural_path = 'output/model_comparison'
+        neural_path = 'output/neural'
+        out_path = 'output/model_comparison'
         for s in [100, 1000, 10000]:
             from visualization.neural_zoom import zoom_plot
-            zoom_plot(neural_path, tr_samples=s)
+            zoom_plot(neural_path, out_path, tr_samples=s)
 
     if command == 'elementary_vs_realistic':
         ilp_pt = 'output/ilp'
-        neural_path = 'output/model_comparison'
+        neural_path = 'output/neural'
+        out_path = 'output/model_comparison'
         for s in [100, 1000, 10000]:
             from visualization.ilp_and_neural_elementary_vs_realistic import elementary_vs_realistic_plot
-            elementary_vs_realistic_plot(neural_path, ilp_pt, tr_samples=s)
+            elementary_vs_realistic_plot(neural_path, ilp_pt, out_path, tr_samples=s)
 
     if command == 'generalization':
         train_vis = 'Trains'
         from visualization.ilp_and_neural_generalization import generalization_plot
         ilp_pt = 'output/ilp'
-        neural_path = 'output/model_comparison'
+        neural_path = 'output/neural'
+        out_path = 'output/model_comparison'
         for s in [100, 1000, 10000]:
-            generalization_plot(neural_path, ilp_pt, tr_samples=s)
+            generalization_plot(neural_path, ilp_pt, out_path, tr_samples=s)
 
     if command == 'rule_complexity':
-        out_path = 'output/model_comparison/'
+        neural_path = 'output/neural'
+        out_path = 'output/model_comparison'
         from visualization.ilp_and_neural_rule_complexity import rule_complexity_plot
         ilp_pth = 'output/ilp'
-        rule_complexity_plot(out_path, ilp_pth, im_count=1000)
+        rule_complexity_plot(out_path, ilp_pth, out_path, im_count=1000)
 
     if command == 'data_efficiency':
-        out_path = 'output/model_comparison/'
+        neural_path = 'output/neural'
+        out_path = 'output/model_comparison'
         ilp_pth = 'output/ilp'
         from visualization.ilp_and_neural_data_efficiency import data_efficiency_plot
-        data_efficiency_plot(out_path, ilp_pth)
-
-    if command == 'image_noise':
-        # from visualization.ilp_and_neural_image_noise import vis_noise
-        ilp_pt = 'output/ilp'
-        neural_path = 'output/model_comparison'
-        # for s in [100, 1000, 10000]:
-        #     vis_noise(neural_path, ilp_pt, training_samples=s)
+        data_efficiency_plot(neural_path, ilp_pth, out_path)
 
     ##############################
     # old code

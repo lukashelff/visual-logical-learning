@@ -14,7 +14,7 @@ from visualization.data_handler import get_ilp_neural_data
 from visualization.vis_util import make_3_im_legend
 
 
-def label_noise_plot(neural_path, ilp_pth, training_samples=1000, vis='Trains'):
+def label_noise_plot(neural_path, ilp_pth, outpath, training_samples=1000, vis='Trains'):
     labelsize, fontsize = 15, 20
     ilp_stats_path = f'{ilp_pth}/stats'
     neural_stats_path = neural_path + '/label_acc_over_epoch.csv'
@@ -31,7 +31,7 @@ def label_noise_plot(neural_path, ilp_pth, training_samples=1000, vis='Trains'):
     colors = {noi: colors_s[n] for n, noi in enumerate(noise)}
     rules = ['theoryx', 'numerical', 'complex']
 
-    out_path = f'{neural_path}/noise'
+    out_path = f'{outpath}/noise'
     materials_s = ["///", "//", '/', '\\', '\\\\']
     mt = {model: materials_s[n] for n, model in enumerate(models)}
     sns.set_theme(style="whitegrid")
@@ -72,7 +72,7 @@ def label_noise_plot(neural_path, ilp_pth, training_samples=1000, vis='Trains'):
     plt.close()
 
 
-def label_noise_degradation_plot(neural_path, ilp_pth, training_samples=1000, vis='Trains'):
+def label_noise_degradation_plot(neural_path, ilp_pth,outpath, training_samples=1000, vis='Trains'):
     labelsize, fontsize = 15, 20
     ilp_stats_path = f'{ilp_pth}/stats'
     neural_stats_path = neural_path + '/label_acc_over_epoch.csv'
@@ -107,7 +107,7 @@ def label_noise_degradation_plot(neural_path, ilp_pth, training_samples=1000, vi
 
     colors_s = sns.color_palette()[:len(noise)]
     colors = {noise[0]: colors_s[0], noise[1]: colors_s[1]}
-    out_path = f'{neural_path}/noise'
+    out_path = f'{outpath}/noise'
     materials_s = ["///", "//", '/', '\\', '\\\\']
     mt = {model: materials_s[n] for n, model in enumerate(models)}
     sns.set_theme(style="whitegrid")
