@@ -27,7 +27,7 @@ def attribute_noise_plot(neural_path, ilp_pth, outpath, training_samples=1000, v
 
     rules = ['theoryx', 'numerical', 'complex']
 
-    out_path = f'{neural_path}/noise'
+    out_path = f'{outpath}/noise'
     materials_s = ["///", "//", '/', '\\', '\\\\']
     mt = {model: materials_s[n] for n, model in enumerate(ilp_models)}
     sns.set_theme(style="whitegrid")

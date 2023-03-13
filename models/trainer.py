@@ -12,8 +12,8 @@ from torch.utils.data import Subset
 from torchvision.models import ResNet18_Weights, ResNet50_Weights, ResNet101_Weights
 
 from michalski_trains.dataset import get_datasets
+from models.cnns.multi_label_nn import MultiLabelNeuralNetwork
 from models.mlp.mlp import MLP
-from models.multi_label_nn import MultiLabelNeuralNetwork
 from models.multioutput_regression.pos_net import PositionNetwork
 from models.rcnn.train import train_rcnn
 from models.set_transformer import SetTransformer
@@ -33,6 +33,8 @@ class Trainer:
                  num_epochs=25, setup_model=True, setup_ds=True, save_model=True):
 
         # ds_val setup
+        self.settings = f'{train_vis}_{class_rule}_{train_col}_{base_scene}_len_{min_car}-{max_car}'
+
         self.base_scene, self.train_col, self.train_vis, self.class_rule = base_scene, train_col, train_vis, class_rule
         self.ds_path, self.ds_size = ds_path, ds_size
         self.max_car, self.min_car = max_car, min_car
@@ -348,6 +350,32 @@ def get_class_dim(y_val):
         'direction': len(label_classes),
         'attributes': len(attribute_classes),
         'mask': len(attribute_classes),
+    }
+    return output[y_val]
+
+
+def get_class_names(y_val):
+    '''
+    Get the class names for each label
+    :param y_val: type of y_val
+    :return: class names for each label
+    '''
+    # ds labels
+    labels = ['direction']
+    label_classes = ['west', 'east']
+    attributes = ['color', 'length', 'walls', 'roofs', 'wheel_count', 'load_obj1', 'load_obj2',
+                  'load_obj3'] * 4
+    color = ['yellow', 'green', 'grey', 'red', 'blue']
+    length = ['short', 'long']
+    walls = ["braced_wall", 'solid_wall']
+    roofs = ["roof_foundation", 'solid_roof', 'braced_roof', 'peaked_roof']
+    wheel_count = ['2_wheels', '3_wheels']
+    load_obj = ["box", "golden_vase", 'barrel', 'diamond', 'metal_pot', 'oval_vase']
+    attribute_classes = ['none'] + color + length + walls + roofs + wheel_count + load_obj
+    output = {
+        'direction': label_classes,
+        'attributes': attribute_classes,
+        'mask': attribute_classes,
     }
     return output[y_val]
 

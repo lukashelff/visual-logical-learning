@@ -24,7 +24,6 @@ def train_rcnn(base_scene, train_col, y_val, device, out_path, model_name, model
     train_loss_list = []
     val_loss_list = []
 
-
     epoch_init = 0
     phases = ['train', 'val'] if train == 'train' else ['val']
     if train == 'train':
@@ -74,7 +73,6 @@ def train_rcnn(base_scene, train_col, y_val, device, out_path, model_name, model
     for epoch in range(num_epochs):
         rtpt.step()
 
-
         print(f"\nEPOCH {epoch + 1} of {num_epochs}")
 
         # reset the training and validation loss histories for the current epoch
@@ -89,7 +87,6 @@ def train_rcnn(base_scene, train_col, y_val, device, out_path, model_name, model
         print(f"Epoch #{epoch + 1} validation loss: {val_loss_hist.value:.3f}")
         end = time.time()
         print(f"Took {((end - start) / 60):.3f} minutes for epoch {epoch}")
-
 
 
 # function for running training iterations

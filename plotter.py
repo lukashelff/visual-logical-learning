@@ -40,7 +40,7 @@ def plot(args):
             image_noise_plot(neural_path, ilp_pt, out_path, training_samples=s)
 
     if command == 'attribute_noise':
-        from visualization.ilp_attr_noise import attribute_noise_plot
+        from visualization.ilp_attribute_noise import attribute_noise_plot
         ilp_pt = 'output/ilp'
         neural_path = 'output/neural'
         out_path = 'output/model_comparison'
