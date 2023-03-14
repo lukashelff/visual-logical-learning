@@ -10,6 +10,7 @@ from torch.optim import lr_scheduler
 from torch.utils.data import DataLoader
 from torch.utils.data import Subset
 from torchvision.models import ResNet18_Weights, ResNet50_Weights, ResNet101_Weights
+from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 
 from michalski_trains.dataset import get_datasets
 from models.cnns.multi_label_nn import MultiLabelNeuralNetwork
@@ -53,9 +54,14 @@ class Trainer:
         self.out_path = self.get_model_path()
         # setup model and dataset
         self.model = self.setup_model(resume=resume) if setup_model else None
-        self.full_ds = get_datasets(base_scene, self.train_col, self.train_vis, ds_size=ds_size, ds_path=ds_path,
-                                    y_val=y_val, max_car=self.max_car, min_car=self.min_car, class_rule=class_rule,
-                                    resize=resize, preprocessing=self.preprocess) if setup_ds else None
+        if setup_ds:
+            self.full_ds = get_datasets(base_scene, self.train_col, self.train_vis, ds_size=ds_size, ds_path=ds_path,
+                                        y_val=y_val, max_car=self.max_car, min_car=self.min_car, class_rule=class_rule,
+                                        resize=resize, preprocessing=self.preprocess)
+            self.setup_ds()
+        else:
+            self.full_ds = None
+
 
     def cross_val_train(self, train_size=None, label_noise=None, rules=None, visualizations=None, scenes=None,
                         n_splits=5, model_path=None, save_models=False, replace=False, image_noise=None):
@@ -103,7 +109,7 @@ class Trainer:
                         del self.model
                     tr_it += 1
 
-    def train(self, rtpt_extra=0, ds_size=None, set_up=True):
+    def train(self, rtpt_extra=0, train_size=None, val_size=None, set_up=True):
         if self.full_ds is None:
             self.full_ds = get_datasets(self.base_scene, self.train_col, self.train_vis, class_rule=self.class_rule,
                                         ds_size=self.ds_size, max_car=self.max_car, min_car=self.min_car,
@@ -111,9 +117,9 @@ class Trainer:
                                         ds_path=self.ds_path, y_val=self.y_val,
                                         resize=self.resize)
         if set_up:
-            self.ds_size = ds_size if ds_size is not None else self.ds_size
+            # self.ds_size = ds_size if ds_size is not None else self.ds_size
             self.setup_model(self.resume)
-            self.setup_ds()
+            self.setup_ds(train_size=train_size, val_size=val_size)
         if self.model_name == 'rcnn':
             self.model = train_rcnn(self.base_scene, self.train_col, self.y_val, self.device, self.out_path,
                                     self.model_name, self.model, self.full_ds, self.dl, self.checkpoint, self.optimizer,
@@ -200,7 +206,9 @@ class Trainer:
 
     def setup_ds(self, tr_idx=None, val_idx=None, train_size=None, val_size=None):
         if tr_idx is None or val_idx is None:
-            if train_size is None and val_size is None:
+            if train_size is not None and val_size is not None:
+                pass
+            elif train_size is None and val_size is None:
                 train_size = int(0.8 * self.ds_size)
                 val_size = int(0.2 * self.ds_size)
             elif train_size is None:
@@ -250,6 +258,11 @@ class Trainer:
             # model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True, classes=22, autoshape=False)
             weights = models.detection.FasterRCNN_ResNet50_FPN_V2_Weights.DEFAULT
             model = models.detection.fasterrcnn_resnet50_fpn_v2(weights=weights, box_score_thresh=0.9)
+            # get the number of input features
+            in_features = model.roi_heads.box_predictor.cls_score.in_features
+            # define a new head for the detector with required number of classes
+            model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_class)
+
             self.preprocess = weights.transforms()
         elif model_name == 'attr_predictor':
             model = AttributeNetwork(dim_input=32)

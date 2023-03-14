@@ -1,5 +1,7 @@
 import torch
 
+from models.rcnn.plot_prediction import plot_prediction
+
 
 def train(args):
     # michalski train dataset settings
@@ -81,6 +83,15 @@ def train(args):
         batch_size = 20
         lr = 0.001
         weight_decay = 0.0005
+        num_epochs = 10
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
-                          y_val=y_val, resume=False, batch_size=batch_size, setup_model=False, setup_ds=False)
-        trainer.train(set_up=True, )
+                          y_val=y_val, resume=False, batch_size=batch_size, setup_model=False, setup_ds=False,
+                          num_epochs=num_epochs)
+        trainer.train(set_up=True, train_size=10000, val_size=2000)
+
+    if command == 'perception_test':
+        from models.trainer import Trainer
+        batch_size = 20
+        trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
+                          y_val=y_val, resume=True, batch_size=batch_size, setup_model=True, setup_ds=True)
+        plot_prediction(trainer.model, trainer.dl['val'], device)

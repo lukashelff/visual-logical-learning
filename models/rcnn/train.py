@@ -6,6 +6,7 @@ from rtpt.rtpt import RTPT
 from sklearn.metrics import balanced_accuracy_score, accuracy_score, confusion_matrix
 from tqdm import tqdm
 
+from models.rcnn.plot_prediction import plot_prediction
 from util import *
 
 
@@ -88,6 +89,8 @@ def train_rcnn(base_scene, train_col, y_val, device, out_path, model_name, model
         end = time.time()
         print(f"Took {((end - start) / 60):.3f} minutes for epoch {epoch}")
 
+    # plot_prediction(model, dl['val'], device)
+    os.makedirs(out_path, exist_ok=True)
     if save_model:
         torch.save({
             'epoch': num_epochs + epoch_init,
@@ -139,6 +142,8 @@ def validate(valid_data_loader, model, device, val_loss_hist):
 
     # initialize tqdm progress bar
     prog_bar = tqdm(valid_data_loader, total=len(valid_data_loader))
+
+    # plot_prediction(model, valid_data_loader, device)
 
     for i, data in enumerate(prog_bar):
         images, targets = data
