@@ -78,7 +78,7 @@ def train(args):
     if command == 'perception':
         from models.trainer import Trainer
         # model_name = 'resnet18'
-        batch_size = 2
+        batch_size = 20
         lr = 0.001
         weight_decay = 0.0005
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,

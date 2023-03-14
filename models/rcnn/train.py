@@ -73,7 +73,7 @@ def train_rcnn(base_scene, train_col, y_val, device, out_path, model_name, model
     for epoch in range(num_epochs):
         rtpt.step()
 
-        print(f"\nEPOCH {epoch + 1} of {num_epochs}")
+        print(f"EPOCH {epoch + 1} of {num_epochs}")
 
         # reset the training and validation loss histories for the current epoch
         train_loss_hist.reset()
@@ -82,11 +82,19 @@ def train_rcnn(base_scene, train_col, y_val, device, out_path, model_name, model
         # start timer and carry out training and validation
         start = time.time()
         train_loss, train_itr = do_train(dl['train'], model, optimizer, device, train_loss_hist)
-        val_loss, val_itr = validate(dl[phase], model, device, val_loss_hist)
+        val_loss, val_itr = validate(dl['val'], model, device, val_loss_hist)
         print(f"Epoch #{epoch + 1} train loss: {train_loss_hist.value:.3f}")
         print(f"Epoch #{epoch + 1} validation loss: {val_loss_hist.value:.3f}")
         end = time.time()
         print(f"Took {((end - start) / 60):.3f} minutes for epoch {epoch}")
+
+    if save_model:
+        torch.save({
+            'epoch': num_epochs + epoch_init,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'loss': val_loss
+        }, out_path + 'model.pth')
 
 
 # function for running training iterations

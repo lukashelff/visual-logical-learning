@@ -247,6 +247,7 @@ class Trainer:
         elif model_name == 'set_transformer':
             model = SetTransformer(dim_input=32, dim_output=num_output * num_class)
         elif model_name == 'rcnn':
+            # model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True, classes=22, autoshape=False)
             weights = models.detection.FasterRCNN_ResNet50_FPN_V2_Weights.DEFAULT
             model = models.detection.fasterrcnn_resnet50_fpn_v2(weights=weights, box_score_thresh=0.9)
             self.preprocess = weights.transforms()
