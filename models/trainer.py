@@ -1,3 +1,4 @@
+import warnings
 from itertools import product
 
 import timm
@@ -53,7 +54,10 @@ class Trainer:
             batch_size, num_worker, lr, step_size, gamma, momentum, num_epochs
         self.out_path = self.get_model_path()
         # setup model and dataset
-        self.model = self.setup_model(resume=resume) if setup_model else None
+        if setup_model:
+            self.setup_model(resume=resume)
+        else:
+            self.model = None
         if setup_ds:
             self.full_ds = get_datasets(base_scene, self.train_col, self.train_vis, ds_size=ds_size, ds_path=ds_path,
                                         y_val=y_val, max_car=self.max_car, min_car=self.min_car, class_rule=class_rule,
@@ -171,6 +175,10 @@ class Trainer:
         if resume and os.path.isfile(path + 'model.pth') and os.path.isfile(path + 'metrics.json'):
             self.checkpoint = torch.load(path + 'model.pth', map_location=self.device)
             set_up_txt += ': loaded from ' + path
+        elif resume and os.path.isfile(path + 'model.pth'):
+            self.checkpoint = torch.load(path + 'model.pth', map_location=self.device)
+            set_up_txt += ': loaded from ' + path
+            warnings.warn('no metrics found')
         else:  # no checkpoint found
             if resume:
                 raise AssertionError(f'no pretrained model or metrics found at {path}\n please train model first')
@@ -206,14 +214,12 @@ class Trainer:
 
     def setup_ds(self, tr_idx=None, val_idx=None, train_size=None, val_size=None):
         if tr_idx is None or val_idx is None:
-            if train_size is not None and val_size is not None:
-                pass
-            elif train_size is None and val_size is None:
+            if train_size is None and val_size is None:
                 train_size = int(0.8 * self.ds_size)
                 val_size = int(0.2 * self.ds_size)
             elif train_size is None:
                 train_size = 0
-            else:
+            elif val_size is None:
                 val_size = int(0.2 * self.ds_size)
             tr_idx = arange(train_size)
             val_idx = arange(train_size, train_size + val_size)

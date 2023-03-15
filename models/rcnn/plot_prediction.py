@@ -1,3 +1,5 @@
+import os
+
 import torch
 from torchvision.io import read_image
 from torchvision.transforms.functional import to_pil_image, to_tensor
@@ -22,12 +24,16 @@ def plot_prediction(model, dataloader, device):
     model.to(device)
     prediction = model(torch_image)[0]
     labels = [michalski_categories()[i] for i in prediction["labels"]]
-    box = draw_bounding_boxes(img, boxes=prediction["boxes"],
-                              labels=labels,
-                              colors="red",
-                              width=4, font_size=30)
-    im = to_pil_image(box.detach())
-    # save pil image
-    im.save('output/models/rcnn/test_prediction/plot_prediction.png')
+    boxes = [i for i in prediction["boxes"]]
+    for c in range(len(labels)):
+        box = draw_bounding_boxes(img, boxes=prediction["boxes"][c:c + 1],
+                                  labels=labels[c:c + 1],
+                                  colors="red",
+                                  width=2, font_size=15)
+        im = to_pil_image(box.detach())
+        # save pil image
+        pth = f'output/models/rcnn/test_prediction/im_{idx}_mask_{c}.png'
+        os.makedirs(os.path.dirname(pth), exist_ok=True)
+        im.save(pth)
 
     # im.show()
