@@ -12,6 +12,7 @@ from torch.utils.data import DataLoader
 from torch.utils.data import Subset
 from torchvision.models import ResNet18_Weights, ResNet50_Weights, ResNet101_Weights
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
+from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
 
 from michalski_trains.dataset import get_datasets
 from models.cnns.multi_label_nn import MultiLabelNeuralNetwork
@@ -59,13 +60,14 @@ class Trainer:
         else:
             self.model = None
         if setup_ds:
-            self.full_ds = get_datasets(base_scene, self.train_col, self.train_vis, ds_size=ds_size, ds_path=ds_path,
-                                        y_val=y_val, max_car=self.max_car, min_car=self.min_car, class_rule=class_rule,
-                                        resize=resize, preprocessing=self.preprocess)
+            self.full_ds = get_datasets(self.base_scene, self.train_col, self.train_vis, ds_size=self.ds_size,
+                                        ds_path=self.ds_path,
+                                        y_val=y_val, max_car=self.max_car, min_car=self.min_car,
+                                        class_rule=self.class_rule,
+                                        resize=self.resize, preprocessing=self.preprocess)
             self.setup_ds()
         else:
             self.full_ds = None
-
 
     def cross_val_train(self, train_size=None, label_noise=None, rules=None, visualizations=None, scenes=None,
                         n_splits=5, model_path=None, save_models=False, replace=False, image_noise=None):
@@ -213,6 +215,11 @@ class Trainer:
         self.scheduler = lr_scheduler.StepLR(self.optimizer, step_size=self.step_size, gamma=self.gamma)
 
     def setup_ds(self, tr_idx=None, val_idx=None, train_size=None, val_size=None):
+        if self.full_ds is None:
+            self.full_ds = get_datasets(self.base_scene, self.train_col, self.train_vis, ds_size=self.ds_size,
+                                        ds_path=self.ds_path, y_val=self.y_val, max_car=self.max_car,
+                                        min_car=self.min_car, class_rule=self.class_rule, resize=self.resize,
+                                        preprocessing=self.preprocess)
         if tr_idx is None or val_idx is None:
             if train_size is None and val_size is None:
                 train_size = int(0.8 * self.ds_size)
@@ -262,12 +269,21 @@ class Trainer:
             model = SetTransformer(dim_input=32, dim_output=num_output * num_class)
         elif model_name == 'rcnn':
             # model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True, classes=22, autoshape=False)
-            weights = models.detection.FasterRCNN_ResNet50_FPN_V2_Weights.DEFAULT
-            model = models.detection.fasterrcnn_resnet50_fpn_v2(weights=weights, box_score_thresh=0.9)
+            # weights = models.detection.FasterRCNN_ResNet50_FPN_V2_Weights.DEFAULT
+            # model = models.detection.fasterrcnn_resnet50_fpn_v2(weights=weights, box_score_thresh=0.9)
+
+            # model initialization
+            weights = models.detection.MaskRCNN_ResNet50_FPN_V2_Weights.DEFAULT
+            model = models.detection.maskrcnn_resnet50_fpn_v2(weights=weights, box_score_thresh=0.9)
+            # for predicting masks
+            in_features_mask = model.roi_heads.mask_predictor.conv5_mask.in_channels
+            hidden_layer = 256
+            model.roi_heads.mask_predictor = MaskRCNNPredictor(in_features_mask, hidden_layer, 22 + 20)
+            # for predicting boxes
             # get the number of input features
             in_features = model.roi_heads.box_predictor.cls_score.in_features
             # define a new head for the detector with required number of classes
-            model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_class)
+            model.roi_heads.box_predictor = FastRCNNPredictor(in_features, 22 + 20)
 
             self.preprocess = weights.transforms()
         elif model_name == 'attr_predictor':

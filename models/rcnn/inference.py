@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import cv2
 import torch
@@ -5,12 +7,85 @@ import glob as glob
 import os
 import time
 
+from sklearn.metrics import accuracy_score
+from tqdm import tqdm
 
-def forward(model, images):
+from michalski_trains.dataset import michalski_categories, rcnn_michalski_categories
+
+
+def infer_symbolic(trainer, segmentation_similarity_threshold=.9, samples=1000):
+    out_path = f'output/models/rcnn/inferred_symbolic/{trainer.settings}'
+    all_labels = np.empty([0, 32], dtype=int)
+    all_preds = np.empty([0, 32], dtype=int)
+    model = trainer.model
+    if trainer.dl is None:
+        trainer.setup_ds(val_size=samples)
+    dl = trainer.dl['val']
+    # initialize tqdm progress bar
+    prog_bar = tqdm(dl, total=len(dl))
     model.eval()
-    with torch.no_grad():
-        outputs = model(images)
-    return outputs
+    model.to(trainer.device)
+    for i, data in enumerate(prog_bar):
+        images, targets = data
+        images = list(image.to(trainer.device) for image in images)
+        targets = [{k: v.to(trainer.device) for k, v in t.items()} for t in targets]
+
+        with torch.no_grad():
+            predictions = model(images)
+        predictions = [{k: v.to(trainer.device) for k, v in t.items()} for t in predictions]
+        for pred in predictions:
+            train = preprocess_symbolics(pred, segmentation_similarity_threshold)
+    #         all_labels = np.vstack((all_labels, labels))
+    #         all_preds = np.vstack((all_preds, preds))
+    # acc = accuracy_score(all_labels.flatten(), all_preds.flatten())
+    # print(f'fold {fold} acc score: {acc}')
+
+
+def preprocess_symbolics(prediction, threshold=.9):
+    labels = prediction["labels"]
+    boxes = [i for i in prediction["boxes"]]
+    masks = [i for i in prediction["masks"]]
+    label_names = [rcnn_michalski_categories()[i] for i in prediction["labels"]]
+    cars = sorted(labels[labels >= len(michalski_categories())])
+    whole_car_masks = []
+    car_numbers = []
+    for car in cars:
+        idx = labels.index(car)
+        whole_car_masks.append(masks[idx])
+        car_numbers.append(car - len(michalski_categories() + 1))
+        del masks[idx]
+        del labels[idx]
+
+    train = np.zeros(len(cars) * 8)
+    for mask, label_names in zip(masks, label_names):
+        for car_number, whole_car_mask in zip(whole_car_masks, car_numbers):
+            mask_pixel_sum = np.sum(mask)
+            similarity = np.sum(mask * whole_car_mask) / mask_pixel_sum
+            if similarity > threshold:
+                class_int = michalski_categories().index(label_names)
+                binary_class = np.zeros(22)
+                binary_class[class_int] = 1
+                label_int = class_to_label(class_int)
+                idx = (car_number - 1) * 8 + label_int
+                if idx == 5:
+                    while train[idx] != 0 and idx < 6:
+                        idx += 1
+                if train[idx] != 0:
+                    raise warnings.warn(
+                        f"Overwriting {michalski_categories()[train[idx]]} with {michalski_categories()[class_int]} at index {idx} for car {car_number}.")
+                train[idx] = class_int
+    return train
+
+
+def class_to_label(class_int):
+    color = [0] * len(['yellow', 'green', 'grey', 'red', 'blue'])
+    length = [1] * len(['short', 'long'])
+    walls = [2] * len(["braced_wall", 'solid_wall'])
+    roofs = [3] * len(["roof_foundation", 'solid_roof', 'braced_roof', 'peaked_roof'])
+    wheel_count = [4] * len(['2_wheels', '3_wheels'])
+    load_obj = [5] * len(["box", "golden_vase", 'barrel', 'diamond', 'metal_pot', 'oval_vase'])
+    all_labels = color + length + walls + roofs + wheel_count + load_obj
+    return all_labels[class_int]
 
 
 def inference(model, images, device, classes, detection_threshold=0.8):
