@@ -1,6 +1,5 @@
 import torch
 
-from models.rcnn.plot_prediction import plot_prediction
 
 
 def train(args):
@@ -94,12 +93,13 @@ def train(args):
         batch_size = 20
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
                           y_val=y_val, resume=True, batch_size=batch_size, setup_model=True, setup_ds=True)
-        plot_prediction(trainer.model, trainer.dl['val'], device)
+        from models.rcnn.plot_prediction import predict_and_plot
+        predict_and_plot(trainer.model, trainer.dl['val'], device)
 
     if command == 'perception_infer':
         from models.trainer import Trainer
         batch_size = 1
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
-                          y_val=y_val, resume=True, batch_size=batch_size, setup_model=True, setup_ds=True)
+                          y_val=y_val, resume=True, batch_size=batch_size, setup_model=True, setup_ds=False)
         from models.rcnn.inference import infer_symbolic
         infer_symbolic(trainer, segmentation_similarity_threshold=.9, samples=1000)

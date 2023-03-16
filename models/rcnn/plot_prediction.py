@@ -3,12 +3,12 @@ import os
 import torch
 from torchvision.io import read_image
 from torchvision.transforms.functional import to_pil_image, to_tensor
-from torchvision.utils import draw_bounding_boxes
+from torchvision.utils import draw_bounding_boxes, draw_segmentation_masks
 
 from michalski_trains.dataset import michalski_categories, rcnn_michalski_categories
 
 
-def plot_prediction(model, dataloader, device):
+def predict_and_plot(model, dataloader, device):
     idx = dataloader.dataset.indices[0]
     torch_image, box = dataloader.dataset.dataset.__getitem__(idx)
     img_path = dataloader.dataset.dataset.get_image_path(idx)
@@ -32,18 +32,49 @@ def plot_prediction(model, dataloader, device):
                                   width=2, font_size=15)
         im = to_pil_image(box.detach())
         # save pil image
-        pth = f'output/models/rcnn/test_prediction/boxes/im_{idx}_mask_{c}.png'
+        pth = f'output/models/rcnn/test_prediction/boxes/im_{idx}_bbox_{c}.png'
         os.makedirs(os.path.dirname(pth), exist_ok=True)
         im.save(pth)
     for c in range(len(labels)):
-        box = draw_bounding_boxes(img, boxes=prediction["masks"][c:c + 1],
-                                  labels=labels[c:c + 1],
-                                  colors="red",
-                                  width=2, font_size=15)
+        mask = prediction["masks"][c]
+        mask[mask > .5] = 1
+        mask[mask <= .5] = 0
+        mask = mask.to(torch.bool)
+        box = draw_segmentation_masks(img, masks=mask,
+                                      colors="red",
+                                      )
         im = to_pil_image(box.detach())
         # save pil image
-        pth = f'output/models/rcnn/test_prediction/masks/im_{idx}_mask_{c}.png'
+        pth = f'output/models/rcnn/test_prediction/masks/im_{idx}_mask{c}_{labels[c]}.png'
         os.makedirs(os.path.dirname(pth), exist_ok=True)
         im.save(pth)
 
-    # im.show()
+
+def plot_prediction(prediction, identifier, tensor_image, device):
+    # tensor to image
+    img = tensor_image * 255
+    # float tensor image to int tensor image
+    img = img.to(torch.uint8).to('cpu')
+    labels = [rcnn_michalski_categories()[i] for i in prediction["labels"]]
+    boxes = [i for i in prediction["boxes"]]
+    # for c in range(len(labels)):
+    #     box = draw_bounding_boxes(img, boxes=prediction["boxes"][c:c + 1],
+    #                               labels=labels[c:c + 1],
+    #                               colors="red",
+    #                               width=2, font_size=15)
+    #     im = to_pil_image(box.detach())
+    #     # save pil image
+    #     pth = f'output/models/rcnn/plt_pred/boxes/im_{identifier}_bbox_{c}.png'
+    #     os.makedirs(os.path.dirname(pth), exist_ok=True)
+    #     im.save(pth)
+    for c in range(len(labels)):
+        mask = prediction["masks"][c]
+        mask[mask > .5] = 1
+        mask[mask <= .5] = 0
+        mask = mask.to(torch.bool).to('cpu')
+        box = draw_segmentation_masks(img, masks=mask)
+        im = to_pil_image(box.detach())
+        # save pil image
+        pth = f'output/models/rcnn/test/masks/im_{identifier}_mask{c}_{labels[c]}.png'
+        os.makedirs(os.path.dirname(pth), exist_ok=True)
+        im.save(pth)

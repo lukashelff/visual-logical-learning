@@ -11,6 +11,7 @@ from sklearn.metrics import accuracy_score
 from tqdm import tqdm
 
 from michalski_trains.dataset import michalski_categories, rcnn_michalski_categories
+from models.rcnn.plot_prediction import plot_prediction
 
 
 def infer_symbolic(trainer, segmentation_similarity_threshold=.9, samples=1000):
@@ -18,7 +19,7 @@ def infer_symbolic(trainer, segmentation_similarity_threshold=.9, samples=1000):
     all_labels = np.empty([0, 32], dtype=int)
     all_preds = np.empty([0, 32], dtype=int)
     model = trainer.model
-    if trainer.dl is None:
+    if trainer.full_ds is None:
         trainer.setup_ds(val_size=samples)
     dl = trainer.dl['val']
     # initialize tqdm progress bar
@@ -33,8 +34,13 @@ def infer_symbolic(trainer, segmentation_similarity_threshold=.9, samples=1000):
         with torch.no_grad():
             predictions = model(images)
         predictions = [{k: v.to(trainer.device) for k, v in t.items()} for t in predictions]
-        for pred in predictions:
+        for j, (pred, t) in enumerate(zip(predictions, targets)):
+            if i == 277:
+                print('debug')
             train = preprocess_symbolics(pred, segmentation_similarity_threshold)
+            labels = t["labels"]
+            if train:
+                plot_prediction(pred, i, images[j], device=trainer.device)
     #         all_labels = np.vstack((all_labels, labels))
     #         all_preds = np.vstack((all_preds, preds))
     # acc = accuracy_score(all_labels.flatten(), all_preds.flatten())
@@ -43,49 +49,113 @@ def infer_symbolic(trainer, segmentation_similarity_threshold=.9, samples=1000):
 
 def preprocess_symbolics(prediction, threshold=.9):
     labels = prediction["labels"]
-    boxes = [i for i in prediction["boxes"]]
-    masks = [i for i in prediction["masks"]]
-    label_names = [rcnn_michalski_categories()[i] for i in prediction["labels"]]
-    cars = sorted(labels[labels >= len(michalski_categories())])
-    whole_car_masks = []
-    car_numbers = []
+    boxes = prediction["boxes"]
+    masks = prediction["masks"]
+    scores = prediction["scores"]
+    cars = sorted(labels[labels >= len(michalski_categories())].unique())
+    # labels = labels.tolist()
+    label_names = [rcnn_michalski_categories()[i] for i in labels]
+    # get indices of all cars
+    all_car_indices = []
+    selected_car_indices = []
+    issues = False
     for car in cars:
-        idx = labels.index(car)
-        whole_car_masks.append(masks[idx])
-        car_numbers.append(car - len(michalski_categories() + 1))
-        del masks[idx]
-        del labels[idx]
+        indices = ((labels == car).nonzero(as_tuple=True)[0])
+        indices = indices.to('cpu').tolist()
+        all_car_indices += indices
+        if len(indices) > 1:
+            # select car with the highest score if there are multiple cars with same car number
+            print(f"Multiple cars with same number: {len(indices)} cars with car number {rcnn_to_car_number(car)}."
+                  f" Selecting car with highest prediction score.")
+            idx = indices[0]
+            for i in indices[1:]:
+                if scores[i] > scores[idx]:
+                    idx = i
 
-    train = np.zeros(len(cars) * 8)
-    for mask, label_names in zip(masks, label_names):
-        for car_number, whole_car_mask in zip(whole_car_masks, car_numbers):
-            mask_pixel_sum = np.sum(mask)
-            similarity = np.sum(mask * whole_car_mask) / mask_pixel_sum
+        else:
+            idx = indices[0]
+        selected_car_indices.append(idx)
+    # get indices of all attributes
+    attribute_indices = [i for i in range(len(labels)) if i not in all_car_indices]
+
+    train = torch.zeros(rcnn_to_car_number(max(cars)) * 8, dtype=torch.uint8)
+    train_scores = torch.zeros(rcnn_to_car_number(max(cars)) * 8, dtype=torch.float32)
+    for car_index in selected_car_indices:
+        whole_car_mask = masks[car_index]
+        car_label = labels[car_index]
+        car_number = rcnn_to_car_number(car_label)
+
+        for attribute_indice in attribute_indices:
+            mask = masks[attribute_indice]
+            label = labels[attribute_indice]
+            label_name = label_names[attribute_indice]
+            # determine to which degree mask is included in whole car mask
+            # calculate similarity value by summing up all values in mask where mask is smaller than whole car mask
+            # and summing up all values of whole car mask where mask is higher than whole car mask
+            similarity = mask[mask <= whole_car_mask].sum() + whole_car_mask[mask > whole_car_mask].sum()
+            similarity = similarity / mask.sum()
+
+            # calculate difference between mask and whole car mask for values where mask is higher than whole car mask
+            # asimilarity = mask[mask > whole_car_mask].sum() - whole_car_mask[mask > whole_car_mask].sum()
+            # similarity = 1 - asimilarity / mask.sum()
+
+            # calculate similarity by multiplication of mask and whole car mask, problem because we hve float values
+            # when mask = whole car mask = 0.3 => similarity = 0.3 * 0.3 = 0.09 => similarity is too low
+            # simi = mask * whole_car_mask
+            # similarity = simi.sum() / mask.sum()
             if similarity > threshold:
-                class_int = michalski_categories().index(label_names)
-                binary_class = np.zeros(22)
-                binary_class[class_int] = 1
-                label_int = class_to_label(class_int)
-                idx = (car_number - 1) * 8 + label_int
-                if idx == 5:
-                    while train[idx] != 0 and idx < 6:
+                # class_int = michalski_categories().index(label_name)
+                # binary_class = np.zeros(22)
+                # binary_class[label] = 1
+                label_category = class_to_label(label)
+                idx = (car_number - 1) * 8 + label_category
+                if label_category == 5:
+                    while train[idx] != 0 and (idx % 8) < 7:
                         idx += 1
                 if train[idx] != 0:
-                    raise warnings.warn(
-                        f"Overwriting {michalski_categories()[train[idx]]} with {michalski_categories()[class_int]} at index {idx} for car {car_number}.")
-                train[idx] = class_int
-    return train
+                    if train[idx] == label:
+                        print(f"Duplicate Mask: Mask for car {car_number} with label {label_name} was predicted twice.")
+                        continue
+                    elif train[idx] != label:
+                        issues = True
+                        if scores[attribute_indice] > train_scores[idx]:
+                            print(f'Mask conflict: {michalski_categories()[train[idx]]} with score {train_scores[idx]} '
+                                  f'and {michalski_categories()[label]} with score {scores[attribute_indice]}'
+                                  f' for car {car_number}. Selecting higher score.')
+                            train[idx] = label
+                            train_scores[idx] = scores[attribute_indice]
+                        else:
+                            print(f'Mask conflict: {michalski_categories()[train[idx]]} with score {train_scores[idx]} '
+                                  f'and {michalski_categories()[label]} with score {scores[attribute_indice]}'
+                                  f' for car {car_number}. Selecting higher score.')
+                            continue
+                else:
+                    train[idx] = label
+                    train_scores[idx] = scores[attribute_indice]
+                # break
+    return issues
+
+
+def rcnn_to_car_number(label_val):
+    return label_val - len(michalski_categories()) + 1
 
 
 def class_to_label(class_int):
+    none = [-1] * len(['none'])
     color = [0] * len(['yellow', 'green', 'grey', 'red', 'blue'])
     length = [1] * len(['short', 'long'])
     walls = [2] * len(["braced_wall", 'solid_wall'])
     roofs = [3] * len(["roof_foundation", 'solid_roof', 'braced_roof', 'peaked_roof'])
     wheel_count = [4] * len(['2_wheels', '3_wheels'])
     load_obj = [5] * len(["box", "golden_vase", 'barrel', 'diamond', 'metal_pot', 'oval_vase'])
-    all_labels = color + length + walls + roofs + wheel_count + load_obj
+    all_labels = none + color + length + walls + roofs + wheel_count + load_obj
     return all_labels[class_int]
+
+
+def label_type(idx):
+    l = idx % 8
+    labels = ['color', 'length', 'walls', 'roofs', 'wheel_count', 'load_obj1', 'load_obj2', 'load_obj3']
+    return labels[l]
 
 
 def inference(model, images, device, classes, detection_threshold=0.8):
