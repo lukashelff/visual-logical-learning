@@ -68,6 +68,7 @@ def preprocess_symbolics(prediction, threshold=.9):
             print(f"Multiple cars with same number: {len(indices)} cars with car number {rcnn_to_car_number(car)}."
                   f" Selecting car with highest prediction score.")
             idx = indices[0]
+            # issues = True
             for i in indices[1:]:
                 if scores[i] > scores[idx]:
                     idx = i
@@ -77,32 +78,17 @@ def preprocess_symbolics(prediction, threshold=.9):
         selected_car_indices.append(idx)
     # get indices of all attributes
     attribute_indices = [i for i in range(len(labels)) if i not in all_car_indices]
-
-    train = torch.zeros(rcnn_to_car_number(max(cars)) * 8, dtype=torch.uint8)
-    train_scores = torch.zeros(rcnn_to_car_number(max(cars)) * 8, dtype=torch.float32)
-    for car_index in selected_car_indices:
+    train = torch.zeros(len(cars) * 8, dtype=torch.uint8)
+    train_scores = torch.zeros(len(cars) * 8, dtype=torch.float32)
+    for car_n, car_index in enumerate(selected_car_indices):
         whole_car_mask = masks[car_index]
-        car_label = labels[car_index]
-        car_number = rcnn_to_car_number(car_label)
+        car_number = car_n + 1
 
         for attribute_indice in attribute_indices:
             mask = masks[attribute_indice]
             label = labels[attribute_indice]
             label_name = label_names[attribute_indice]
-            # determine to which degree mask is included in whole car mask
-            # calculate similarity value by summing up all values in mask where mask is smaller than whole car mask
-            # and summing up all values of whole car mask where mask is higher than whole car mask
-            similarity = mask[mask <= whole_car_mask].sum() + whole_car_mask[mask > whole_car_mask].sum()
-            similarity = similarity / mask.sum()
-
-            # calculate difference between mask and whole car mask for values where mask is higher than whole car mask
-            # asimilarity = mask[mask > whole_car_mask].sum() - whole_car_mask[mask > whole_car_mask].sum()
-            # similarity = 1 - asimilarity / mask.sum()
-
-            # calculate similarity by multiplication of mask and whole car mask, problem because we hve float values
-            # when mask = whole car mask = 0.3 => similarity = 0.3 * 0.3 = 0.09 => similarity is too low
-            # simi = mask * whole_car_mask
-            # similarity = simi.sum() / mask.sum()
+            similarity = get_similarity_score(mask, whole_car_mask)
             if similarity > threshold:
                 # class_int = michalski_categories().index(label_name)
                 # binary_class = np.zeros(22)
@@ -134,6 +120,24 @@ def preprocess_symbolics(prediction, threshold=.9):
                     train_scores[idx] = scores[attribute_indice]
                 # break
     return issues
+
+
+def get_similarity_score(mask, whole_car_mask):
+    # determine to which degree mask is included in whole car mask
+    # calculate similarity value by summing up all values in mask where mask is smaller than whole car mask
+    # and summing up all values of whole car mask where mask is higher than whole car mask
+    similarity = mask[mask <= whole_car_mask].sum() + whole_car_mask[mask > whole_car_mask].sum()
+    similarity = similarity / mask.sum()
+
+    # calculate difference between mask and whole car mask for values where mask is higher than whole car mask
+    # asimilarity = mask[mask > whole_car_mask].sum() - whole_car_mask[mask > whole_car_mask].sum()
+    # similarity = 1 - asimilarity / mask.sum()
+
+    # calculate similarity by multiplication of mask and whole car mask, problem because we hve float values
+    # when mask = whole car mask = 0.3 => similarity = 0.3 * 0.3 = 0.09 => similarity is too low
+    # simi = mask * whole_car_mask
+    # similarity = simi.sum() / mask.sum()
+    return similarity
 
 
 def rcnn_to_car_number(label_val):
