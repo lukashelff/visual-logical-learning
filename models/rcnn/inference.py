@@ -16,38 +16,52 @@ from models.rcnn.plot_prediction import plot_prediction
 
 def infer_symbolic(trainer, segmentation_similarity_threshold=.9, samples=1000):
     out_path = f'output/models/rcnn/inferred_symbolic/{trainer.settings}'
-    all_labels = np.empty([0, 32], dtype=int)
-    all_preds = np.empty([0, 32], dtype=int)
+    all_labels = []
+    all_preds = []
     model = trainer.model
     if trainer.full_ds is None:
         trainer.setup_ds(val_size=samples)
     dl = trainer.dl['val']
     # initialize tqdm progress bar
-    prog_bar = tqdm(dl, total=len(dl))
+    # prog_bar = tqdm(dl, total=len(dl))
     model.eval()
     model.to(trainer.device)
-    for i, data in enumerate(prog_bar):
-        images, targets = data
-        images = list(image.to(trainer.device) for image in images)
-        targets = [{k: v.to(trainer.device) for k, v in t.items()} for t in targets]
-
+    ds = trainer.full_ds
+    t_acc = []
+    # for i, data in enumerate(prog_bar):
+    for i in tqdm(range(samples)):
+        image, target = ds.__getitem__(i)
+        image = image.to(trainer.device).unsqueeze(0)
+        labels = ds.get_attributes(i)
         with torch.no_grad():
-            predictions = model(images)
+            predictions = model(image)
         predictions = [{k: v.to(trainer.device) for k, v in t.items()} for t in predictions]
-        for j, (pred, t) in enumerate(zip(predictions, targets)):
-            if i == 277:
-                print('debug')
-            train = preprocess_symbolics(pred, segmentation_similarity_threshold)
-            labels = t["labels"]
-            if train:
-                plot_prediction(pred, i, images[j], device=trainer.device)
-    #         all_labels = np.vstack((all_labels, labels))
-    #         all_preds = np.vstack((all_preds, preds))
-    # acc = accuracy_score(all_labels.flatten(), all_preds.flatten())
-    # print(f'fold {fold} acc score: {acc}')
+        acc = accuracy_score(target['labels'].to('cpu').numpy(), predictions[0]['labels'].to('cpu').numpy())
+        t_acc.append(acc)
+        for j, pred in enumerate(predictions):
+            symbolic, issues = preprocess_symbolics(pred, segmentation_similarity_threshold)
+            # if issues:
+            #     plot_prediction(pred, i, image[j], device=trainer.device)
+            all_preds.append(symbolic.to('cpu').numpy())
+        all_labels.append(labels.to('cpu').numpy())
+
+    # create numpy array with all predictions and labels
+    b = np.zeros([len(all_preds), len(max(all_preds, key=lambda x: len(x)))])
+    for i, j in enumerate(all_preds):
+        b[i][0:len(j)] = j
+    all_preds = b
+
+    b = np.zeros([len(all_labels), len(max(all_labels, key=lambda x: len(x)))])
+    for i, j in enumerate(all_labels):
+        b[i][0:len(j)] = j
+    all_labels = b
+
+    acc = accuracy_score(all_labels.flatten(), all_preds.flatten())
+    print(f'acc score: {acc}')
+    print(f'average acc score: {np.mean(t_acc)}')
 
 
-def preprocess_symbolics(prediction, threshold=.9):
+def preprocess_symbolics(prediction, threshold=.8):
     labels = prediction["labels"]
     boxes = prediction["boxes"]
     masks = prediction["masks"]
@@ -111,15 +125,15 @@ def preprocess_symbolics(prediction, threshold=.9):
                             train[idx] = label
                             train_scores[idx] = scores[attribute_indice]
                         else:
-                            print(f'Mask conflict: {michalski_categories()[train[idx]]} with score {train_scores[idx]} '
-                                  f'and {michalski_categories()[label]} with score {scores[attribute_indice]}'
-                                  f' for car {car_number}. Selecting higher score.')
-                            continue
+                            warnings.warn(
+                                f'Mask conflict: {michalski_categories()[train[idx]]} with score {train_scores[idx]} '
+                                f'and {michalski_categories()[label]} with score {scores[attribute_indice]}'
+                                f' for car {car_number}. Selecting higher score.')
                 else:
                     train[idx] = label
                     train_scores[idx] = scores[attribute_indice]
                 # break
-    return issues
+    return train, issues
 
 
 def get_similarity_score(mask, whole_car_mask):
