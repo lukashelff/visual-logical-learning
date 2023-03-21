@@ -18,10 +18,10 @@ from michalski_trains.dataset import get_datasets
 from models.cnns.multi_label_nn import MultiLabelNeuralNetwork
 from models.mlp.mlp import MLP
 from models.multioutput_regression.pos_net import PositionNetwork
-from models.rcnn.train import train_rcnn
+from models.rcnn.rcnn_train import train_rcnn
 from models.set_transformer import SetTransformer
 from models.spacial_attr_net.attr_net import AttributeNetwork
-from models.train import do_train
+from models.train_loop import do_train
 from util import *
 from visualization.vis_model import visualize_statistics, vis_confusion_matrix
 from visualization.vis_model_comparison import model_scene_imcount_comparison, csv_to_tex_table

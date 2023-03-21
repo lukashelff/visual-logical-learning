@@ -1,12 +1,9 @@
 import copy
-import json
 import time
-
 from rtpt.rtpt import RTPT
-from sklearn.metrics import balanced_accuracy_score, accuracy_score, confusion_matrix
 from tqdm import tqdm
 
-from models.rcnn.plot_prediction import plot_prediction
+from models.rcnn.engine import train_one_epoch, evaluate
 from util import *
 
 
@@ -82,10 +79,17 @@ def train_rcnn(base_scene, train_col, y_val, device, out_path, model_name, model
 
         # start timer and carry out training and validation
         start = time.time()
-        train_loss, train_itr = do_train(dl['train'], model, optimizer, device, train_loss_hist)
-        val_loss, val_itr = validate(dl['val'], model, device, val_loss_hist)
-        print(f"Epoch #{epoch + 1} train loss: {train_loss_hist.value:.3f}")
-        print(f"Epoch #{epoch + 1} validation loss: {val_loss_hist.value:.3f}")
+        # train for one epoch, printing every 10 iterations
+        train_one_epoch(model, optimizer, dl['train'], device, epoch, print_freq=100)
+        # update the learning rate
+        scheduler.step()
+        # evaluate on the test dataset
+        evaluate(model, dl['val'], device=device)
+
+        # train_loss, train_itr = do_train(dl['train'], model, optimizer, device, train_loss_hist, scheduler)
+        # val_loss, val_itr = validate(dl['val'], model, device, val_loss_hist)
+        # print(f"Epoch #{epoch + 1} train loss: {train_loss_hist.value:.3f}")
+        # print(f"Epoch #{epoch + 1} validation loss: {val_loss_hist.value:.3f}")
         end = time.time()
         print(f"Took {((end - start) / 60):.3f} minutes for epoch {epoch}")
 
@@ -96,12 +100,12 @@ def train_rcnn(base_scene, train_col, y_val, device, out_path, model_name, model
             'epoch': num_epochs + epoch_init,
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
-            'loss': val_loss
+            # 'loss': val_loss
         }, out_path + 'model.pth')
 
 
 # function for running training iterations
-def do_train(train_data_loader, model, optimizer, device, train_loss_hist):
+def do_train(train_data_loader, model, optimizer, device, train_loss_hist, scheduler):
     print('Training')
 
     # initialize tqdm progress bar
@@ -131,6 +135,7 @@ def do_train(train_data_loader, model, optimizer, device, train_loss_hist):
 
         # update the loss value beside the progress bar for each iteration
         prog_bar.set_description(desc=f"Loss: {loss_value:.4f}")
+    scheduler.step()
     return train_loss_list, train_itr
 
 

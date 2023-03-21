@@ -67,7 +67,7 @@ def main():
         return
 
     if action == 'train':
-        from train import train
+        from train_functions import train
         train(args)
         return
 
