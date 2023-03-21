@@ -102,4 +102,4 @@ def train(args):
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
                           y_val=y_val, resume=True, batch_size=batch_size, setup_model=True, setup_ds=False)
         from models.rcnn.inference import infer_symbolic
-        infer_symbolic(trainer, segmentation_similarity_threshold=.9, samples=1000)
+        infer_symbolic(trainer, segmentation_similarity_threshold=.8, samples=10)

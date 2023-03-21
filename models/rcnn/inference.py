@@ -8,13 +8,13 @@ import os
 import time
 
 from sklearn.metrics import accuracy_score
-from tqdm import tqdm
+from tqdm import tqdm, trange
 
 from michalski_trains.dataset import michalski_categories, rcnn_michalski_categories
 from models.rcnn.plot_prediction import plot_prediction
 
 
-def infer_symbolic(trainer, segmentation_similarity_threshold=.9, samples=1000):
+def infer_symbolic(trainer, segmentation_similarity_threshold=.8, samples=1000):
     out_path = f'output/models/rcnn/inferred_symbolic/{trainer.settings}'
     all_labels = []
     all_preds = []
@@ -22,30 +22,35 @@ def infer_symbolic(trainer, segmentation_similarity_threshold=.9, samples=1000):
     if trainer.full_ds is None:
         trainer.setup_ds(val_size=samples)
     dl = trainer.dl['val']
-    # initialize tqdm progress bar
-    # prog_bar = tqdm(dl, total=len(dl))
     model.eval()
     model.to(trainer.device)
     ds = trainer.full_ds
     t_acc = []
-    # for i, data in enumerate(prog_bar):
-    for i in tqdm(range(samples)):
+
+    for i in range(samples):
         image, target = ds.__getitem__(i)
         image = image.to(trainer.device).unsqueeze(0)
-        labels = ds.get_attributes(i)
+        labels = ds.get_attributes(i).to('cpu').numpy()
         with torch.no_grad():
-            predictions = model(image)
-        predictions = [{k: v.to(trainer.device) for k, v in t.items()} for t in predictions]
-        acc = accuracy_score(target['labels'].to('cpu').numpy(), predictions[0]['labels'].to('cpu').numpy())
-        t_acc.append(acc)
-        for j, pred in enumerate(predictions):
-            symbolic, issues = preprocess_symbolics(pred, segmentation_similarity_threshold)
-            # if issues:
-            #     plot_prediction(pred, i, image[j], device=trainer.device)
-            all_preds.append(symbolic.to('cpu').numpy())
-        all_labels.append(labels.to('cpu').numpy())
+            output = model(image)
+        output = [{k: v.to(trainer.device) for k, v in t.items()} for t in output]
+        symbolic, issues = process_symbolics(output[0], segmentation_similarity_threshold)
+        symbolic = symbolic.to('cpu').numpy()
+        length = max(len(symbolic), len(labels))
+        symbolic = np.pad(symbolic, (0, length - len(symbolic)), 'constant', constant_values=0)
+        labels = np.pad(labels, (0, length - len(labels)), 'constant', constant_values=0)
+        if '[' in issues:
+            plot_prediction(output[0], i, image[0], device=trainer.device)
+        all_labels.append(labels)
+        all_preds.append(symbolic)
+        train_acc = accuracy_score(labels, symbolic)
+        t_acc.append(train_acc)
+        out_text = f"image {i}/{samples}, accuracy score: {round(train_acc * 100, 1)}%, " \
+                   f"running accuracy score: {(np.mean(t_acc) * 100).round(3)}%, Number of gt attributes {len(labels[labels > 0])}. "
+        print(out_text + issues)
+        out_text = out_text
 
-    # create numpy array with all predictions and labels
+        # create numpy array with all predictions and labels
     b = np.zeros([len(all_preds), len(max(all_preds, key=lambda x: len(x)))])
     for i, j in enumerate(all_preds):
         b[i][0:len(j)] = j
@@ -61,7 +66,7 @@ def infer_symbolic(trainer, segmentation_similarity_threshold=.9, samples=1000):
     print(f'average acc score: {np.mean(t_acc)}')
 
 
-def preprocess_symbolics(prediction, threshold=.8):
+def process_symbolics(prediction, threshold=.8):
     labels = prediction["labels"]
     boxes = prediction["boxes"]
     masks = prediction["masks"]
@@ -72,15 +77,15 @@ def preprocess_symbolics(prediction, threshold=.8):
     # get indices of all cars
     all_car_indices = []
     selected_car_indices = []
-    issues = False
+    issues = ""
     for car in cars:
         indices = ((labels == car).nonzero(as_tuple=True)[0])
         indices = indices.to('cpu').tolist()
         all_car_indices += indices
         if len(indices) > 1:
             # select car with the highest score if there are multiple cars with same car number
-            print(f"Multiple cars with same number: {len(indices)} cars with car number {rcnn_to_car_number(car)}."
-                  f" Selecting car with highest prediction score.")
+            issues += f"Multiple cars with same number: {len(indices)} cars with car number {rcnn_to_car_number(car)}." \
+                      f" Selecting car with highest prediction score."
             idx = indices[0]
             # issues = True
             for i in indices[1:]:
@@ -94,46 +99,66 @@ def preprocess_symbolics(prediction, threshold=.8):
     attribute_indices = [i for i in range(len(labels)) if i not in all_car_indices]
     train = torch.zeros(len(cars) * 8, dtype=torch.uint8)
     train_scores = torch.zeros(len(cars) * 8, dtype=torch.float32)
-    for car_n, car_index in enumerate(selected_car_indices):
-        whole_car_mask = masks[car_index]
-        car_number = car_n + 1
+    skipped_indicies = []
+    for attribute_index in attribute_indices:
+        allocated = False
+        label = labels[attribute_index]
+        label_name = label_names[attribute_index]
+        car_similarities = get_all_similarities_score(masks, car_indices=selected_car_indices,
+                                                      attribute_index=attribute_index)
+        car_number = np.argmax(car_similarities) + 1
+        similarity = car_similarities[car_number - 1]
 
-        for attribute_indice in attribute_indices:
-            mask = masks[attribute_indice]
-            label = labels[attribute_indice]
-            label_name = label_names[attribute_indice]
-            similarity = get_similarity_score(mask, whole_car_mask)
-            if similarity > threshold:
-                # class_int = michalski_categories().index(label_name)
-                # binary_class = np.zeros(22)
-                # binary_class[label] = 1
-                label_category = class_to_label(label)
-                idx = (car_number - 1) * 8 + label_category
-                if label_category == 5:
-                    while train[idx] != 0 and (idx % 8) < 7:
-                        idx += 1
-                if train[idx] != 0:
-                    if train[idx] == label:
-                        print(f"Duplicate Mask: Mask for car {car_number} with label {label_name} was predicted twice.")
-                        continue
-                    elif train[idx] != label:
-                        issues = True
-                        if scores[attribute_indice] > train_scores[idx]:
-                            print(f'Mask conflict: {michalski_categories()[train[idx]]} with score {train_scores[idx]} '
-                                  f'and {michalski_categories()[label]} with score {scores[attribute_indice]}'
-                                  f' for car {car_number}. Selecting higher score.')
-                            train[idx] = label
-                            train_scores[idx] = scores[attribute_indice]
-                        else:
-                            warnings.warn(
-                                f'Mask conflict: {michalski_categories()[train[idx]]} with score {train_scores[idx]} '
-                                f'and {michalski_categories()[label]} with score {scores[attribute_indice]}'
-                                f' for car {car_number}. Selecting higher score.')
-                else:
-                    train[idx] = label
-                    train_scores[idx] = scores[attribute_indice]
-                # break
+        if similarity > threshold:
+            # class_int = michalski_categories().index(label_name)
+            # binary_class = np.zeros(22)
+            # binary_class[label] = 1
+            label_category = class_to_label(label)
+            idx = (car_number - 1) * 8 + label_category
+            if label_category == 5:
+                while train[idx] != 0 and (idx % 8) < 7:
+                    idx += 1
+            if train[idx] != 0:
+                if train[idx] == label:
+                    issues += f"Duplicate Mask: Mask for car {car_number} with label {label_name} was predicted twice."
+                    continue
+                elif train[idx] != label:
+                    issues = True
+                    if scores[attribute_index] > train_scores[idx]:
+                        issues += f'Mask conflict: {michalski_categories()[train[idx]]} with score' \
+                                  f' {train_scores[idx]} and {michalski_categories()[label]} with score' \
+                                  f' {scores[attribute_index].round(3)} for car {car_number}. Selecting label with higher score.'
+                        train[idx] = label
+                        allocated = True
+                        train_scores[idx] = scores[attribute_index]
+                    else:
+                        issues += f'Mask conflict: {michalski_categories()[train[idx]]} with score ' \
+                                  f'{train_scores[idx]} and {michalski_categories()[label]} with score' \
+                                  f' {scores[attribute_index].round(3)} for car {car_number}. Selecting label with higher score.'
+            else:
+                train[idx] = label
+                allocated = True
+                train_scores[idx] = scores[attribute_index]
+            # break
+        if not allocated:
+            skipped_indicies.append(attribute_index)
+    nr_attr_processed = len(train[(train > 0) & (train < 22)])
+    model_label_prdictions = prediction['labels'].to('cpu').numpy()
+    nr_output_attr = len(model_label_prdictions[(model_label_prdictions > 0) & (model_label_prdictions < 22)])
+    issues = f'Number of predictions: {nr_output_attr}, number of found allocations: {nr_attr_processed}, ' \
+             f'not allocated label number: {skipped_indicies}. ' \
+             + issues
     return train, issues
+
+
+def get_all_similarities_score(masks, attribute_index, car_indices):
+    car_similarities = []
+    for car_n, car_index in enumerate(car_indices):
+        whole_car_mask = masks[car_index]
+        mask = masks[attribute_index]
+        similarity = get_similarity_score(mask, whole_car_mask)
+        car_similarities += [similarity]
+    return car_similarities
 
 
 def get_similarity_score(mask, whole_car_mask):
