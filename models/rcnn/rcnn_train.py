@@ -80,7 +80,7 @@ def train_rcnn(base_scene, train_col, y_val, device, out_path, model_name, model
         # start timer and carry out training and validation
         start = time.time()
         # train for one epoch, printing every 10 iterations
-        train_one_epoch(model, optimizer, dl['train'], device, epoch, print_freq=100)
+        train_one_epoch(model, optimizer, dl['train'], device, scheduler, epoch, print_freq=100)
         # update the learning rate
         scheduler.step()
         # evaluate on the test dataset

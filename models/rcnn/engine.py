@@ -11,20 +11,20 @@ from models.rcnn.coco_utils import get_coco_api_from_dataset
 
 ##### copied from torch references detection engine.py
 
-def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq, scaler=None):
+def train_one_epoch(model, optimizer, data_loader, device, lr_scheduler, epoch, print_freq, scaler=None):
     model.train()
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter("lr", utils.SmoothedValue(window_size=1, fmt="{value:.6f}"))
     header = f"Epoch: [{epoch}]"
 
-    lr_scheduler = None
-    if epoch == 0:
-        warmup_factor = 1.0 / 1000
-        warmup_iters = min(1000, len(data_loader) - 1)
-
-        lr_scheduler = torch.optim.lr_scheduler.LinearLR(
-            optimizer, start_factor=warmup_factor, total_iters=warmup_iters
-        )
+    # lr_scheduler = None
+    # if epoch == 0:
+    #     warmup_factor = 1.0 / 1000
+    #     warmup_iters = min(1000, len(data_loader) - 1)
+    #
+    #     lr_scheduler = torch.optim.lr_scheduler.LinearLR(
+    #         optimizer, start_factor=warmup_factor, total_iters=warmup_iters
+    #     )
 
     for images, targets in metric_logger.log_every(data_loader, print_freq, header):
         images = list(image.to(device) for image in images)

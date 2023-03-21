@@ -79,13 +79,15 @@ def train(args):
     if command == 'perception':
         from models.trainer import Trainer
         # model_name = 'resnet18'
-        batch_size = 15
-        lr = 0.001
-        weight_decay = 0.0005
-        num_epochs = 10
+        batch_size = 10
+        # batch_size = 1
+        lr = 0.02
+        step_size = 250
+        weight_decay = 0.9
+        num_epochs = 20
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
                           y_val=y_val, resume=False, batch_size=batch_size, setup_model=False, setup_ds=False,
-                          num_epochs=num_epochs)
+                          num_epochs=num_epochs, gamma=weight_decay, lr=lr, step_size=step_size)
         trainer.train(set_up=True, train_size=10000, val_size=2000)
 
     if command == 'perception_test':
