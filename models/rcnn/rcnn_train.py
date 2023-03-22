@@ -3,7 +3,8 @@ import time
 from rtpt.rtpt import RTPT
 from tqdm import tqdm
 
-from models.rcnn.engine import train_one_epoch, evaluate
+import models.rcnn.engine as engine
+from models.rcnn.inference import infer_symbolic
 from util import *
 
 
@@ -29,7 +30,7 @@ def train_rcnn(base_scene, train_col, y_val, device, out_path, model_name, model
 
     if checkpoint is not None:
         epoch_init = checkpoint['epoch']
-        loss = checkpoint['loss']
+        # loss = checkpoint['loss']
 
     label_names = full_ds.get_ds_labels()
     class_names = full_ds.get_ds_classes()
@@ -79,12 +80,18 @@ def train_rcnn(base_scene, train_col, y_val, device, out_path, model_name, model
 
         # start timer and carry out training and validation
         start = time.time()
+
         # train for one epoch, printing every 10 iterations
-        train_one_epoch(model, optimizer, dl['train'], device, scheduler, epoch, print_freq=100)
+        print('Training')
+        engine.train_one_epoch(model, optimizer, dl['train'], device, scheduler, epoch, print_freq=100)
+        # do_train(dl['train'], model, optimizer, device, train_loss_hist, scheduler)
         # update the learning rate
-        scheduler.step()
+        print('Infering symbolic')
+        _, _, acc, mean = infer_symbolic(model, dl['val'], device=device)
         # evaluate on the test dataset
-        evaluate(model, dl['val'], device=device)
+        # print('Evaluating')
+        engine.evaluate(model, dl['val'], device=device)
+        # validate(dl['val'], model, device, val_loss_hist)
 
         # train_loss, train_itr = do_train(dl['train'], model, optimizer, device, train_loss_hist, scheduler)
         # val_loss, val_itr = validate(dl['val'], model, device, val_loss_hist)
@@ -106,7 +113,6 @@ def train_rcnn(base_scene, train_col, y_val, device, out_path, model_name, model
 
 # function for running training iterations
 def do_train(train_data_loader, model, optimizer, device, train_loss_hist, scheduler):
-    print('Training')
 
     # initialize tqdm progress bar
     prog_bar = tqdm(train_data_loader, total=len(train_data_loader))
@@ -135,13 +141,12 @@ def do_train(train_data_loader, model, optimizer, device, train_loss_hist, sched
 
         # update the loss value beside the progress bar for each iteration
         prog_bar.set_description(desc=f"Loss: {loss_value:.4f}")
-    scheduler.step()
+        scheduler.step()
     return train_loss_list, train_itr
 
 
 # function for running validation iterations
 def validate(valid_data_loader, model, device, val_loss_hist):
-    print('Validating')
     val_loss_list = []
     val_itr = 0
 

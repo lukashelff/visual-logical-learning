@@ -33,6 +33,8 @@ from blender_image_generator.json_util import encodeMask
 import m_train_dataset
 from pycocotools import mask as maskUtils
 
+from michalski_trains.dataset import get_datasets
+
 logger = logging.getLogger("detectron2")
 
 
@@ -47,10 +49,13 @@ def setup(path, base_scene, train_col):
     cfg.freeze()
     return cfg
 
-def register_ds(base_scene, train_col, image_count):
-    y_val = 'mask'
-    full_ds = m_train_dataset.get_datasets(base_scene, train_col, image_count, y_val)
-    train_size, val_size = int(0.7 * image_count), int(0.3 * image_count)
+
+def register_ds(base_scene, raw_trains, train_vis, class_rule, min_car=2, max_car=4,
+                ds_size=12000, ds_path='output/image_generator', y_val='mask', resize=False, label_noise=0,
+                image_noise=0, preprocessing=None, fixed_output_car_size=4):
+    full_ds = get_datasets(base_scene, raw_trains, train_vis, class_rule, min_car, max_car, ds_size, ds_path, y_val,
+                           resize, label_noise, image_noise, preprocessing, fixed_output_car_size)
+    train_size, val_size = int(0.7 * ds_size), int(0.3 * ds_size)
     train_dataset, val_dataset = random_split(full_ds, [train_size, val_size])
 
     def create_train_ds():
@@ -60,7 +65,7 @@ def register_ds(base_scene, train_col, image_count):
         return create_michalski_train_ds(val_dataset.indices)
 
     def create_full_ds():
-        return create_michalski_train_ds([*range(image_count)])
+        return create_michalski_train_ds([*range(ds_size)])
 
     def create_michalski_train_ds(ds_ind):
         ds = []
