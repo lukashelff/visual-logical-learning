@@ -128,7 +128,7 @@ class Trainer:
                                     self.model_name, self.model, self.full_ds, self.dl, self.checkpoint, self.optimizer,
                                     self.scheduler, self.criteria, num_epochs=self.num_epochs, lr=self.lr,
                                     step_size=self.step_size, gamma=self.gamma, save_model=self.save_model,
-                                    rtpt_extra=rtpt_extra
+                                    rtpt_extra=rtpt_extra, ex_name=ex_name
                                     )
         else:
             self.model = do_train(self.base_scene, self.train_col, self.y_val, self.device, self.out_path,

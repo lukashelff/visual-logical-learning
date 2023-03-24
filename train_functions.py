@@ -80,8 +80,8 @@ def train(args):
     if command == 'perception':
         from models.trainer import Trainer
         # model_name = 'resnet18'
-        # batch_size = 10
-        batch_size = 1
+        batch_size = 10
+        # batch_size = 1
         lr = 0.001
         # every n training steps, the learning rate is reduced by gamma
         step_size = round(50000 / batch_size)
@@ -90,7 +90,7 @@ def train(args):
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
                           y_val=y_val, resume=False, batch_size=batch_size, setup_model=False, setup_ds=False,
                           num_epochs=num_epochs, gamma=gamma, lr=lr, step_size=step_size, optimizer_='ADAMW')
-        trainer.train(set_up=True, train_size=10000, val_size=2000)
+        trainer.train(set_up=True, train_size=10000, val_size=2000, ex_name=f'{action}_{model_name[:4]}_{command}')
 
     if command == 'perception_test':
         from models.trainer import Trainer

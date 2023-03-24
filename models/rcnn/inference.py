@@ -21,8 +21,6 @@ def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samp
     # if trainer.full_ds is None:
     #     trainer.setup_ds(val_size=samples)
 
-    for param in model.parameters():
-        param.requires_grad = False
     model.eval()
     model.to(device)
     t_acc = []

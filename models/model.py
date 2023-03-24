@@ -46,7 +46,7 @@ def get_model(model_name, pretrained, num_output, num_class):
                                                           image_std=[0.229, 0.224, 0.225],
                                                           # num_classes=22 + 20,
                                                           rpn_batch_size_per_image=256,
-                                                          # box_nms_thresh=0.7,
+                                                          box_nms_thresh=0.8,
                                                           # box_score_thresh=0.9
                                                           )
         # for predicting masks
