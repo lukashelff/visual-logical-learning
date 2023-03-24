@@ -10,7 +10,7 @@ import time
 from sklearn.metrics import accuracy_score
 from tqdm import tqdm, trange
 
-from michalski_trains.dataset import michalski_categories, rcnn_michalski_categories
+from michalski_trains.dataset import michalski_categories, rcnn_michalski_categories, michalski_labels
 from models.rcnn.plot_prediction import plot_prediction
 
 
@@ -20,6 +20,9 @@ def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samp
     all_preds = []
     # if trainer.full_ds is None:
     #     trainer.setup_ds(val_size=samples)
+
+    for param in model.parameters():
+        param.requires_grad = False
     model.eval()
     model.to(device)
     t_acc = []
@@ -40,7 +43,7 @@ def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samp
         length = max(len(symbolic), len(labels))
         symbolic = np.pad(symbolic, (0, length - len(symbolic)), 'constant', constant_values=0)
         labels = np.pad(labels, (0, length - len(labels)), 'constant', constant_values=0)
-        if debug and '[]' not in issues:
+        if debug:
             plot_prediction(output[0], i, image[0], device=device)
         all_labels.append(labels)
         all_preds.append(symbolic)
@@ -58,17 +61,25 @@ def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samp
     b = np.zeros([len(all_preds), len(max(all_preds, key=lambda x: len(x)))])
     for i, j in enumerate(all_preds):
         b[i][0:len(j)] = j
-    all_preds = b
+    all_preds = b.reshape((-1, 8))
 
     b = np.zeros([len(all_labels), len(max(all_labels, key=lambda x: len(x)))])
     for i, j in enumerate(all_labels):
         b[i][0:len(j)] = j
-    all_labels = b
+    all_labels = b.reshape((-1, 8))
 
+    labels = michalski_labels()
     acc = accuracy_score(all_labels.flatten(), all_preds.flatten())
-    print(f'symbolic acc score: {round(acc, 3)}')
-    print(f'average acc score: {np.mean(t_acc).round(3)}')
+    txt = f'average symbolic accuracies: {round(acc, 3)}, '
+    label_acc = 'label-wise accuracies:'
+    for label_id, label in enumerate(labels):
+        lab = all_labels[:, label_id]
+        pred = all_preds[:, label_id]
+        acc = accuracy_score(lab[lab > 0], pred[lab > 0])
+        label_acc += f' {label}: {round(acc * 100, 3)}%'
+    print(txt + label_acc)
 
+    # print(f'average train acc score: {np.mean(t_acc).round(3)}')
     return all_preds, all_labels, acc, np.mean(t_acc)
 
 

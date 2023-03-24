@@ -61,7 +61,7 @@ class Trainer:
             self.full_ds = None
 
     def cross_val_train(self, train_size=None, label_noise=None, rules=None, visualizations=None, scenes=None,
-                        n_splits=5, model_path=None, save_models=False, replace=False, image_noise=None):
+                        n_splits=5, model_path=None, save_models=False, replace=False, image_noise=None, ex_name=None):
         if train_size is None:
             train_size = [10000]
         if label_noise is None:
@@ -78,7 +78,6 @@ class Trainer:
         test_size = 2000
         self.save_model = save_models
         tr_it, tr_b = 0, 0
-
         n_batches = sum(train_size) // self.batch_size
         tr_b_total = n_splits * n_batches * len(label_noise) * len(image_noise) * len(rules) * len(
             visualizations) * len(scenes)
@@ -108,12 +107,12 @@ class Trainer:
                             f'total batches trained.')
                         self.setup_model(resume=self.resume, path=model_path)
                         self.setup_ds(tr_idx=tr_idx, val_idx=val_idx)
-                        self.train(rtpt_extra=(tr_b_total - tr_b) * self.num_epochs, set_up=False)
+                        self.train(rtpt_extra=(tr_b_total - tr_b) * self.num_epochs, set_up=False, ex_name=ex_name)
                         del self.model
-                    tr_b += (t_size + test_size) // self.batch_size
+                    tr_b += t_size // self.batch_size
                     tr_it += 1
 
-    def train(self, rtpt_extra=0, train_size=None, val_size=None, set_up=True):
+    def train(self, rtpt_extra=0, train_size=None, val_size=None, set_up=True, ex_name=None):
         if self.full_ds is None:
             self.full_ds = get_datasets(self.base_scene, self.train_col, self.train_vis, class_rule=self.class_rule,
                                         ds_size=self.ds_size, max_car=self.max_car, min_car=self.min_car,
@@ -136,7 +135,7 @@ class Trainer:
                                   self.model_name, self.model, self.full_ds, self.dl, self.checkpoint, self.optimizer,
                                   self.scheduler, self.criteria, num_epochs=self.num_epochs, lr=self.lr,
                                   step_size=self.step_size, gamma=self.gamma, save_model=self.save_model,
-                                  rtpt_extra=rtpt_extra
+                                  rtpt_extra=rtpt_extra, ex_name=ex_name
                                   )
         torch.cuda.empty_cache()
 

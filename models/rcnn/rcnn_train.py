@@ -87,7 +87,7 @@ def train_rcnn(base_scene, train_col, y_val, device, out_path, model_name, model
         # do_train(dl['train'], model, optimizer, device, train_loss_hist, scheduler)
         # update the learning rate
         print('Infering symbolic')
-        _, _, acc, mean = infer_symbolic(model, dl['val'], device=device)
+        _, _, acc, mean = infer_symbolic(model, dl['val'], device=device, debug=False)
         # evaluate on the test dataset
         # print('Evaluating')
         engine.evaluate(model, dl['val'], device=device)

@@ -6,9 +6,9 @@ from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
 
 from models.cnns.multi_label_nn import MultiLabelNeuralNetwork
+from models.cnns.set_transformer import SetTransformer
 from models.mlp.mlp import MLP
 from models.multioutput_regression.pos_net import PositionNetwork
-from models.set_transformer import SetTransformer
 from models.spacial_attr_net.attr_net import AttributeNetwork
 
 
@@ -46,17 +46,18 @@ def get_model(model_name, pretrained, num_output, num_class):
                                                           image_std=[0.229, 0.224, 0.225],
                                                           # num_classes=22 + 20,
                                                           rpn_batch_size_per_image=256,
+                                                          # box_nms_thresh=0.7,
                                                           # box_score_thresh=0.9
                                                           )
         # for predicting masks
         in_features_mask = model.roi_heads.mask_predictor.conv5_mask.in_channels
         hidden_layer = 256
         # define a new head for the detector with required number of classes, 22 for the label specific classes and 20 as the upper bound for the number of cars which can be present in a scene
-        model.roi_heads.mask_predictor = MaskRCNNPredictor(in_features_mask, hidden_layer, 22 + 4)
+        model.roi_heads.mask_predictor = MaskRCNNPredictor(in_features_mask, hidden_layer, 22 + 20)
         # for predicting boxes
         # get the number of input features
         in_features = model.roi_heads.box_predictor.cls_score.in_features
-        model.roi_heads.box_predictor = FastRCNNPredictor(in_features, 22 + 4)
+        model.roi_heads.box_predictor = FastRCNNPredictor(in_features, 22 + 20)
 
     elif model_name == 'attr_predictor':
         model = AttributeNetwork(dim_input=32)

@@ -2,6 +2,7 @@ import os
 
 import torch
 from torchvision.io import read_image
+from torchvision.transforms import transforms
 from torchvision.transforms.functional import to_pil_image, to_tensor
 from torchvision.utils import draw_bounding_boxes, draw_segmentation_masks
 
@@ -51,6 +52,11 @@ def predict_and_plot(model, dataloader, device):
 
 
 def plot_prediction(prediction, identifier, tensor_image, device):
+    inv_normalize = transforms.Normalize(
+        mean=[-0.485 / 0.229, -0.456 / 0.224, -0.406 / 0.255],
+        std=[1 / 0.229, 1 / 0.224, 1 / 0.255]
+    )
+    tensor_image = inv_normalize(tensor_image)
     # tensor to image
     img = tensor_image * 255
     # float tensor image to int tensor image
@@ -75,6 +81,6 @@ def plot_prediction(prediction, identifier, tensor_image, device):
         box = draw_segmentation_masks(img, masks=mask)
         im = to_pil_image(box.detach())
         # save pil image
-        pth = f'output/models/rcnn/test/masks/im_{identifier}_mask{c}_{labels[c]}.png'
+        pth = f'output/models/rcnn/test/masks/im_{identifier}_{labels[c]}_mask{c}.png'
         os.makedirs(os.path.dirname(pth), exist_ok=True)
         im.save(pth)

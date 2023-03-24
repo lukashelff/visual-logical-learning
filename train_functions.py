@@ -13,6 +13,7 @@ def train(args):
     ds_size = args.dataset_size
     model_name = args.model
     command = args.command
+    action = args.action
     max_cars = args.max_train_length
     min_cars = args.min_train_length
     device = torch.device("cpu" if not torch.cuda.is_available() or args.cuda == -1 else f"cuda:{args.cuda}")
@@ -74,21 +75,21 @@ def train(args):
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
                           setup_model=False, setup_ds=False, batch_size=batch_size, resize=resize, lr=lr)
         trainer.cross_val_train(train_size=train_size, image_noise=noises, rules=rules, replace=True,
-                                save_models=False)
+                                save_models=False, ex_name=f'{action}_{model_name[:4]}_{command}')
 
     if command == 'perception':
         from models.trainer import Trainer
         # model_name = 'resnet18'
         # batch_size = 10
-        batch_size = 15
+        batch_size = 1
         lr = 0.001
         # every n training steps, the learning rate is reduced by gamma
         step_size = round(50000 / batch_size)
-        weight_decay = 0.1
+        gamma = 0.1
         num_epochs = 20
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
                           y_val=y_val, resume=False, batch_size=batch_size, setup_model=False, setup_ds=False,
-                          num_epochs=num_epochs, gamma=weight_decay, lr=lr, step_size=step_size, optimizer_='ADAMW')
+                          num_epochs=num_epochs, gamma=gamma, lr=lr, step_size=step_size, optimizer_='ADAMW')
         trainer.train(set_up=True, train_size=10000, val_size=2000)
 
     if command == 'perception_test':
@@ -102,11 +103,11 @@ def train(args):
     if command == 'perception_infer':
         from models.trainer import Trainer
         batch_size = 1
-        samples = 10
+        samples = 100
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
                           y_val=y_val, resume=True, batch_size=batch_size, setup_model=True, setup_ds=True)
         from models.rcnn.inference import infer_symbolic
-        infer_symbolic(trainer.model, trainer.dl['val'], device, segmentation_similarity_threshold=.8, samples=10)
+        infer_symbolic(trainer.model, trainer.dl['val'], device, segmentation_similarity_threshold=.8, samples=samples, debug=False)
 
     if command == 'train_dtron':
         logger = logging.getLogger("detectron2")
