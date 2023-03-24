@@ -63,7 +63,6 @@ def train(args):
         lr = 0.001
         rules = ['theoryx', 'numerical', 'complex']
         train_size = [100, 1000, 10000]
-        noises = [0, 0.1, 0.3]
         noises = [0.1, 0.3]
         visualizations = ['Trains', 'SimpleObjects']
         scenes = ['base_scene', 'desert_scene', 'sky_scene', 'fisheye_scene']
@@ -74,7 +73,7 @@ def train(args):
             lr = 0.00001
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
                           setup_model=False, setup_ds=False, batch_size=batch_size, resize=resize, lr=lr)
-        trainer.cross_val_train(train_size=train_size, image_noise=noises, rules=rules, replace=False,
+        trainer.cross_val_train(train_size=train_size, image_noise=noises, rules=rules, replace=True,
                                 save_models=False)
 
     if command == 'perception':

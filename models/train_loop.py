@@ -59,7 +59,6 @@ def do_train(base_scene, train_col, y_val, device, out_path, model_name, model, 
                 epoch_label_accs[phase][metric][l_class] = [0] * num_epochs
 
     for epoch in range(num_epochs):
-        rtpt.step()
         time_elapsed = time.time() - since
 
         # Each epoch has a training and validation phase
@@ -103,6 +102,8 @@ def do_train(base_scene, train_col, y_val, device, out_path, model_name, model, 
                     if phase == 'train':
                         loss.backward()
                         optimizer.step()
+                        rtpt.step()
+
                 # print_train(outputs)
                 # show_torch_im(inputs)
 

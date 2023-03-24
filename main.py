@@ -80,7 +80,7 @@ def main():
         # min_car, max_car = 2, 4
         ds_size = 2000
         train_vis = 'Trains'
-        from models.eval import ilp_generalization_test, generalization_test
+        from models.evaluation import ilp_generalization_test, generalization_test
         ilp_pt = 'output/ilp'
         neural_path = 'output/model_comparison'
         # get generalization results for neural networks

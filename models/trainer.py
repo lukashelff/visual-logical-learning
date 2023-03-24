@@ -77,8 +77,12 @@ class Trainer:
         random_state = 0
         test_size = 2000
         self.save_model = save_models
-        tr_it = 0
-        tr_max = n_splits * len(train_size) * len(label_noise) * len(image_noise) * len(rules) * len(
+        tr_it, tr_b = 0, 0
+
+        n_batches = sum(train_size) // self.batch_size
+        tr_b_total = n_splits * n_batches * len(label_noise) * len(image_noise) * len(rules) * len(
+            visualizations) * len(scenes)
+        tr_it_total = n_splits * len(train_size) * len(label_noise) * len(image_noise) * len(rules) * len(
             visualizations) * len(scenes)
         for l_noise, i_noise, rule, visualization, scene in product(label_noise, image_noise, rules, visualizations,
                                                                     scenes):
@@ -99,11 +103,14 @@ class Trainer:
                     if not (os.path.isfile(self.out_path + 'metrics.json') and os.path.isfile(
                             self.out_path + 'model.pth')) or replace:
                         print('====' * 10)
-                        print(f'training iteration {tr_it} of {tr_max}')
+                        print(
+                            f'training iteration {tr_it} of {tr_it_total}, {tr_b} out of {tr_b_total} '
+                            f'total batches trained.')
                         self.setup_model(resume=self.resume, path=model_path)
                         self.setup_ds(tr_idx=tr_idx, val_idx=val_idx)
-                        self.train(rtpt_extra=(tr_max - tr_it) * self.num_epochs, set_up=False)
+                        self.train(rtpt_extra=(tr_b_total - tr_b) * self.num_epochs, set_up=False)
                         del self.model
+                    tr_b += (t_size + test_size) // self.batch_size
                     tr_it += 1
 
     def train(self, rtpt_extra=0, train_size=None, val_size=None, set_up=True):
@@ -387,6 +394,3 @@ def collate_fn_rcnn(batch):
     of objects and to handle varying size tensors as well.
     """
     return tuple(zip(*batch))
-
-
-

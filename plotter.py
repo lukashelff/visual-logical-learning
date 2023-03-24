@@ -49,7 +49,7 @@ def plot(args):
 
     if command == 'zoom':
         ds_p = ds_path + '/zoom7'
-        from models.eval import zoom_test
+        from models.evaluation import zoom_test
         # zoom_test(min_cars, max_cars, base_scene, raw_trains, train_vis, device, ds_p, ds_size=2000)
         neural_path = 'output/neural'
         out_path = 'output/model_comparison'
