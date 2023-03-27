@@ -51,7 +51,7 @@ def predict_and_plot(model, dataloader, device):
         im.save(pth)
 
 
-def plot_prediction(prediction, identifier, tensor_image, device):
+def plot_mask(prediction, identifier, tensor_image, tag=''):
     inv_normalize = transforms.Normalize(
         mean=[-0.485 / 0.229, -0.456 / 0.224, -0.406 / 0.255],
         std=[1 / 0.229, 1 / 0.224, 1 / 0.255]
@@ -81,6 +81,7 @@ def plot_prediction(prediction, identifier, tensor_image, device):
         box = draw_segmentation_masks(img, masks=mask)
         im = to_pil_image(box.detach())
         # save pil image
-        pth = f'output/models/rcnn/test/masks/im_{identifier}_{labels[c]}_mask{c}.png'
+        tag = tag if tag == '' else '/' + tag
+        pth = f'output/models/rcnn/test/masks{tag}/im_{identifier}_{labels[c]}_mask{c}.png'
         os.makedirs(os.path.dirname(pth), exist_ok=True)
         im.save(pth)

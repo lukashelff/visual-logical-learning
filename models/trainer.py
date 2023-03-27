@@ -61,7 +61,7 @@ class Trainer:
             self.full_ds = None
 
     def cross_val_train(self, train_size=None, label_noise=None, rules=None, visualizations=None, scenes=None,
-                        n_splits=5, model_path=None, save_models=False, replace=False, image_noise=None, ex_name=None):
+                        n_splits=5, model_path=None, save_models=False, replace=False, image_noise=None, ex_name=None, start_it=0):
         if train_size is None:
             train_size = [10000]
         if label_noise is None:
@@ -99,8 +99,8 @@ class Trainer:
 
                 for fold, (tr_idx, val_idx) in enumerate(cv.split(np.zeros(len(y)), y)):
                     self.out_path = self.get_model_path(prefix=True, suffix=f'it_{fold}/', im_count=t_size)
-                    if not (os.path.isfile(self.out_path + 'metrics.json') and os.path.isfile(
-                            self.out_path + 'model.pth')) or replace:
+                    if tr_it >= start_it and (not (os.path.isfile(self.out_path + 'metrics.json') and os.path.isfile(
+                            self.out_path + 'model.pth')) or replace):
                         print('====' * 10)
                         print(
                             f'training iteration {tr_it} of {tr_it_total}, {tr_b} out of {tr_b_total} '

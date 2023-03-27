@@ -59,6 +59,7 @@ def train(args):
 
     if command == 'image_noise':
         from models.trainer import Trainer
+        start_it = 55
         resize = False
         batch_size = 25
         lr = 0.001
@@ -75,13 +76,13 @@ def train(args):
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
                           setup_model=False, setup_ds=False, batch_size=batch_size, resize=resize, lr=lr)
         trainer.cross_val_train(train_size=train_size, image_noise=noises, rules=rules, replace=True,
-                                save_models=False, ex_name=f'{action}_{model_name[:4]}_{command}')
+                                save_models=False, ex_name=f'{action}_{model_name[:4]}_{command}', start_it=start_it)
 
     if command == 'perception':
         from models.trainer import Trainer
         # model_name = 'resnet18'
-        batch_size = 10
-        # batch_size = 1
+        # batch_size = 15
+        batch_size = 1
         lr = 0.001
         # every n training steps, the learning rate is reduced by gamma
         step_size = round(50000 / batch_size)
@@ -107,7 +108,8 @@ def train(args):
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
                           y_val=y_val, resume=True, batch_size=batch_size, setup_model=True, setup_ds=True)
         from models.rcnn.inference import infer_symbolic
-        infer_symbolic(trainer.model, trainer.dl['val'], device, segmentation_similarity_threshold=.8, samples=samples, debug=False)
+        infer_symbolic(trainer.model, trainer.dl['val'], device, segmentation_similarity_threshold=.8, samples=samples,
+                       debug=False)
 
     if command == 'train_dtron':
         logger = logging.getLogger("detectron2")

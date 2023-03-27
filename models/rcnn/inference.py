@@ -11,7 +11,7 @@ from sklearn.metrics import accuracy_score
 from tqdm import tqdm, trange
 
 from michalski_trains.dataset import michalski_categories, rcnn_michalski_categories, michalski_labels
-from models.rcnn.plot_prediction import plot_prediction
+from models.rcnn.plot_prediction import plot_mask
 
 
 def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samples=1000, debug=False):
@@ -33,6 +33,9 @@ def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samp
         image, target = ds.__getitem__(i)
         image = image.to(device).unsqueeze(0)
         labels = ds.get_attributes(i).to('cpu').numpy()
+        if debug:
+            plot_mask(target, i, image[0], tag='gt')
+
         with torch.no_grad():
             output = model(image)
         output = [{k: v.to(device) for k, v in t.items()} for t in output]
@@ -42,7 +45,7 @@ def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samp
         symbolic = np.pad(symbolic, (0, length - len(symbolic)), 'constant', constant_values=0)
         labels = np.pad(labels, (0, length - len(labels)), 'constant', constant_values=0)
         if debug:
-            plot_prediction(output[0], i, image[0], device=device)
+            plot_mask(output[0], i, image[0], tag='prediction')
         all_labels.append(labels)
         all_preds.append(symbolic)
         accuracy = accuracy_score(labels, symbolic)
@@ -69,7 +72,7 @@ def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samp
     labels = michalski_labels()
     acc = accuracy_score(all_labels.flatten(), all_preds.flatten())
     txt = f'average symbolic accuracies: {round(acc, 3)}, '
-    label_acc = 'label-wise accuracies:'
+    label_acc = 'label accuracies:'
     for label_id, label in enumerate(labels):
         lab = all_labels[:, label_id]
         pred = all_preds[:, label_id]
