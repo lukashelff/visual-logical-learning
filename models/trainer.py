@@ -103,8 +103,8 @@ class Trainer:
                             self.out_path + 'model.pth')) or replace):
                         print('====' * 10)
                         print(
-                            f'training iteration {tr_it} of {tr_it_total}, {tr_b} out of {tr_b_total} '
-                            f'total batches trained.')
+                            f'training iteration {tr_it + 1}/{tr_it_total} with {t_size // self.batch_size} '
+                            f'training batches, already completed: {tr_b}/{tr_b_total} batches. ')
                         self.setup_model(resume=self.resume, path=model_path)
                         self.setup_ds(tr_idx=tr_idx, val_idx=val_idx)
                         self.train(rtpt_extra=(tr_b_total - tr_b) * self.num_epochs, set_up=False, ex_name=ex_name)
