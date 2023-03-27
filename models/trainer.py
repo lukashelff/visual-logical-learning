@@ -19,7 +19,7 @@ from visualization.vis_model_comparison import model_scene_imcount_comparison, c
 
 
 class Trainer:
-    def __init__(self, base_scene, train_col, train_vis, device, model_name, class_rule, ds_path,
+    def __init__(self, base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path,
                  X_val='image', y_val='direction', max_car=4, min_car=2,
                  resume=False, pretrained=True, resize=False, optimizer_='ADAM', loss='CrossEntropyLoss',
                  train_size=None, val_size=None, ds_size=10000, image_noise=0, label_noise=0,
@@ -27,9 +27,9 @@ class Trainer:
                  num_epochs=25, setup_model=True, setup_ds=True, save_model=True):
 
         # ds_val setup
-        self.settings = f'{train_vis}_{class_rule}_{train_col}_{base_scene}_len_{min_car}-{max_car}'
+        self.settings = f'{train_vis}_{class_rule}_{raw_trains}_{base_scene}_len_{min_car}-{max_car}'
 
-        self.base_scene, self.train_col, self.train_vis, self.class_rule = base_scene, train_col, train_vis, class_rule
+        self.base_scene, self.raw_trains, self.train_vis, self.class_rule = base_scene, raw_trains, train_vis, class_rule
         self.ds_path, self.ds_size = ds_path, ds_size
         self.max_car, self.min_car = max_car, min_car
         self.device = device
@@ -51,7 +51,7 @@ class Trainer:
         else:
             self.model = None
         if setup_ds:
-            self.full_ds = get_datasets(self.base_scene, self.train_col, self.train_vis, ds_size=self.ds_size,
+            self.full_ds = get_datasets(self.base_scene, self.raw_trains, self.train_vis, ds_size=self.ds_size,
                                         ds_path=self.ds_path,
                                         y_val=y_val, max_car=self.max_car, min_car=self.min_car,
                                         class_rule=self.class_rule,
@@ -86,7 +86,7 @@ class Trainer:
         for l_noise, i_noise, rule, visualization, scene in product(label_noise, image_noise, rules, visualizations,
                                                                     scenes):
             self.label_noise, self.image_noise, self.class_rule, self.train_vis, self.base_scene = l_noise, i_noise, rule, visualization, scene
-            self.full_ds = get_datasets(self.base_scene, self.train_col, self.train_vis, class_rule=rule,
+            self.full_ds = get_datasets(self.base_scene, self.raw_trains, self.train_vis, class_rule=rule,
                                         ds_size=self.ds_size, max_car=self.max_car, min_car=self.min_car,
                                         label_noise=self.label_noise, image_noise=self.image_noise,
                                         ds_path=self.ds_path,
@@ -114,7 +114,7 @@ class Trainer:
 
     def train(self, rtpt_extra=0, train_size=None, val_size=None, set_up=True, ex_name=None):
         if self.full_ds is None:
-            self.full_ds = get_datasets(self.base_scene, self.train_col, self.train_vis, class_rule=self.class_rule,
+            self.full_ds = get_datasets(self.base_scene, self.raw_trains, self.train_vis, class_rule=self.class_rule,
                                         ds_size=self.ds_size, max_car=self.max_car, min_car=self.min_car,
                                         label_noise=self.label_noise, image_noise=self.image_noise,
                                         ds_path=self.ds_path, y_val=self.y_val,
@@ -124,14 +124,14 @@ class Trainer:
             self.setup_model(self.resume)
             self.setup_ds(train_size=train_size, val_size=val_size)
         if self.model_name == 'rcnn':
-            self.model = train_rcnn(self.base_scene, self.train_col, self.y_val, self.device, self.out_path,
+            self.model = train_rcnn(self.base_scene, self.raw_trains, self.y_val, self.device, self.out_path,
                                     self.model_name, self.model, self.full_ds, self.dl, self.checkpoint, self.optimizer,
                                     self.scheduler, self.criteria, num_epochs=self.num_epochs, lr=self.lr,
                                     step_size=self.step_size, gamma=self.gamma, save_model=self.save_model,
                                     rtpt_extra=rtpt_extra, ex_name=ex_name
                                     )
         else:
-            self.model = do_train(self.base_scene, self.train_col, self.y_val, self.device, self.out_path,
+            self.model = do_train(self.base_scene, self.raw_trains, self.y_val, self.device, self.out_path,
                                   self.model_name, self.model, self.full_ds, self.dl, self.checkpoint, self.optimizer,
                                   self.scheduler, self.criteria, num_epochs=self.num_epochs, lr=self.lr,
                                   step_size=self.step_size, gamma=self.gamma, save_model=self.save_model,
@@ -147,7 +147,7 @@ class Trainer:
             self.setup_ds(val_size=val_size)
             self.setup_model(self.resume, path=model_path)
         if self.model_name == 'rcnn':
-            acc, precision, recall = train_rcnn(self.base_scene, self.train_col, self.y_val, self.device, self.out_path,
+            acc, precision, recall = train_rcnn(self.base_scene, self.raw_trains, self.y_val, self.device, self.out_path,
                                                 self.model_name,
                                                 self.model, self.full_ds, self.dl, self.checkpoint, self.optimizer,
                                                 self.scheduler,
@@ -155,7 +155,7 @@ class Trainer:
                                                 step_size=self.step_size,
                                                 gamma=self.gamma, save_model=False, train='val')
         else:
-            acc, precision, recall = do_train(self.base_scene, self.train_col, self.y_val, self.device, self.out_path,
+            acc, precision, recall = do_train(self.base_scene, self.raw_trains, self.y_val, self.device, self.out_path,
                                               self.model_name,
                                               self.model, self.full_ds, self.dl, self.checkpoint, self.optimizer,
                                               self.scheduler,
@@ -215,7 +215,7 @@ class Trainer:
 
     def setup_ds(self, tr_idx=None, val_idx=None, train_size=None, val_size=None):
         if self.full_ds is None:
-            self.full_ds = get_datasets(self.base_scene, self.train_col, self.train_vis, ds_size=self.ds_size,
+            self.full_ds = get_datasets(self.base_scene, self.raw_trains, self.train_vis, ds_size=self.ds_size,
                                         ds_path=self.ds_path, y_val=self.y_val, max_car=self.max_car,
                                         min_car=self.min_car, class_rule=self.class_rule, resize=self.resize,
                                         preprocessing=self.preprocess)
@@ -251,10 +251,10 @@ class Trainer:
                        'val': DataLoader(self.ds['val'], batch_size=self.batch_size, num_workers=self.num_worker)}
 
     def plt_accuracy(self):
-        visualize_statistics(self.train_col, self.base_scene, self.y_val, self.ds, self.out_path, self.model_name)
+        visualize_statistics(self.raw_trains, self.base_scene, self.y_val, self.ds, self.out_path, self.model_name)
 
     def plt_confusion_matrix(self):
-        vis_confusion_matrix(self.train_col, self.base_scene, self.out_path, self.model_name, self.model,
+        vis_confusion_matrix(self.raw_trains, self.base_scene, self.out_path, self.model_name, self.model,
                              self.dl, self.device)
 
     def plt_cross_val_performance(self, tex_table=False, models=None):
@@ -262,7 +262,7 @@ class Trainer:
             models = [self.model_name]
         print('plotting  cross validated performance')
         path = self.get_model_path()
-        model_scene_imcount_comparison(self.train_col, models, self.y_val, path)
+        model_scene_imcount_comparison(self.raw_trains, models, self.y_val, path)
         if tex_table:
             csv_to_tex_table(path + 'mean_variance_comparison.csv')
 
@@ -270,7 +270,7 @@ class Trainer:
         model_name = self.model_name if model_name is None else model_name
         pre = '_pretrained' if self.pretrained else ''
         im_count = self.ds_size if im_count is None else im_count
-        ds_settings = f'{self.train_vis}_{self.class_rule}_{self.train_col}_{self.base_scene}'
+        ds_settings = f'{self.train_vis}_{self.class_rule}_{self.raw_trains}_{self.base_scene}'
         train_config = f'imcount_{im_count}_X_val_{self.X_val}{pre}_lr_{self.lr}_step_{self.step_size}_gamma{self.gamma}'
         pref = '' if not prefix else 'cv'
         if self.label_noise > 0:

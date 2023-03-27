@@ -114,22 +114,27 @@ def train(args):
     if command == 'train_dtron':
         logger = logging.getLogger("detectron2")
         from detectron2.modeling import build_model
-        from models.train_loop import do_train
         from models.rcnn.detectron import setup
         from models.rcnn.detectron import register_ds
+        logger = logging.getLogger("detectron2")
 
+        y_val = 'mask'
         print('train detectron 2')
         print('detectron 2 predicts segmentation and the corresponding label')
         image_count = 10000
-        register_ds(base_scene, train_col, image_count)
+        from michalski_trains.dataset import get_datasets
+        full_ds = get_datasets(base_scene, raw_trains, train_vis, class_rule,
+                               y_val=y_val, ds_size=ds_size, ds_path=ds_path)
+        register_ds(full_ds)
         cfg_path = "models/rcnn/configs/mask_rcnn_R_101_FPN_3x.yaml"
-        cfg = setup(cfg_path, base_scene, train_col)
+        cfg = setup(cfg_path, base_scene, raw_trains)
 
         model = build_model(cfg)
         logger.info("Model:\n{}".format(model))
-        experiment_name = f'dtron_{base_scene[:3]}_{train_col[0]}'
+        experiment_name = f'dtron_{base_scene[:3]}_{raw_trains[0]}'
 
-        do_train(cfg, model, experiment_name, resume=False)
+        from models.rcnn.detectron import do_train
+        do_train(cfg, model, experiment_name, logger, resume=False)
 
     if command == 'test_dtron':
         print('test detectron 2')
@@ -137,8 +142,8 @@ def train(args):
         from models.rcnn.detectron import do_test
 
         cfg_path = "models/rcnn/configs/mask_rcnn_R_101_FPN_3x.yaml"
-        cfg = setup(cfg_path, base_scene, train_col)
-        do_test(cfg, base_scene, train_col)
+        cfg = setup(cfg_path, base_scene, raw_trains)
+        do_test(cfg, base_scene, raw_trains)
 
     if command == 'eval_dtron':
         from visualization.vis_detectron import detectron_pred_vis_images, plt_metrics
@@ -146,6 +151,6 @@ def train(args):
 
         print('evaluate performance of detectron 2')
         cfg_path = "models/rcnn/configs/mask_rcnn_R_101_FPN_3x.yaml"
-        cfg = setup(cfg_path, base_scene, train_col)
-        detectron_pred_vis_images(cfg, base_scene, train_col)
-        plt_metrics(base_scene, train_col)
+        cfg = setup(cfg_path, base_scene, raw_trains)
+        detectron_pred_vis_images(cfg, base_scene, raw_trains)
+        plt_metrics(base_scene, raw_trains)

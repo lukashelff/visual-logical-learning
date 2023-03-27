@@ -8,9 +8,9 @@ from torch.utils.data import random_split
 from util import *
 
 
-def visualize_statistics(train_col, base_scene, y_val, datasets, out_path, model_name):
+def visualize_statistics(raw_trains, base_scene, y_val, datasets, out_path, model_name):
     print('visualizing model statistics from metrics.json')
-    # full_ds = get_datasets(base_scene, train_col, image_count, y_val, X_val=X_val)
+    # full_ds = get_datasets(base_scene, raw_trains, image_count, y_val, X_val=X_val)
     # train_size, val_size = int(0.7 * image_count), int(0.3 * image_count)
     # train_dataset, val_dataset = random_split(full_ds, [train_size, val_size])
     # datasets = {
@@ -18,12 +18,12 @@ def visualize_statistics(train_col, base_scene, y_val, datasets, out_path, model
     #     'val': val_dataset
     # }
     if y_val == 'direction':
-        vis_statistics_dir(train_col, base_scene, model_name, datasets, out_path)
+        vis_statistics_dir(raw_trains, base_scene, model_name, datasets, out_path)
     elif y_val == 'attribute':
-        vis_statistics_at(train_col, base_scene, model_name, datasets, out_path)
+        vis_statistics_at(raw_trains, base_scene, model_name, datasets, out_path)
 
 
-def vis_statistics_dir(train_col, base_scene, model_name, datasets, out_path):
+def vis_statistics_dir(raw_trains, base_scene, model_name, datasets, out_path):
     with open(out_path + 'metrics.json', 'r') as fp:
         statistics = json.load(fp)
     label_names = datasets['train'].dataset.labels
@@ -56,7 +56,7 @@ def vis_statistics_dir(train_col, base_scene, model_name, datasets, out_path):
     plt.xlabel("training epoch")
     plt.ylabel("acc")
     plt.legend(loc="lower right")
-    plt.title(f'{model_name} trained on {base_scene} DS with {train_col}')
+    plt.title(f'{model_name} trained on {base_scene} DS with {raw_trains}')
     plt.savefig(path + f'accuracy.png', dpi=400)
     plt.close()
 
@@ -67,7 +67,7 @@ def vis_statistics_dir(train_col, base_scene, model_name, datasets, out_path):
     plt.ylabel("acc")
     plt.ylim(ymin=0)
     plt.legend(loc="lower right")
-    plt.title(f'{model_name} loss on {base_scene} with {train_col} DS')
+    plt.title(f'{model_name} loss on {base_scene} with {raw_trains} DS')
     plt.savefig(path + f'loss.png', dpi=400)
     plt.close()
 
@@ -85,13 +85,13 @@ def vis_statistics_dir(train_col, base_scene, model_name, datasets, out_path):
         plt.ylim(ymin=0)
         plt.ylabel(metric)
         plt.legend(loc="lower right")
-        plt.title(f'{metric} of {label_name} label during {phase}\n {base_scene} DS with {train_col}')
+        plt.title(f'{metric} of {label_name} label during {phase}\n {base_scene} DS with {raw_trains}')
         plt.savefig(path + f'{metric}_performance_{label_name}.png', dpi=400)
         plt.close()
     print(f'statistics saved in {path}')
 
 
-def vis_statistics_at(train_col, base_scene, model_name, datasets, out_path):
+def vis_statistics_at(raw_trains, base_scene, model_name, datasets, out_path):
     with open(out_path + 'metrics.json', 'r') as fp:
         statistics = json.load(fp)
     attributes = datasets['train'].dataset.attributes
@@ -135,7 +135,7 @@ def vis_statistics_at(train_col, base_scene, model_name, datasets, out_path):
             plt.ylim(ymin=0)
             plt.legend(loc="lower right")
             plt.title(f'{phase} {acc_type} for each label including {baselines_n[acc_type]} as baseline\n'
-                      f'model trained on {base_scene} DS with {train_col}')
+                      f'model trained on {base_scene} DS with {raw_trains}')
             plt.savefig(path + f'{phase}_{acc_type}.png', dpi=400)
             plt.close()
 
@@ -152,7 +152,7 @@ def vis_statistics_at(train_col, base_scene, model_name, datasets, out_path):
     plt.ylabel("acc")
     plt.legend(loc="lower right")
     plt.title(f'Accumulated classification accuracy including corresponding baseline\n'
-              f'{model_name} model trained on {base_scene} DS with {train_col}')
+              f'{model_name} model trained on {base_scene} DS with {raw_trains}')
     plt.savefig(path + f'accumulated_acc.png', dpi=400)
     plt.close()
 
@@ -162,7 +162,7 @@ def vis_statistics_at(train_col, base_scene, model_name, datasets, out_path):
     plt.xlabel("training epoch")
     plt.ylabel("acc")
     plt.legend(loc="lower right")
-    plt.title(f'{model_name} loss on {base_scene} with {train_col} DS')
+    plt.title(f'{model_name} loss on {base_scene} with {raw_trains} DS')
     plt.savefig(path + f'loss.png', dpi=400)
     plt.close()
 
@@ -182,7 +182,7 @@ def vis_statistics_at(train_col, base_scene, model_name, datasets, out_path):
                 plt.ylim(ymin=0)
                 plt.ylabel(metric)
                 plt.legend(loc="lower right")
-                plt.title(f'{metric} of {label_name} label during {phase}\n {base_scene} DS with {train_col}')
+                plt.title(f'{metric} of {label_name} label during {phase}\n {base_scene} DS with {raw_trains}')
                 plt.savefig(path + f'{metric}_performance_{phase}_{label_name}.png', dpi=400)
                 plt.close()
 
@@ -214,10 +214,10 @@ def visualize_model(model, class_names, device, dataloaders, num_images=6):
         model.train(mode=was_training)
 
 
-def vis_confusion_matrix(train_col, base_scene, out_path, model_name, model, dl, device):
+def vis_confusion_matrix(raw_trains, base_scene, out_path, model_name, model, dl, device):
     print('evaluate model validation performance and create confusion matrix')
     num_epoch = 1
-    # model, _, _, _, dl, ds_val, _, _ = train_setup(backbone, model_name, base_scene, train_col,
+    # model, _, _, _, dl, ds_val, _, _ = train_setup(backbone, model_name, base_scene, raw_trains,
     #                                            y_val, device,
     #                                            num_epoch, out_path, resume=True, batch_size=20,
     #                                            image_count=image_count, )
@@ -252,7 +252,7 @@ def vis_confusion_matrix(train_col, base_scene, out_path, model_name, model, dl,
     ConfusionMatrixDisplay.from_predictions(all_labels, all_preds, include_values=False, cmap=plt.cm.Blues,
                                             normalize='true')
     plt.title(f'Confusion Matrix for {model_name} (acc: {round(acc * 100, 2)}%)\n'
-              f'trained on {train_col} in {base_scene} DS')
+              f'trained on {raw_trains} in {base_scene} DS')
     pth = out_path + 'statistics'
     os.makedirs(pth, exist_ok=True)
     plt.savefig(pth + '/confusion_matrix', dpi=400)

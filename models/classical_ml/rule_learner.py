@@ -28,12 +28,12 @@ import seaborn as sns
 from util import *
 
 
-def michalski_learner(base_scene, train_col, image_counts, device):
+def michalski_learner(base_scene, raw_trains, image_counts, device):
     y_val = 'direction'
     X_val = 'gt_attributes'
     X_val = 'predicted_attributes'
     base_scene = 'base_scene'
-    train_col = 'MichalskiTrains'
+    raw_trains = 'MichalskiTrains'
     random_state = 0
     test_size = 2000
     n_splits = 10
@@ -77,10 +77,10 @@ def michalski_learner(base_scene, train_col, image_counts, device):
     print(f'the methods described below were employed on a michalski train dataset of the sizes {image_counts}')
     print(f'the score represents the methods mean accuracy over {n_splits} folds of cross-validation')
 
-    scores += get_set_transformer_scores(y_val, train_col, base_scene)
+    scores += get_set_transformer_scores(y_val, raw_trains, base_scene)
 
     from m_train_dataset import get_datasets
-    full_ds = get_datasets(base_scene, train_col, 10000, y_val=y_val, X_val=X_val)
+    full_ds = get_datasets(base_scene, raw_trains, 10000, y_val=y_val, X_val=X_val)
     for image_count in image_counts:
         print(f'employing methods on dataset with a size of {image_count} images')
         full_ds.predictions_im_count = image_count
@@ -185,12 +185,12 @@ def michalski_learner(base_scene, train_col, image_counts, device):
     plt.close()
 
 
-def get_set_transformer_scores(y_val, train_col, base_scene):
+def get_set_transformer_scores(y_val, raw_trains, base_scene):
     scores = []
     # add performance of set transformer
     model_name = 'set_transformer'
     # load set transformer performance
-    _out_path = f'output/models/{model_name}/{y_val}_classification/{train_col}/{base_scene}/cv/'
+    _out_path = f'output/models/{model_name}/{y_val}_classification/{raw_trains}/{base_scene}/cv/'
 
     conf = os.listdir(_out_path)
     configs_invariant = []
@@ -204,7 +204,7 @@ def get_set_transformer_scores(y_val, train_col, base_scene):
     configs.insert(0, configs.pop())
     if len(configs) < 3:
         # m_name, num_epochs = 'set_transformer', 150
-        # trainer = Trainer(base_scene, train_col, device, m_name, num_epochs=num_epochs, X_val=X_val, y_val=y_val, )
+        # trainer = Trainer(base_scene, raw_trains, device, m_name, num_epochs=num_epochs, X_val=X_val, y_val=y_val, )
         # trainer.cross_val_train()
         raise AssertionError(f'set transformer not trained for all image sizes, available: {configs}')
 
@@ -224,11 +224,11 @@ def get_set_transformer_scores(y_val, train_col, base_scene):
 
 
 def create_bk(base_scene, num_trains, noise=0.01):
-    train_col = 'MichalskiTrains'
+    raw_trains = 'MichalskiTrains'
     y_val = 'direction'
     X_val = 'gt_attributes'
     from m_train_dataset import get_datasets
-    ds = get_datasets(base_scene, train_col, num_trains, y_val=y_val, X_val=X_val)
+    ds = get_datasets(base_scene, raw_trains, num_trains, y_val=y_val, X_val=X_val)
 
     train_c = 0
     path = './output/models/popper/gt/'
@@ -312,11 +312,11 @@ def create_bk(base_scene, num_trains, noise=0.01):
     shutil.copy(path + '/bk.pl', path_dilp + '/facts.dilp')
 
 
-def eval_induction_lr(base_scene, train_col, image_count):
+def eval_induction_lr(base_scene, raw_trains, image_count):
     y_val = 'direction'
     X_val = 'gt_attributes'
     from m_train_dataset import get_datasets
-    full_ds = get_datasets(base_scene, train_col, image_count, y_val=y_val, X_val=X_val)
+    full_ds = get_datasets(base_scene, raw_trains, image_count, y_val=y_val, X_val=X_val)
     # train_size, val_size = int(0.7 * image_count), int(0.3 * image_count)
     # train_dataset, val_dataset = torch.utils.data.random_split(full_ds, [train_size, val_size])
     # datasets = {
@@ -580,12 +580,12 @@ def ds_attr_pred_confusion_matrix():
 
     X_val = 'predicted_attributes'
     y_val = 'attribute'
-    train_col = 'MichalskiTrains'
+    raw_trains = 'MichalskiTrains'
     path = 'output/predicted_ds'
     os.makedirs(path, exist_ok=True)
     for scene in scenes:
         import m_train_dataset
-        ds = m_train_dataset.get_datasets(scene, train_col, 10000, y_val, X_val=X_val)
+        ds = m_train_dataset.get_datasets(scene, raw_trains, 10000, y_val, X_val=X_val)
         gt_attr = np.concatenate([y for x, y in ds], axis=0).flatten()
         for image_count in [100, 1000, 8000]:
             ds.predictions_im_count = image_count
@@ -594,6 +594,6 @@ def ds_attr_pred_confusion_matrix():
                                                     cmap=plt.cm.Blues,
                                                     normalize='true')
             # plt.title(f'Confusion Matrix for {model_name} (acc: {round(acc * 100, 2)}%)\n'
-            #           f'trained on {train_col} in {base_scene} DS')
+            #           f'trained on {raw_trains} in {base_scene} DS')
             plt.savefig(path + f'/{scene}_{image_count}_ims_confusion_matrix', dpi=400, bbox_inches='tight')
             plt.close()

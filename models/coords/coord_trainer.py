@@ -134,9 +134,9 @@ def mean_variance_comparison(full_ds, train_size):
     plt.close()
 
 
-def compare_multi_class(base_scene, train_col, y_val='attribute_str', X_val='gt_positions'):
+def compare_multi_class(base_scene, raw_trains, y_val='attribute_str', X_val='gt_positions'):
     print('Multiclass and multi-output algorithms')
-    full_ds = get_datasets(base_scene, train_col, 10000, y_val=y_val, X_val=X_val)
+    full_ds = get_datasets(base_scene, raw_trains, 10000, y_val=y_val, X_val=X_val)
     X = np.concatenate([x.flatten().unsqueeze(dim=0) for x, y in full_ds], axis=0)
     # y = np.concatenate([y.unsqueeze(dim=0) for x, y in full_ds], axis=0)
     y = np.array([y for x, y in full_ds])

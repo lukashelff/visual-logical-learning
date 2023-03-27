@@ -90,9 +90,9 @@ def show_masked_im(train_ds):
 
 
 # plot gt instances from dataset frame
-def plot_detectron_gt(cfg, base_scene, train_col):
+def plot_detectron_gt(cfg, base_scene, raw_trains):
     image_count = 10
-    register_ds(base_scene, train_col, image_count)
+    register_ds(base_scene, raw_trains, image_count)
     metadata = MetadataCatalog.get("michalski_val_ds")
     data_loader = build_detection_train_loader(cfg)
     for data in data_loader:

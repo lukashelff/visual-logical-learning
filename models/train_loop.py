@@ -8,10 +8,10 @@ from sklearn.metrics import balanced_accuracy_score, accuracy_score, confusion_m
 from util import *
 
 
-def do_train(base_scene, train_col, y_val, device, out_path, model_name, model, full_ds, dl,
+def do_train(base_scene, raw_trains, y_val, device, out_path, model_name, model, full_ds, dl,
              checkpoint, optimizer, scheduler, criteria, num_epochs=25, lr=0.001, step_size=5, gamma=.8,
              save_model=True, rtpt_extra=0, train='train', ex_name=None):
-    ex_name = f'train_{base_scene[:3]}_{train_col[0]}' if ex_name is None else ex_name
+    ex_name = f'train_{base_scene[:3]}_{raw_trains[0]}' if ex_name is None else ex_name
     rtpt = RTPT(name_initials='LH', experiment_name=ex_name,
                 max_iterations=num_epochs + rtpt_extra)
     rtpt.start()

@@ -13,11 +13,11 @@ def infer_symbolic(trainer, use_transfer_trained_model=False, im_counts=None):
     # model_pred2 = 'resnet18'
     # out_path = f'output/models/{model_pred2}/attribute_classification/RandomTrains/{trainer.base_scene}'
     # config = f'imcount_10000_X_val_predicted_mask_lr_0.001_step_5_gamma0.8'
-    train_col = trainer.train_col
+    raw_trains = trainer.raw_trains
     dl = DataLoader(trainer.full_ds, batch_size=trainer.batch_size, shuffle=False, num_workers=4)
     if im_counts is None: im_counts = [100, 1000, 8000]
     if not use_transfer_trained_model:
-        trainer.train_col = 'RandomTrains'
+        trainer.raw_trains = 'RandomTrains'
         im_counts = [8000]
 
     # trainer.X_val = 'gt_mask'
@@ -26,8 +26,8 @@ def infer_symbolic(trainer, use_transfer_trained_model=False, im_counts=None):
         out_path = f'output/models/inferred_symbolic/{trainer.model_name}/attribute_classification/{trainer.setting}'
 
         print(
-            f'{trainer.model_name} trained on {im_count}{trainer.train_col} images predicting train descriptions for the'
-            f' {train_col} trains in {trainer.base_scene}')
+            f'{trainer.model_name} trained on {im_count}{trainer.raw_trains} images predicting train descriptions for the'
+            f' {raw_trains} trains in {trainer.base_scene}')
         accs = []
         for fold in range(5):
 
@@ -88,7 +88,7 @@ def transfer_classification(trainer, train_size, n_splits=5, batch_size=None):
     rtpt.start()
 
     for scene in ['base_scene', 'desert_scene', 'sky_scene', 'fisheye_scene']:
-        ds = get_datasets(scene, trainer.train_col, trainer.train_vis, 10000, resize=False,
+        ds = get_datasets(scene, trainer.raw_trains, trainer.train_vis, 10000, resize=False,
                           ds_path=trainer.ds_path)
         dl = DataLoader(ds, batch_size=batch_size, num_workers=trainer.num_worker)
         for training_size in train_size:
@@ -142,7 +142,7 @@ def transfer_classification(trainer, train_size, n_splits=5, batch_size=None):
             _df = pd.DataFrame([li], columns=['methods', 'number of images', 'scenes', 'mean', 'variance', 'std'])
             data = pd.concat([data, _df], ignore_index=True)
     print(tabulate(data, headers='keys', tablefmt='psql'))
-    path = f'output/models/{trainer.model_name}/{trainer.y_val}_classification/{trainer.train_col}/{trainer.base_scene}/'
+    path = f'output/models/{trainer.model_name}/{trainer.y_val}_classification/{trainer.raw_trains}/{trainer.base_scene}/'
     os.makedirs(path, exist_ok=True)
     data.to_csv(path + 'transfer_classification.csv')
     data_cv.to_csv(path + 'transfer_classification_cv.csv')

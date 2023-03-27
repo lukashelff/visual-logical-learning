@@ -17,7 +17,7 @@ def explain_model_decision(device):
     from captum.attr import LayerGradCam
     from captum.attr import visualization as viz
 
-    train_col = 'MichalskiTrains'
+    raw_trains = 'MichalskiTrains'
     base_scene = 'base_scene'
     y_val = 'direction'
 
@@ -30,7 +30,7 @@ def explain_model_decision(device):
     gamma = .8
     lr = 0.001
     step_size = 10
-    trainer = Trainer(base_scene, train_col, device, model_name,
+    trainer = Trainer(base_scene, raw_trains, device, model_name,
                       image_count=image_count, num_epochs=num_epochs, resume=resume, y_val=y_val,
                       pretrained=pretrained, lr=lr, step_size=step_size, gamma=gamma, optimizer_=optimizer_,
                       setup_ds=False, setup_model=False

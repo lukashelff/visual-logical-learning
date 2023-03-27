@@ -49,9 +49,9 @@ def get_model(model_name, pretrained, num_output, num_class):
                                                           box_nms_thresh=0.8,
                                                           # box_score_thresh=0.9
                                                           )
-        model.roi_heads.box_head = FastRCNNConvFCHead(
-            (model.backbone.out_channels, 7, 7), [256, 256, 256, 256], [1024], norm_layer=None
-        )
+        # model.roi_heads.box_head = FastRCNNConvFCHead(
+        #     (model.backbone.out_channels, 7, 7), [256, 256, 256, 256], [1024], norm_layer=None
+        # )
         # for predicting masks
         in_features_mask = model.roi_heads.mask_predictor.conv5_mask.in_channels
         hidden_layer = 256

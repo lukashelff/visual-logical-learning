@@ -22,16 +22,16 @@ from visualization.vis_model import visualize_statistics, vis_confusion_matrix
 
 
 class Regression:
-    def __init__(self, base_scene, train_col, device, model_name,
+    def __init__(self, base_scene, raw_trains, device, model_name,
                  X_val='image', y_val='direction',
                  resume=False, pretrained=True, resize=False, optimizer_='ADAM', loss='CrossEntropyLoss',
                  image_count=10000, batch_size=50, num_worker=4, lr=0.001, step_size=5, gamma=.8, momentum=0.9,
                  num_epochs=25):
-        if y_val == 'direction' and train_col == 'RandomTrains':
-            raise AssertionError(f'There is no direction label for a {train_col}. Use MichalskiTrain DS.')
+        if y_val == 'direction' and raw_trains == 'RandomTrains':
+            raise AssertionError(f'There is no direction label for a {raw_trains}. Use MichalskiTrain DS.')
 
         # ds_val setup
-        self.base_scene, self.train_col, self.device = base_scene, train_col, device
+        self.base_scene, self.raw_trains, self.device = base_scene, raw_trains, device
         self.X_val, self.y_val = X_val, y_val
         self.pretrained = pretrained
         # model setup
@@ -49,7 +49,7 @@ class Regression:
             if resume:
                 raise AssertionError(f'no pretrained model or metrics found at {model_path}\n please train model first')
             self.checkpoint = None
-        self.full_ds = get_datasets(base_scene, train_col, 10000, y_val, resize=resize, X_val=X_val)
+        self.full_ds = get_datasets(base_scene, raw_trains, 10000, y_val, resize=resize, X_val=X_val)
         train_size, val_size = int(0.8 * self.image_count), int(0.2 * self.image_count)
         self.ds = {
             'train': Subset(self.full_ds, arange(train_size)),
@@ -113,7 +113,7 @@ class Regression:
                                       num_workers=self.num_worker)
                 }
 
-                self.model = do_train_reg(self.base_scene, self.train_col, self.y_val, self.device, self.out_path,
+                self.model = do_train_reg(self.base_scene, self.raw_trains, self.y_val, self.device, self.out_path,
                                           self.model_name, self.model, self.full_ds, self.dl, self.checkpoint,
                                           self.optimizer, self.scheduler, self.criteria,
                                           num_epochs=self.num_epochs, lr=self.lr, step_size=self.step_size,
@@ -122,7 +122,7 @@ class Regression:
                 torch.cuda.empty_cache()
 
     def train(self):
-        self.model = do_train_reg(self.base_scene, self.train_col, self.y_val, self.device, self.out_path,
+        self.model = do_train_reg(self.base_scene, self.raw_trains, self.y_val, self.device, self.out_path,
                                   self.model_name,
                                   self.model, self.full_ds, self.dl, self.checkpoint, self.optimizer, self.scheduler,
                                   self.criteria, num_epochs=self.num_epochs, lr=self.lr, step_size=self.step_size,
@@ -132,7 +132,7 @@ class Regression:
 
     def predict_world_coords(self):
         ds = self.full_ds
-        rtpt = RTPT(name_initials='LH', experiment_name=f'Pred_{self.base_scene[:3]}_{self.train_col[0]}',
+        rtpt = RTPT(name_initials='LH', experiment_name=f'Pred_{self.base_scene[:3]}_{self.raw_trains[0]}',
                     max_iterations=ds.__len__())
         rtpt.start()
         all_preds = []
@@ -155,7 +155,7 @@ class Regression:
                 rtpt.step()
         all_preds = np.array(all_preds)
 
-        path = f'output/predictions/{self.train_col}/{self.base_scene}'
+        path = f'output/predictions/{self.raw_trains}/{self.base_scene}'
         os.makedirs(path, exist_ok=True)
         np.save(path + f'/world_coord_predictions.npy', all_preds, allow_pickle=True)
         # with open(path + f'/world_coord_predictions.json', 'w+') as fp:
@@ -164,7 +164,7 @@ class Regression:
     def update_out_path(self, prefix='', suffix=''):
         pre = '_pretrained' if self.pretrained else ''
         config = f'imcount_{self.image_count}_X_val_{self.X_val}{pre}_lr_{self.lr}_step_{self.step_size}_gamma{self.gamma}'
-        out_path = f'output/models/{self.model_name}/{self.y_val}_classification/{self.train_col}' \
+        out_path = f'output/models/{self.model_name}/{self.y_val}_classification/{self.raw_trains}' \
                    f'/{self.base_scene}/{prefix}{config}/{suffix}'
         return out_path
 
@@ -198,10 +198,10 @@ class Regression:
             plt.close()
 
 
-def do_train_reg(base_scene, train_col, y_val, device, out_path, model_name, model, full_ds, dl,
+def do_train_reg(base_scene, raw_trains, y_val, device, out_path, model_name, model, full_ds, dl,
                  checkpoint, optimizer, scheduler, criteria, num_epochs=25, lr=0.001, step_size=5, gamma=.8
                  ):
-    rtpt = RTPT(name_initials='LH', experiment_name=f'train_{base_scene[:3]}_{train_col[0]}',
+    rtpt = RTPT(name_initials='LH', experiment_name=f'train_{base_scene[:3]}_{raw_trains[0]}',
                 max_iterations=num_epochs)
     rtpt.start()
     epoch_init = 0

@@ -30,32 +30,27 @@ from rtpt import RTPT
 from torch.utils.data import random_split
 
 from blender_image_generator.json_util import encodeMask
-import m_train_dataset
 from pycocotools import mask as maskUtils
 
-from michalski_trains.dataset import get_datasets
-
-logger = logging.getLogger("detectron2")
+from michalski_trains.dataset import rcnn_michalski_categories
 
 
-def setup(path, base_scene, train_col):
+def setup(path, base_scene, raw_trains):
     """
     Create configs and perform basic setups.
     """
     cfg = get_cfg()
     cfg.merge_from_file(path)
-    cfg.OUTPUT_DIR = f'./output/detectron/{train_col}/{base_scene}'
+    cfg.OUTPUT_DIR = f'./output/models/detectron/{raw_trains}/{base_scene}'
     os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
     cfg.freeze()
     return cfg
 
 
-def register_ds(base_scene, raw_trains, train_vis, class_rule, min_car=2, max_car=4,
-                ds_size=12000, ds_path='output/image_generator', y_val='mask', resize=False, label_noise=0,
-                image_noise=0, preprocessing=None, fixed_output_car_size=4):
-    full_ds = get_datasets(base_scene, raw_trains, train_vis, class_rule, min_car, max_car, ds_size, ds_path, y_val,
-                           resize, label_noise, image_noise, preprocessing, fixed_output_car_size)
-    train_size, val_size = int(0.7 * ds_size), int(0.3 * ds_size)
+def register_ds(full_ds):
+    # full_ds = get_datasets(base_scene, raw_trains, train_vis, class_rule, min_car, max_car, ds_size, ds_path, y_val,
+    #                        resize, label_noise, image_noise, preprocessing, fixed_output_car_size)
+    train_size, val_size = int(0.7 * full_ds.__len__()), int(0.3 * full_ds.__len__())
     train_dataset, val_dataset = random_split(full_ds, [train_size, val_size])
 
     def create_train_ds():
@@ -65,15 +60,18 @@ def register_ds(base_scene, raw_trains, train_vis, class_rule, min_car=2, max_ca
         return create_michalski_train_ds(val_dataset.indices)
 
     def create_full_ds():
-        return create_michalski_train_ds([*range(ds_size)])
+        return create_michalski_train_ds([*range(full_ds.__len__())])
 
     def create_michalski_train_ds(ds_ind):
         ds = []
         height, width = 270, 480
-        all_categories = full_ds.attribute_classes[1:]
         for id, index in enumerate(ds_ind):
-            train = full_ds.get_m_train(index)
-            train_mask = full_ds.get_mask(index)
+            # image, target = full_ds.__getitem__(index)
+            rles = full_ds.get_rle(index)
+            boxes = full_ds.get_bboxes(index, format='[x0,y0,w,h]')
+            labels = full_ds.get_mask_labels(index)
+            # train = full_ds.get_m_train(index)
+            # train_mask = full_ds.get_mask(index)
             image_pth = full_ds.get_image_path(index)
             data_dict = {
                 'file_name': image_pth,
@@ -82,31 +80,40 @@ def register_ds(base_scene, raw_trains, train_vis, class_rule, min_car=2, max_ca
                 'image_id': id,
                 'annotations': []
             }
-            for (car_name, car_mask), car in zip(train_mask.items(), train.get_cars()):
-                position = car_name
-                whole_car_mask = car_mask['mask']
-                # title = f'{car_name} segmentation'
-                # plot_rle(whole_car_mask, title)
-
-                whole_car_bbox = maskUtils.toBbox(whole_car_mask)
-                del car_mask['mask'], car_mask['b_box'], car_mask['world_cord']
-                for att_name, att in car_mask.items():
-                    label = att['label']
-                    if label != 'none':
-                        annotations = {}
-
-                        if att_name == 'length' or att_name == 'color':
-                            rle, bbox = whole_car_mask, whole_car_bbox
-                        else:
-                            rle = att['mask']
-                            bbox = maskUtils.toBbox(rle)
-                        # bbox = boxes.Boxes(torch.tensor(bbox).unsqueeze(dim=0))
-                        annotations['bbox'] = list(bbox)
-                        annotations['bbox_mode'] = 1
-                        annotations['category_id'] = all_categories.index(label)
-                        annotations['segmentation'] = rle
-                        data_dict['annotations'].append(annotations)
+            for box, label, mask in zip(boxes, labels, rles):
+                annotations = {}
+                annotations['bbox'] = list(box)
+                annotations['bbox_mode'] = 1
+                annotations['category_id'] = label
+                annotations['segmentation'] = mask
+                data_dict['annotations'].append(annotations)
             ds.append(data_dict)
+
+            # for (car_name, car_mask), car in zip(train_mask.items(), train.get_cars()):
+            #     position = car_name
+            #     whole_car_mask = car_mask['mask']
+            #     # title = f'{car_name} segmentation'
+            #     # plot_rle(whole_car_mask, title)
+            #
+            #     whole_car_bbox = maskUtils.toBbox(whole_car_mask)
+            #     del car_mask['mask'], car_mask['b_box'], car_mask['world_cord']
+            #     for att_name, att in car_mask.items():
+            #         label = att['label']
+            #         if label != 'none':
+            #             annotations = {}
+            #
+            #             if att_name == 'length' or att_name == 'color':
+            #                 rle, bbox = whole_car_mask, whole_car_bbox
+            #             else:
+            #                 rle = att['mask']
+            #                 bbox = maskUtils.toBbox(rle)
+            #             # bbox = boxes.Boxes(torch.tensor(bbox).unsqueeze(dim=0))
+            #             annotations['bbox'] = list(bbox)
+            #             annotations['bbox_mode'] = 1
+            #             annotations['category_id'] = all_categories.index(label)
+            #             annotations['segmentation'] = rle
+            #             data_dict['annotations'].append(annotations)
+            # ds.append(data_dict)
         return ds
 
     def mapper(dataset_dict):
@@ -131,14 +138,14 @@ def register_ds(base_scene, raw_trains, train_vis, class_rule, min_car=2, max_ca
     DatasetCatalog.register("michalski_train_ds", create_train_ds)
     DatasetCatalog.register("michalski_val_ds", create_val_ds)
     DatasetCatalog.register("michalski_ds", create_full_ds)
-    all_att = full_ds.attribute_classes[1:]
+    all_att = rcnn_michalski_categories()
     MetadataCatalog.get("michalski_train_ds").thing_classes = all_att
     MetadataCatalog.get("michalski_val_ds").thing_classes = all_att
     MetadataCatalog.get("michalski_ds").thing_classes = all_att
     # data = DatasetCatalog.get("michalski_val_ds")
 
 
-def do_train(cfg, model, experiment_name, resume=False):
+def do_train(cfg, model, experiment_name, logger, resume=False):
     model.train()
     optimizer = build_optimizer(cfg, model)
     scheduler = build_lr_scheduler(cfg, optimizer)
@@ -200,19 +207,19 @@ def do_train(cfg, model, experiment_name, resume=False):
             periodic_checkpointer.step(iteration)
 
 
-def do_test(cfg, base_scene, train_col):
+def do_test(cfg, base_scene, raw_trains, logger):
     model = build_model(cfg)
     out_dir = cfg.OUTPUT_DIR
     # model_path = out_dir + '/model_final.pth'
     model_path = f'./output/detectron/RandomTrains/{base_scene}/model_final.pth'
     if not os.path.isfile(model_path):
         raise ValueError(
-            f'trained detectron model for {train_col} in {base_scene} not found \n please consider to training a model first')
+            f'trained detectron model for {raw_trains} in {base_scene} not found \n please consider to training a model first')
     checkpointer = DetectionCheckpointer(model)
     checkpointer.load(model_path)
     model.eval()
     image_count = 10000
-    register_ds(base_scene, train_col, image_count)
+    register_ds(base_scene, raw_trains, image_count)
     dataset_name = cfg.DATASETS.TEST[0]
 
     results = OrderedDict()
@@ -278,22 +285,22 @@ def get_evaluator(cfg, dataset_name, output_folder=None):
     return DatasetEvaluators(evaluator_list)
 
 
-def predict_instances(base_scene, train_col, cfg):
+def predict_instances(base_scene, raw_trains, cfg):
     model = build_model(cfg)
     out_dir = cfg.OUTPUT_DIR
     # model_path = out_dir + '/model_final.pth'
     model_path = f'./output/detectron/RandomTrains/{base_scene}/model_final.pth'
     if not os.path.isfile(model_path):
         raise ValueError(
-            f'trained detectron model for {train_col} in {base_scene} not found \n please consider to training a model first')
+            f'trained detectron model for {raw_trains} in {base_scene} not found \n please consider to training a model first')
     checkpointer = DetectionCheckpointer(model)
     checkpointer.load(model_path)
     model.eval()
     image_count = 10000
-    register_ds(base_scene, train_col, image_count)
+    register_ds(base_scene, raw_trains, image_count)
     metadata = MetadataCatalog.get("michalsk_ds")
     data_loader = build_detection_test_loader(cfg, cfg.DATASETS.TEST[1])
-    rtpt = RTPT(name_initials='LH', experiment_name=f'Pred_In_{base_scene[:3]}_{train_col[0]}',
+    rtpt = RTPT(name_initials='LH', experiment_name=f'Pred_In_{base_scene[:3]}_{raw_trains[0]}',
                 max_iterations=len(data_loader))
     rtpt.start()
     with torch.no_grad():
@@ -330,7 +337,7 @@ def predict_instances(base_scene, train_col, cfg):
                     # obj_mask['instances'][i]['pred_class_name'] = metadata.thing_classes[pred_class]
                     obj_mask['instances'][i]['pred_mask'] = encodeMask(pred_mask)
                 object_masks[image_id] = obj_mask
-    path = f'./output/detectron/{train_col}/{base_scene}'
+    path = f'./output/detectron/{raw_trains}/{base_scene}'
     os.makedirs(path, exist_ok=True)
     with open(path + '/predictions.json', 'w+') as fp:
         json.dump(object_masks, fp, indent=2)

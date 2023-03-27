@@ -18,19 +18,19 @@ from models.detectron import register_ds
 from util import *
 
 
-def detectron_pred_vis_images(cfg, base_scene, train_col):
+def detectron_pred_vis_images(cfg, base_scene, raw_trains):
     model = build_model(cfg)
     path = cfg.OUTPUT_DIR
 
     model_path = f'./output/detectron/RandomTrains/{base_scene}/model_final.pth'
     if not os.path.isfile(model_path):
-        raise AssertionError(f'trained detectron model for {train_col} in {base_scene} not found \n'
+        raise AssertionError(f'trained detectron model for {raw_trains} in {base_scene} not found \n'
                              f'please consider to training a model first')
     checkpointer = DetectionCheckpointer(model)
     checkpointer.load(model_path)
     model.eval()
     image_count = 10
-    register_ds(base_scene, train_col, image_count)
+    register_ds(base_scene, raw_trains, image_count)
     metadata = MetadataCatalog.get("michalski_val_ds")
     data_loader = build_detection_test_loader(cfg, cfg.DATASETS.TEST[0])
     with torch.no_grad():
@@ -55,13 +55,13 @@ def detectron_pred_vis_images(cfg, base_scene, train_col):
                 # plt.savefig(path, bbox_inches='tight')
 
 
-def plt_metrics(base_scene, train_col):
-    path = f'output/detectron/{train_col}/{base_scene}'
+def plt_metrics(base_scene, raw_trains):
+    path = f'output/detectron/{raw_trains}/{base_scene}'
     metrics_path = path + '/metrics.json'
     os.makedirs(path + '/statistics/', exist_ok=True)
     colors = list(mcolors.TABLEAU_COLORS.values())
     if not os.path.isfile(metrics_path):
-        raise AssertionError(f'trained data for {train_col} in {base_scene} not found \n'
+        raise AssertionError(f'trained data for {raw_trains} in {base_scene} not found \n'
                              f'please consider to training a model first')
     with open(metrics_path, 'r') as f:
         metrics = [json.loads(line) for line in f]
@@ -82,7 +82,7 @@ def plt_metrics(base_scene, train_col):
         total_loss = [metric["total_loss"] for metric in metrics]
 
         # plot accuracy#
-        # plt.title(f'detectron acc on {train_col} in {base_scene}')
+        # plt.title(f'detectron acc on {raw_trains} in {base_scene}')
         plt.plot(iteration, cls_accuracy, label=f'cls_accuracy {round(cls_accuracy[-1] * 100, 1)}%')
         plt.plot(iteration, fg_cls_accuracy, label=f'fg_cls_accuracy {round(fg_cls_accuracy[-1] * 100, 1)}%')
         plt.plot(iteration, accuracy, label=f'accuracy {round(fg_cls_accuracy[-1] * 100, 1)}%')
@@ -93,7 +93,7 @@ def plt_metrics(base_scene, train_col):
         plt.close()
 
         # plot accuracy#
-        plt.title(f'detectron loss on {train_col} in {base_scene}')
+        plt.title(f'detectron loss on {raw_trains} in {base_scene}')
         losses = [loss_box_reg, loss_cls, loss_mask, loss_rpn_cls, loss_rpn_loc, total_loss]
         plt.plot(iteration, loss_box_reg, label=f'loss_box_reg {round(loss_box_reg[-1], 2)}')
         plt.plot(iteration, loss_cls, label=f'loss_cls {round(loss_cls[-1], 2)}')

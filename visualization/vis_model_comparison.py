@@ -116,8 +116,8 @@ def rule_comparison(out_path):
     # over epoch
 
 
-def model_scene_imcount_comparison(train_col, model_names, y_val, out_path, transfer_eval=False):
-    # full_ds = get_datasets(base_scene, train_col, 1)
+def model_scene_imcount_comparison(raw_trains, model_names, y_val, out_path, transfer_eval=False):
+    # full_ds = get_datasets(base_scene, raw_trains, 1)
     #
     # label_names = full_ds.labels
     # unique_label_names = list(set(label_names))
@@ -361,9 +361,9 @@ def plot_label_acc_over_epochs(out_path):
         data = pd.read_csv(f)
         scenes = data['scene'].unique()
         im_count = data['number of images'].unique()
-        train_col = 'RandomTrains' if 'RandomTrains' in out_path else 'MichalskiTrains'
+        raw_trains = 'RandomTrains' if 'RandomTrains' in out_path else 'MichalskiTrains'
         from michalski_trains.michalskitraindataset import get_datasets
-        dataset = get_datasets('base_scene', train_col, 10000, y_val='attribute')
+        dataset = get_datasets('base_scene', raw_trains, 10000, y_val='attribute')
         baselines = get_baseline(dataset)
         data.loc[data['label'] == 'load_1', 'label'] = 'load_obj'
         data.loc[data['label'] == 'load_2', 'label'] = 'load_obj'
