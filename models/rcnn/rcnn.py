@@ -351,7 +351,7 @@ def multi_head_maskrcnn_resnet50_fpn_v2(
         **kwargs,
     )
 
-    if weights is not None:
-        model.load_state_dict(weights.get_state_dict(progress=progress))
+    # if weights is not None:
+    #     model.load_state_dict(weights.get_state_dict(progress=progress))
 
     return model

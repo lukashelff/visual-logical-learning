@@ -9,6 +9,7 @@ from models.cnns.multi_label_nn import MultiLabelNeuralNetwork
 from models.cnns.set_transformer import SetTransformer
 from models.mlp.mlp import MLP
 from models.multioutput_regression.pos_net import PositionNetwork
+from models.rcnn.rcnn import multi_head_maskrcnn_resnet50_fpn_v2
 from models.spacial_attr_net.attr_net import AttributeNetwork
 
 
@@ -40,8 +41,17 @@ def get_model(model_name, pretrained, num_output, num_class):
         # model initialization
         weights = models.detection.MaskRCNN_ResNet50_FPN_V2_Weights.DEFAULT if pretrained else None
         # model_image_processing = models.detection.MaskRCNN_ResNet50_FPN_V2_Weights.DEFAULT.transforms()
+        #
+        # model = models.detection.maskrcnn_resnet50_fpn_v2(weights=weights,
+        #                                                   image_mean=[0.485, 0.456, 0.406],
+        #                                                   image_std=[0.229, 0.224, 0.225],
+        #                                                   # num_classes=22 + 20,
+        #                                                   rpn_batch_size_per_image=256,
+        #                                                   box_nms_thresh=0.8,
+        #                                                   # box_score_thresh=0.9
+        #                                                   )
 
-        model = models.detection.maskrcnn_resnet50_fpn_v2(weights=weights,
+        model = multi_head_maskrcnn_resnet50_fpn_v2(weights=weights,
                                                           image_mean=[0.485, 0.456, 0.406],
                                                           image_std=[0.229, 0.224, 0.225],
                                                           # num_classes=22 + 20,
