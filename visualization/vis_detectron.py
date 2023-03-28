@@ -13,24 +13,21 @@ from matplotlib import pyplot as plt
 from matplotlib.patches import Rectangle
 from torch.utils.data import random_split
 
-from m_train_dataset import get_datasets
-from models.detectron import register_ds
 from util import *
 
 
-def detectron_pred_vis_images(cfg, base_scene, raw_trains):
+def detectron_pred_vis_images(cfg):
     model = build_model(cfg)
     path = cfg.OUTPUT_DIR
 
-    model_path = f'./output/detectron/RandomTrains/{base_scene}/model_final.pth'
+    model_path = f'{path}/model_final.pth'
     if not os.path.isfile(model_path):
-        raise AssertionError(f'trained detectron model for {raw_trains} in {base_scene} not found \n'
-                             f'please consider to training a model first')
+        raise AssertionError(
+            f'trained detectron model not found in {path}\n please consider to training a model first')
+    path = cfg.OUTPUT_DIR + f'/model_predictions/'
     checkpointer = DetectionCheckpointer(model)
     checkpointer.load(model_path)
     model.eval()
-    image_count = 10
-    register_ds(base_scene, raw_trains, image_count)
     metadata = MetadataCatalog.get("michalski_val_ds")
     data_loader = build_detection_test_loader(cfg, cfg.DATASETS.TEST[0])
     with torch.no_grad():
@@ -45,7 +42,6 @@ def detectron_pred_vis_images(cfg, base_scene, raw_trains):
                 instance = instances[c]
                 label = metadata.thing_classes[int(instance.pred_classes)]
                 draw = visualizer.draw_instance_predictions(instance)
-                path = cfg.OUTPUT_DIR + f'/model_predictions/'
                 os.makedirs(path, exist_ok=True)
                 draw.save(path + f'train_{id}_instance_{c}_has_label_{label}.png')
                 del visualizer
@@ -55,14 +51,13 @@ def detectron_pred_vis_images(cfg, base_scene, raw_trains):
                 # plt.savefig(path, bbox_inches='tight')
 
 
-def plt_metrics(base_scene, raw_trains):
-    path = f'output/detectron/{raw_trains}/{base_scene}'
+def plt_metrics(path):
     metrics_path = path + '/metrics.json'
     os.makedirs(path + '/statistics/', exist_ok=True)
     colors = list(mcolors.TABLEAU_COLORS.values())
     if not os.path.isfile(metrics_path):
-        raise AssertionError(f'trained data for {raw_trains} in {base_scene} not found \n'
-                             f'please consider to training a model first')
+        raise AssertionError(
+            f'trained detectron model not found in {path}\n please consider to training a model first')
     with open(metrics_path, 'r') as f:
         metrics = [json.loads(line) for line in f]
         cls_accuracy = [metric["fast_rcnn/cls_accuracy"] for metric in metrics]
@@ -93,7 +88,7 @@ def plt_metrics(base_scene, raw_trains):
         plt.close()
 
         # plot accuracy#
-        plt.title(f'detectron loss on {raw_trains} in {base_scene}')
+        plt.title(f'detectron loss on {path.split("/")[-2]} in {path.split("/")[-1]}')
         losses = [loss_box_reg, loss_cls, loss_mask, loss_rpn_cls, loss_rpn_loc, total_loss]
         plt.plot(iteration, loss_box_reg, label=f'loss_box_reg {round(loss_box_reg[-1], 2)}')
         plt.plot(iteration, loss_cls, label=f'loss_cls {round(loss_cls[-1], 2)}')

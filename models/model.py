@@ -53,14 +53,7 @@ def get_model(model_name, pretrained, num_output, num_class):
         #     (model.backbone.out_channels, 7, 7), [256, 256, 256, 256], [1024], norm_layer=None
         # )
         # for predicting masks
-        in_features_mask = model.roi_heads.mask_predictor.conv5_mask.in_channels
-        hidden_layer = 256
-        # define a new head for the detector with required number of classes, 22 for the label specific classes and 20 as the upper bound for the number of cars which can be present in a scene
-        model.roi_heads.mask_predictor = MaskRCNNPredictor(in_features_mask, hidden_layer, 22 + 20)
-        # for predicting boxes
-        # get the number of input features
-        in_features = model.roi_heads.box_predictor.cls_score.in_features
-        model.roi_heads.box_predictor = FastRCNNPredictor(in_features, 22 + 20)
+
 
     elif model_name == 'attr_predictor':
         model = AttributeNetwork(dim_input=32)

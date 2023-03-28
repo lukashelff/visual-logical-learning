@@ -7,6 +7,7 @@ from collections import OrderedDict
 
 import detectron2.data.transforms as T
 import detectron2.utils.comm as comm
+import numpy as np
 import torch
 from detectron2.checkpoint import DetectionCheckpointer, PeriodicCheckpointer
 from detectron2.config import get_cfg
@@ -27,31 +28,37 @@ from detectron2.modeling import build_model
 from detectron2.solver import build_lr_scheduler, build_optimizer
 from detectron2.utils.events import EventStorage
 from rtpt import RTPT
+from sklearn.metrics import accuracy_score
 from torch.utils.data import random_split
+from tqdm import tqdm
 
 from blender_image_generator.json_util import encodeMask
 from pycocotools import mask as maskUtils
 
-from michalski_trains.dataset import rcnn_michalski_categories
+from michalski_trains.dataset import rcnn_michalski_categories, get_datasets, michalski_labels
+from models.rcnn.inference import process_symbolics
 
 
-def setup(path, base_scene, raw_trains):
+def setup(path, base_scene, raw_trains, device):
     """
     Create configs and perform basic setups.
     """
     cfg = get_cfg()
     cfg.merge_from_file(path)
     cfg.OUTPUT_DIR = f'./output/models/detectron/{raw_trains}/{base_scene}'
+    cfg.MODEL.DEVICE = device.type
     os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
     cfg.freeze()
     return cfg
 
 
-def register_ds(full_ds):
+def register_ds(full_ds, image_count=None):
     # full_ds = get_datasets(base_scene, raw_trains, train_vis, class_rule, min_car, max_car, ds_size, ds_path, y_val,
     #                        resize, label_noise, image_noise, preprocessing, fixed_output_car_size)
-    train_size, val_size = int(0.7 * full_ds.__len__()), int(0.3 * full_ds.__len__())
-    train_dataset, val_dataset = random_split(full_ds, [train_size, val_size])
+    image_count = full_ds.__len__() if image_count is None else image_count
+    train_size, val_size = int(0.7 * image_count), int(0.3 * image_count)
+    remaining = full_ds.__len__() - train_size - val_size
+    train_dataset, val_dataset, _ = random_split(full_ds, [train_size, val_size, remaining])
 
     def create_train_ds():
         return create_michalski_train_ds(train_dataset.indices)
@@ -60,7 +67,7 @@ def register_ds(full_ds):
         return create_michalski_train_ds(val_dataset.indices)
 
     def create_full_ds():
-        return create_michalski_train_ds([*range(full_ds.__len__())])
+        return create_michalski_train_ds([*range(image_count)])
 
     def create_michalski_train_ds(ds_ind):
         ds = []
@@ -69,16 +76,18 @@ def register_ds(full_ds):
             # image, target = full_ds.__getitem__(index)
             rles = full_ds.get_rle(index)
             boxes = full_ds.get_bboxes(index, format='[x0,y0,w,h]')
-            labels = full_ds.get_mask_labels(index)
+            labels, _ = full_ds.get_mask_labels(index)
             # train = full_ds.get_m_train(index)
             # train_mask = full_ds.get_mask(index)
             image_pth = full_ds.get_image_path(index)
+            symbolic_annotation = full_ds.get_attributes(index)
             data_dict = {
                 'file_name': image_pth,
                 'height': height,
                 'width': width,
                 'image_id': id,
-                'annotations': []
+                'annotations': [],
+                'symbolic_annotation': symbolic_annotation
             }
             for box, label, mask in zip(boxes, labels, rles):
                 annotations = {}
@@ -114,6 +123,7 @@ def register_ds(full_ds):
             #             annotations['segmentation'] = rle
             #             data_dict['annotations'].append(annotations)
             # ds.append(data_dict)
+
         return ds
 
     def mapper(dataset_dict):
@@ -207,19 +217,18 @@ def do_train(cfg, model, experiment_name, logger, resume=False):
             periodic_checkpointer.step(iteration)
 
 
-def do_test(cfg, base_scene, raw_trains, logger):
+def do_test(cfg, logger):
+    path = cfg.OUTPUT_DIR
     model = build_model(cfg)
     out_dir = cfg.OUTPUT_DIR
     # model_path = out_dir + '/model_final.pth'
-    model_path = f'./output/detectron/RandomTrains/{base_scene}/model_final.pth'
+    model_path = f'{path}/model_final.pth'
     if not os.path.isfile(model_path):
         raise ValueError(
-            f'trained detectron model for {raw_trains} in {base_scene} not found \n please consider to training a model first')
+            f'trained detectron model in {path} not found \n please consider to training a model first')
     checkpointer = DetectionCheckpointer(model)
     checkpointer.load(model_path)
     model.eval()
-    image_count = 10000
-    register_ds(base_scene, raw_trains, image_count)
     dataset_name = cfg.DATASETS.TEST[0]
 
     results = OrderedDict()
@@ -229,7 +238,7 @@ def do_test(cfg, base_scene, raw_trains, logger):
     )
     results_i = inference_on_dataset(model, data_loader, DatasetEvaluator())
     print(results_i)
-    json_pth = f'./output/detectron/RandomTrains/{base_scene}/model_test.json'
+    json_pth = f'{path}/model_test.json'
     with open(json_pth, 'w+') as f:
         json.dump(results_i, f, indent=4)
     results[dataset_name] = results_i
@@ -285,27 +294,31 @@ def get_evaluator(cfg, dataset_name, output_folder=None):
     return DatasetEvaluators(evaluator_list)
 
 
-def predict_instances(base_scene, raw_trains, cfg):
+def detectron_infer_symbolic(cfg, debug=True):
     model = build_model(cfg)
     out_dir = cfg.OUTPUT_DIR
     # model_path = out_dir + '/model_final.pth'
-    model_path = f'./output/detectron/RandomTrains/{base_scene}/model_final.pth'
+    # model_path = f'./output/detectron/RandomTrains/{base_scene}/model_final.pth'
+    model_path = f'{cfg.OUTPUT_DIR}/model_final.pth'
     if not os.path.isfile(model_path):
         raise ValueError(
-            f'trained detectron model for {raw_trains} in {base_scene} not found \n please consider to training a model first')
+            f'trained detectron model in {model_path} not found \n please consider to training a model first')
     checkpointer = DetectionCheckpointer(model)
     checkpointer.load(model_path)
     model.eval()
-    image_count = 10000
-    register_ds(base_scene, raw_trains, image_count)
     metadata = MetadataCatalog.get("michalsk_ds")
-    data_loader = build_detection_test_loader(cfg, cfg.DATASETS.TEST[1])
-    rtpt = RTPT(name_initials='LH', experiment_name=f'Pred_In_{base_scene[:3]}_{raw_trains[0]}',
-                max_iterations=len(data_loader))
+    dataloader = build_detection_test_loader(cfg, cfg.DATASETS.TEST[1])
+    num_samples = len(dataloader)
+    rtpt = RTPT(name_initials='LH', experiment_name=f'inferring_symbolics',
+                max_iterations=len(dataloader))
     rtpt.start()
+    all_labels = []
+    all_preds = []
+    t_acc = []
+
     with torch.no_grad():
         object_masks = {}
-        for data in data_loader:
+        for id, data in enumerate(tqdm(dataloader)):
             rtpt.step()
             preds = model(data)
             # preds[0]['instances'][0].pred_boxes
@@ -314,30 +327,89 @@ def predict_instances(base_scene, raw_trains, cfg):
             # preds[0]['instances'][0].pred_masks
             for pred, image in zip(preds, data):
                 file_name = image['file_name']
+                labels = image['symbolic_annotation']
                 image_name = file_name.split("/")[-1]
                 image_id = image['image_id']
                 instances = pred['instances'].to("cpu")
-                obj_mask = {
-                    'instances': {},
-                    'file_name': file_name
-                }
-                for i in range(len(instances)):
-                    instance = instances[i]
-                    pred_box = instance.pred_boxes
-                    score = float(instance.scores)
-                    pred_class = int(instance.pred_classes)
-                    pred_mask = instance.pred_masks.squeeze().numpy()
-                    obj_mask['instances'][i] = {}
-                    obj_mask['instances'][i]['pred_box'] = tuple(pred_box.tensor.squeeze().int().tolist())
-                    obj_mask['instances'][i]['score'] = score
-                    ##############################################
-                    # obj_mask['instances'][i]['pred_class'] = pred_class + 1???
-                    ##############################################
-                    obj_mask['instances'][i]['pred_class'] = pred_class
-                    # obj_mask['instances'][i]['pred_class_name'] = metadata.thing_classes[pred_class]
-                    obj_mask['instances'][i]['pred_mask'] = encodeMask(pred_mask)
-                object_masks[image_id] = obj_mask
-    path = f'./output/detectron/{raw_trains}/{base_scene}'
-    os.makedirs(path, exist_ok=True)
-    with open(path + '/predictions.json', 'w+') as fp:
-        json.dump(object_masks, fp, indent=2)
+                prediction = {}
+                prediction["labels"] = instances[:].pred_classes
+                prediction["boxes"] = instances[:].pred_boxes
+                prediction["scores"] = instances[:].scores
+                prediction["masks"] = instances[:].pred_masks
+                symbolic, issues = process_symbolics(prediction, threshold=.8)
+                symbolic = symbolic.to('cpu').numpy()
+                length = max(len(symbolic), len(labels))
+                symbolic = np.pad(symbolic, (0, length - len(symbolic)), 'constant', constant_values=0)
+                labels = np.pad(labels, (0, length - len(labels)), 'constant', constant_values=0)
+
+                all_labels.append(labels)
+                all_preds.append(symbolic)
+                accuracy = accuracy_score(labels, symbolic)
+                t_acc.append(accuracy)
+                out_text = f"image {id}/{num_samples}, accuracy score: {round(accuracy * 100, 1)}%, " \
+                           f"running accuracy score: {(np.mean(t_acc) * 100).round(3)}%, Number of gt attributes {len(labels[labels > 0])}. "
+
+                if debug:
+                    print(out_text + issues)
+
+    b = np.zeros([len(all_preds), len(max(all_preds, key=lambda x: len(x)))])
+    for i, j in enumerate(all_preds):
+        b[i][0:len(j)] = j
+    all_preds = b.reshape((-1, 8))
+
+    b = np.zeros([len(all_labels), len(max(all_labels, key=lambda x: len(x)))])
+    for i, j in enumerate(all_labels):
+        b[i][0:len(j)] = j
+    all_labels = b.reshape((-1, 8))
+
+    labels = michalski_labels()
+    acc = accuracy_score(all_labels.flatten(), all_preds.flatten())
+    txt = f'average symbolic accuracies: {round(acc, 3)}, '
+    label_acc = 'label accuracies:'
+    for label_id, label in enumerate(labels):
+        lab = all_labels[:, label_id]
+        pred = all_preds[:, label_id]
+        acc = accuracy_score(lab[lab > 0], pred[lab > 0])
+        label_acc += f' {label}: {round(acc * 100, 3)}%'
+    print(txt + label_acc)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                # obj_mask = {
+                #     'instances': {},
+                #     'file_name': file_name
+                # }
+                # for i in range(len(instances)):
+                #     instance = instances[i]
+                #     pred_box = instance.pred_boxes
+                #     score = float(instance.scores)
+                #     pred_class = int(instance.pred_classes)
+                #     pred_mask = instance.pred_masks.squeeze().numpy()
+                #     obj_mask['instances'][i] = {}
+                #     obj_mask['instances'][i]['pred_box'] = tuple(pred_box.tensor.squeeze().int().tolist())
+                #     obj_mask['instances'][i]['score'] = score
+                #     ##############################################
+                #     # obj_mask['instances'][i]['pred_class'] = pred_class + 1???
+                #     ##############################################
+                #     obj_mask['instances'][i]['pred_class'] = pred_class
+                #     # obj_mask['instances'][i]['pred_class_name'] = metadata.thing_classes[pred_class]
+                #     obj_mask['instances'][i]['pred_mask'] = encodeMask(pred_mask)
+                # object_masks[image_id] = obj_mask
+    # path = f'./output/detectron/{raw_trains}/{base_scene}'
+    # path = cfg.OUTPUT_DIR
+    # os.makedirs(path, exist_ok=True)
+    # with open(path + '/predictions.json', 'w+') as fp:
+    #     json.dump(object_masks, fp, indent=2)

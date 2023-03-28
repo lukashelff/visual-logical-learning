@@ -1,17 +1,17 @@
-import warnings
-
-import numpy as np
-import cv2
-import torch
-import glob as glob
-import os
 import time
 
+import cv2
+from detectron2.checkpoint import DetectionCheckpointer
+from detectron2.data import (
+    MetadataCatalog, build_detection_test_loader, )
+from detectron2.modeling import build_model
+from detectron2.utils.visualizer import Visualizer
 from sklearn.metrics import accuracy_score
-from tqdm import tqdm, trange
+from tqdm import tqdm
 
 from michalski_trains.dataset import michalski_categories, rcnn_michalski_categories, michalski_labels
 from models.rcnn.plot_prediction import plot_mask
+from util import *
 
 
 def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samples=1000, debug=False):
@@ -82,6 +82,7 @@ def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samp
 
     # print(f'average train acc score: {np.mean(t_acc).round(3)}')
     return all_preds, all_labels, acc, np.mean(t_acc)
+
 
 
 def process_symbolics(prediction, threshold=.8):

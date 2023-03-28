@@ -112,45 +112,75 @@ def train(args):
                        debug=False)
 
     if command == 'train_dtron':
-        logger = logging.getLogger("detectron2")
         from detectron2.modeling import build_model
         from models.rcnn.detectron import setup
         from models.rcnn.detectron import register_ds
+        from michalski_trains.dataset import get_datasets
+        from models.rcnn.detectron import do_train
+
         logger = logging.getLogger("detectron2")
 
         y_val = 'mask'
         print('train detectron 2')
         print('detectron 2 predicts segmentation and the corresponding label')
         image_count = 10000
-        from michalski_trains.dataset import get_datasets
         full_ds = get_datasets(base_scene, raw_trains, train_vis, class_rule,
                                y_val=y_val, ds_size=ds_size, ds_path=ds_path)
         register_ds(full_ds)
         cfg_path = "models/rcnn/configs/mask_rcnn_R_101_FPN_3x.yaml"
-        cfg = setup(cfg_path, base_scene, raw_trains)
+        cfg = setup(cfg_path, base_scene, raw_trains, device)
 
         model = build_model(cfg)
         logger.info("Model:\n{}".format(model))
         experiment_name = f'dtron_{base_scene[:3]}_{raw_trains[0]}'
 
-        from models.rcnn.detectron import do_train
-        do_train(cfg, model, experiment_name, logger, resume=False)
+        do_train(cfg, model, experiment_name, logger, resume=True)
 
     if command == 'test_dtron':
         print('test detectron 2')
-        from models.rcnn.detectron import setup
-        from models.rcnn.detectron import do_test
-
+        from models.rcnn.detectron import setup, do_test
+        from models.rcnn.detectron import register_ds
+        from michalski_trains.dataset import get_datasets
+        logger = logging.getLogger("detectron2")
         cfg_path = "models/rcnn/configs/mask_rcnn_R_101_FPN_3x.yaml"
-        cfg = setup(cfg_path, base_scene, raw_trains)
-        do_test(cfg, base_scene, raw_trains)
+        cfg = setup(cfg_path, base_scene, raw_trains, device)
+
+        # register dataset
+        full_ds = get_datasets(base_scene, raw_trains, train_vis, class_rule, y_val=y_val, ds_size=ds_size,
+                               ds_path=ds_path)
+        register_ds(full_ds, image_count=10)
+        # setup detectron
+        res = do_test(cfg, logger)
+        print(res)
 
     if command == 'eval_dtron':
         from visualization.vis_detectron import detectron_pred_vis_images, plt_metrics
         from models.rcnn.detectron import setup
+        from models.rcnn.detectron import register_ds
+        from michalski_trains.dataset import get_datasets
+        logger = logging.getLogger("detectron2")
+        cfg_path = "models/rcnn/configs/mask_rcnn_R_101_FPN_3x.yaml"
+        cfg = setup(cfg_path, base_scene, raw_trains, device)
+        # register dataset
+        full_ds = get_datasets(base_scene, raw_trains, train_vis, class_rule, y_val=y_val, ds_size=ds_size,
+                               ds_path=ds_path)
+        register_ds(full_ds, image_count=10)
 
         print('evaluate performance of detectron 2')
+        detectron_pred_vis_images(cfg)
+        plt_metrics(cfg.OUTPUT_DIR)
+
+    if command == 'infer_dtron':
+        from visualization.vis_detectron import detectron_pred_vis_images, plt_metrics
+        from models.rcnn.detectron import setup, detectron_infer_symbolic, register_ds
+        from michalski_trains.dataset import get_datasets
+        logger = logging.getLogger("detectron2")
         cfg_path = "models/rcnn/configs/mask_rcnn_R_101_FPN_3x.yaml"
-        cfg = setup(cfg_path, base_scene, raw_trains)
-        detectron_pred_vis_images(cfg, base_scene, raw_trains)
-        plt_metrics(base_scene, raw_trains)
+        cfg = setup(cfg_path, base_scene, raw_trains, device)
+        # register dataset
+        full_ds = get_datasets(base_scene, raw_trains, train_vis, class_rule, y_val=y_val, ds_size=ds_size,
+                               ds_path=ds_path)
+        register_ds(full_ds, image_count=10)
+
+        print('detectron 2 inferring symbolic representations of the trains')
+        detectron_infer_symbolic(cfg)
