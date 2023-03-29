@@ -87,7 +87,7 @@ def train(args):
         # every n training steps, the learning rate is reduced by gamma
         step_size = round(50000 / batch_size)
         gamma = 0.1
-        num_epochs = 20
+        num_epochs = 10
         model_name = 'rcnn'
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
                           y_val=y_val, resume=False, batch_size=batch_size, setup_model=False, setup_ds=False,
@@ -104,10 +104,10 @@ def train(args):
 
     if command == 'perception_infer':
         from models.trainer import Trainer
-        batch_size = 1
+        batch_size = 2
         samples = 100
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
-                          y_val=y_val, resume=True, batch_size=batch_size, setup_model=True, setup_ds=True)
+                          y_val=y_val, resume=False, batch_size=batch_size, setup_model=True, setup_ds=True)
         from models.rcnn.inference import infer_symbolic
         infer_symbolic(trainer.model, trainer.dl['val'], device, segmentation_similarity_threshold=.8, samples=samples,
                        debug=False)

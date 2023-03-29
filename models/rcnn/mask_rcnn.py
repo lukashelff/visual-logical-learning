@@ -274,7 +274,7 @@ def multi_head_maskrcnn_resnet50_fpn_v2(
 
     in_features_mask, hidden_layer = 256, 256
     # define a new head for the detector with required number of classes, 22 for the label specific classes and 20 as the upper bound for the number of cars which can be present in a scene
-    mask_predictor = MaskRCNNPredictor(in_features_mask, hidden_layer, 91)
+    mask_predictor = MaskRCNNPredictor(in_features_mask, hidden_layer, num_classes)
     # for predicting boxes
     # get the number of input features
     representation_size = 1024

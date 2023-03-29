@@ -54,6 +54,7 @@ def get_model(model_name, pretrained, num_output, num_class):
         model = multi_head_maskrcnn_resnet50_fpn_v2(weights=weights,
                                                           image_mean=[0.485, 0.456, 0.406],
                                                           image_std=[0.229, 0.224, 0.225],
+                                                          num_classes=91,
                                                           # num_classes=22 + 20,
                                                           rpn_batch_size_per_image=256,
                                                           box_nms_thresh=0.8,
@@ -63,6 +64,7 @@ def get_model(model_name, pretrained, num_output, num_class):
         #     (model.backbone.out_channels, 7, 7), [256, 256, 256, 256], [1024], norm_layer=None
         # )
         # for predicting masks
+        # model = nn.DataParallel(model)
 
 
     elif model_name == 'attr_predictor':

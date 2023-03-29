@@ -44,6 +44,36 @@ class GeneralizedMultiHeadRCNN(nn.Module):
         for roi_head in self.roi_heads:
             roi_head.to(*args, **kwargs)
 
+    def eval(self):
+        super().eval()
+        for roi_head in self.roi_heads:
+            roi_head.eval()
+        return self
+
+    def train(self, mode: bool = True):
+        r"""Sets the module in training mode.
+
+        This has any effect only on certain modules. See documentations of
+        particular modules for details of their behaviors in training/evaluation
+        mode, if they are affected, e.g. :class:`Dropout`, :class:`BatchNorm`,
+        etc.
+
+        Args:
+            mode (bool): whether to set training mode (``True``) or evaluation
+                         mode (``False``). Default: ``True``.
+
+        Returns:
+            Module: self
+        """
+        if not isinstance(mode, bool):
+            raise ValueError("training mode is expected to be boolean")
+        self.training = mode
+        for module in self.children():
+            module.train(mode)
+        for roi_head in self.roi_heads:
+            roi_head.train(mode)
+        return self
+
     def load_state_dict(self, state_dict: Mapping[str, Any], strict: bool = True):
         # copy state_dict so _load_from_state_dict can modify it
         metadata = getattr(state_dict, "_metadata", None)
@@ -131,20 +161,29 @@ class GeneralizedMultiHeadRCNN(nn.Module):
             features = OrderedDict([("0", features)])
         proposals, proposal_losses = self.rpn(images, features, targets)
         losses = {}
-        detections = []
+        detections = [{}] * images.tensors.shape[0]
         for head_id, roi_head in enumerate(self.roi_heads):
             head_targets = []
-            for target in targets:
-                head_targets.append({
-                    "boxes": target["boxes"][target["labels_ids"] == head_id],
-                    "labels": target["labels"][target["labels_ids"] == head_id],
-                    "image_id": target["image_id"],
-                    "area": target["area"][target["labels_ids"] == head_id],
-                    "iscrowd": target["iscrowd"][target["labels_ids"] == head_id],
-                    "masks": target["masks"][target["labels_ids"] == head_id],
-                })
-            det, detector_losses = roi_head(features, proposals, images.image_sizes, head_targets)
-            detections.append(self.transform.postprocess(det, images.image_sizes, original_image_sizes))
+            if targets is not None:
+                for target in targets:
+                    head_targets.append({
+                        "boxes": target["boxes"][target["labels_ids"] == head_id],
+                        "labels": target["labels"][target["labels_ids"] == head_id],
+                        "image_id": target["image_id"],
+                        "area": target["area"][target["labels_ids"] == head_id],
+                        "iscrowd": target["iscrowd"][target["labels_ids"] == head_id],
+                        "masks": target["masks"][target["labels_ids"] == head_id],
+                    })
+
+            detection, detector_losses = roi_head(features, proposals, images.image_sizes, head_targets)
+            detection = self.transform.postprocess(detection, images.image_sizes, original_image_sizes)
+            for d_id, d in enumerate(detection):
+                for key, value in d.items():
+                    if key in detections[d_id]:
+                        detections[d_id][key] = torch.cat([detections[d_id][key], value])
+                    else:
+                        detections[d_id][key] = value
+
             for key, value in detector_losses.items():
                 if key in losses:
                     losses[key] += value
