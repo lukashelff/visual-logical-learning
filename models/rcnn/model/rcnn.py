@@ -43,6 +43,7 @@ class GeneralizedMultiHeadRCNN(nn.Module):
         super().to(*args, **kwargs)
         for roi_head in self.roi_heads:
             roi_head.to(*args, **kwargs)
+        return self
 
     def eval(self):
         super().eval()

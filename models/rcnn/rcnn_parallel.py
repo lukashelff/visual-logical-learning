@@ -7,6 +7,7 @@ import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
 from rtpt.rtpt import RTPT
+from torch import optim
 from torch.nn.parallel import DistributedDataParallel
 from torch.utils.data import DistributedSampler, DataLoader
 
@@ -27,14 +28,21 @@ def rcnn_distributed_training(rank, out_path, model, ds, optimizer, scheduler, w
     train_loader = prepare_ds(rank, world_size, ds['train'], batch_size)
     val_loader = prepare_ds(rank, world_size, ds['val'], batch_size)
 
+
     # instantiate the model(it's your own model) and move it to the right device
-    model = model.to(rank)
+    model.to(rank)
 
     # wrap the model with DDP
     # device_ids tell DDP where is your model
     # output_device tells DDP where to output, in our case, it is rank
     # find_unused_parameters=True instructs DDP to find unused output of the forward() function of any module in the model
-    model = DistributedDataParallel(model, device_ids=[rank], output_device=rank, find_unused_parameters=True)
+    model = DistributedDataParallel(model, device_ids=[rank],
+                                    output_device=rank,
+                                    # find_unused_parameters=True
+                                    )
+
+    # optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-5)
+
     device = f'cuda:{rank}' if torch.cuda.is_available() else 'cpu'
     for epoch in range(num_epochs):
         rtpt.step()
@@ -68,12 +76,12 @@ def rcnn_distributed_training(rank, out_path, model, ds, optimizer, scheduler, w
 
 def train_parallel(out_path, model, dl, optimizer, scheduler, num_epochs, batch_size, save_model, rtpt_extra=0,
                    ex_name=None, world_size=3, ):
-    # for rank in range(world_size):
     mp.spawn(
         rcnn_distributed_training,
         args=(out_path, model, dl, optimizer, scheduler, world_size, batch_size, num_epochs, save_model, rtpt_extra,
               ex_name),
-        nprocs=world_size
+        nprocs=world_size,
+        join=True
     )
     cleanup()
 

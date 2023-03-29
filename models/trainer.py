@@ -127,7 +127,7 @@ class Trainer:
             self.setup_model(self.resume)
             self.setup_ds(train_size=train_size, val_size=val_size)
         if self.model_name == 'rcnn':
-            if gpu_count > 1:
+            if gpu_count >= 1:
                 rcnn_parallel.train_parallel(self.out_path, self.model, self.ds, self.optimizer, self.scheduler,
                                              self.num_epochs, self.batch_size, self.save_model, world_size=gpu_count,
                                              ex_name=ex_name)
