@@ -59,14 +59,15 @@ def get_model(model_name, pretrained, num_output, num_class):
         # for predicting masks
 
         model = multi_head_maskrcnn_resnet50_fpn_v2(weights=weights,
-                                                          image_mean=[0.485, 0.456, 0.406],
-                                                          image_std=[0.229, 0.224, 0.225],
-                                                          num_classes=91,
-                                                          # num_classes=22 + 20,
-                                                          rpn_batch_size_per_image=256,
-                                                          box_nms_thresh=0.8,
-                                                          # box_score_thresh=0.9
-                                                          )
+                                                    image_mean=[0.485, 0.456, 0.406],
+                                                    image_std=[0.229, 0.224, 0.225],
+                                                    num_classes=91,
+                                                    # num_classes=22 + 20,
+                                                    rpn_batch_size_per_image=256,
+                                                    num_heads=7,
+                                                    box_nms_thresh=0.8,
+                                                    # box_score_thresh=0.9
+                                                    )
 
     elif model_name == 'attr_predictor':
         model = AttributeNetwork(dim_input=32)

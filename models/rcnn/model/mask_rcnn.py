@@ -108,7 +108,7 @@ class MultiHeadMaskRCNN(MultiHeadFasterRCNN):
             self,
             backbone,
             num_classes=None,
-            num_heads=6,
+            num_heads=7,
             # transform parameters
             min_size=800,
             max_size=1333,
@@ -218,6 +218,7 @@ def multi_head_maskrcnn_resnet50_fpn_v2(
         weights: Optional[MaskRCNN_ResNet50_FPN_V2_Weights] = None,
         progress: bool = True,
         num_classes: int = None,
+        num_heads: int = 7,
         weights_backbone: Optional[ResNet50_Weights] = None,
         trainable_backbone_layers: Optional[int] = None,
         **kwargs: Any,
@@ -289,6 +290,7 @@ def multi_head_maskrcnn_resnet50_fpn_v2(
         box_predictor=box_predictor,
         mask_head=mask_head,
         mask_predictor=mask_predictor,
+        num_heads=num_heads,
         **kwargs,
     )
 

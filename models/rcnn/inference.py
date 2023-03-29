@@ -56,7 +56,6 @@ def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samp
 
         if debug:
             print(out_text + issues)
-        out_text = out_text
 
         # create numpy array with all predictions and labels
     b = np.zeros([len(all_preds), len(max(all_preds, key=lambda x: len(x)))])

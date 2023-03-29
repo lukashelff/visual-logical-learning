@@ -8,14 +8,14 @@ import torch.distributed as dist
 import torch.multiprocessing as mp
 from rtpt.rtpt import RTPT
 from torch.nn.parallel import DistributedDataParallel
-from torch.utils.data import DistributedSampler
+from torch.utils.data import DistributedSampler, DataLoader
 
 import models.rcnn.engine as engine
 from models.rcnn.inference import infer_symbolic
 
 
-def rcnn_distributed_training(out_path, model, dl, optimizer, scheduler, rank, world_size, num_epochs=25,
-                              save_model=True, rtpt_extra=0, ex_name=None, ):
+def rcnn_distributed_training(rank, out_path, model, ds, optimizer, scheduler, world_size, batch_size, num_epochs=25,
+                              save_model=True, rtpt_extra=0, ex_name=None):
     ex_name = f'mask_rcnn_perception' if ex_name is None else ex_name
     rtpt = RTPT(name_initials='LH', experiment_name=ex_name, max_iterations=num_epochs + rtpt_extra)
     rtpt.start()
@@ -24,8 +24,8 @@ def rcnn_distributed_training(out_path, model, dl, optimizer, scheduler, rank, w
 
     # setup the process groups
     setup(rank, world_size)  # prepare the dataloader
-    train_loader = prepare_dl(rank, world_size, dl['train'])
-    val_loader = prepare_dl(rank, world_size, dl['val'])
+    train_loader = prepare_ds(rank, world_size, ds['train'], batch_size)
+    val_loader = prepare_ds(rank, world_size, ds['val'], batch_size)
 
     # instantiate the model(it's your own model) and move it to the right device
     model = model.to(rank)
@@ -52,7 +52,7 @@ def rcnn_distributed_training(out_path, model, dl, optimizer, scheduler, rank, w
         # update the learning rate
         print('Inferring symbolic representation')
         val_loader.sampler.set_epoch(epoch)
-        _, _, acc, mean = infer_symbolic(model, val_loader, device=device, debug=False)
+        _, _, acc, mean = infer_symbolic(model, val_loader, device=device, debug=False, samples=500)
 
         end = time.time()
         print(f"Took {((end - start) / 60):.3f} minutes for epoch {epoch}")
@@ -66,14 +66,16 @@ def rcnn_distributed_training(out_path, model, dl, optimizer, scheduler, rank, w
         }, out_path + 'model.pth')
 
 
-def train_parallel(out_path, model, dl, optimizer, scheduler, rank, num_epochs, save_model, rtpt_extra, ex_name,
-                   world_size=3, ):
+def train_parallel(out_path, model, dl, optimizer, scheduler, num_epochs, batch_size, save_model, rtpt_extra=0,
+                   ex_name=None, world_size=3, ):
+    # for rank in range(world_size):
     mp.spawn(
         rcnn_distributed_training,
-        args=(
-            out_path, model, dl, optimizer, scheduler, rank, world_size, num_epochs, save_model, rtpt_extra, ex_name),
+        args=(out_path, model, dl, optimizer, scheduler, world_size, batch_size, num_epochs, save_model, rtpt_extra,
+              ex_name),
         nprocs=world_size
     )
+    cleanup()
 
 
 def load_model(state_dict_model, state_dict):
@@ -97,12 +99,16 @@ def cleanup():
     dist.destroy_process_group()
 
 
-def prepare_dl(rank, world_size, dataloader, pin_memory=False, num_workers=0):
-    sampler = DistributedSampler(dataloader.dataset, num_replicas=world_size, rank=rank, shuffle=False, drop_last=False)
-    dataloader.sampler = sampler
-    dataloader.drop_last = True
-    # dataloader.batch_size = batch_size
-    dataloader.num_workers = num_workers
-    dataloader.pin_memory = pin_memory
+def prepare_ds(rank, world_size, ds, batch_size, pin_memory=False, num_workers=0):
+    sampler = DistributedSampler(ds, num_replicas=world_size, rank=rank, shuffle=False, drop_last=True)
+    dataloader = DataLoader(ds, batch_size=batch_size, num_workers=num_workers, pin_memory=pin_memory,
+                            sampler=sampler, drop_last=True, collate_fn=collate_fn_rcnn)
     return dataloader
 
+
+def collate_fn_rcnn(batch):
+    """
+    To handle the data loading as different images may have different number
+    of objects and to handle varying size tensors as well.
+    """
+    return tuple(zip(*batch))

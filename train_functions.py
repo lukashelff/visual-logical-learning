@@ -79,23 +79,46 @@ def train(args):
         trainer.cross_val_train(train_size=train_size, image_noise=noises, rules=rules, replace=True,
                                 save_models=False, ex_name=f'{action}_{model_name[:4]}_{command}', start_it=start_it)
 
-    if command == 'perception':
+    if command == 'rcnn_train':
         from models.trainer import Trainer
         # model_name = 'resnet18'
-        batch_size = 15
+        batch_size = 5
         # batch_size = 1
+        num_epochs = 20
+        train_size = 10000
+        val_size = 2000
+        num_batches = (train_size * num_epochs) // batch_size
         lr = 0.001
         # every n training steps, the learning rate is reduced by gamma
-        step_size = round(50000 / batch_size)
+        step_size = num_batches // 4
         gamma = 0.1
-        num_epochs = 10
         model_name = 'rcnn'
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
                           y_val=y_val, resume=False, batch_size=batch_size, setup_model=False, setup_ds=False,
                           num_epochs=num_epochs, gamma=gamma, lr=lr, step_size=step_size, optimizer_='ADAMW')
-        trainer.train(set_up=True, train_size=10000, val_size=2000, ex_name=f'{action}_{model_name[:4]}_{command}')
+        trainer.train(set_up=True, train_size=train_size, val_size=val_size, ex_name=f'{action}_{model_name[:4]}_{command}')
 
-    if command == 'perception_test':
+    if command == 'rcnn_train_parallel':
+        from models.trainer import Trainer
+        batch_size = 15
+        # batch_size = 1
+        num_epochs = 20
+        train_size = 10000
+        val_size = 2000
+        num_batches = (train_size * num_epochs) // batch_size
+        lr = 0.001
+        # every n training steps, the learning rate is reduced by gamma
+        step_size = num_batches // 4
+        gamma = 0.1
+        model_name = 'rcnn'
+        gpu_count = 2
+        trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
+                          y_val=y_val, resume=False, batch_size=batch_size, setup_model=False, setup_ds=False,
+                          num_epochs=num_epochs, gamma=gamma, lr=lr, step_size=step_size, optimizer_='ADAMW')
+        trainer.train(set_up=True, train_size=10000, val_size=2000, ex_name=f'{action}_{model_name[:4]}_{command}',
+                      gpu_count=gpu_count)
+
+    if command == 'rcnn_test':
         from models.trainer import Trainer
         batch_size = 20
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
@@ -103,7 +126,7 @@ def train(args):
         from models.rcnn.plot_prediction import predict_and_plot
         predict_and_plot(trainer.model, trainer.dl['val'], device)
 
-    if command == 'perception_infer':
+    if command == 'rcnn_infer':
         from models.trainer import Trainer
         batch_size = 2
         samples = 100
@@ -115,11 +138,8 @@ def train(args):
 
     if command == 'train_dtron':
         from detectron2.modeling import build_model
-        from models.rcnn.detectron import setup
-        from models.rcnn.detectron import register_ds
+        from models.rcnn.detectron import setup, register_ds, do_train
         from michalski_trains.dataset import get_datasets
-        from models.rcnn.detectron import do_train
-
         logger = logging.getLogger("detectron2")
 
         y_val = 'mask'

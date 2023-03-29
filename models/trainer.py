@@ -11,6 +11,7 @@ from torch.utils.data import Subset
 
 from michalski_trains.dataset import get_datasets
 from models.model import get_model
+from models.rcnn import rcnn_parallel
 from models.rcnn.rcnn_train import train_rcnn
 from models.train_loop import do_train
 from util import *
@@ -114,7 +115,7 @@ class Trainer:
                     tr_b += t_size // self.batch_size
                     tr_it += 1
 
-    def train(self, rtpt_extra=0, train_size=None, val_size=None, set_up=True, ex_name=None):
+    def train(self, rtpt_extra=0, train_size=None, val_size=None, set_up=True, ex_name=None, gpu_count=1):
         if self.full_ds is None:
             self.full_ds = get_datasets(self.base_scene, self.raw_trains, self.train_vis, class_rule=self.class_rule,
                                         ds_size=self.ds_size, max_car=self.max_car, min_car=self.min_car,
@@ -126,12 +127,18 @@ class Trainer:
             self.setup_model(self.resume)
             self.setup_ds(train_size=train_size, val_size=val_size)
         if self.model_name == 'rcnn':
-            self.model = train_rcnn(self.base_scene, self.raw_trains, self.y_val, self.device, self.out_path,
-                                    self.model_name, self.model, self.full_ds, self.dl, self.checkpoint, self.optimizer,
-                                    self.scheduler, self.criteria, num_epochs=self.num_epochs, lr=self.lr,
-                                    step_size=self.step_size, gamma=self.gamma, save_model=self.save_model,
-                                    rtpt_extra=rtpt_extra, ex_name=ex_name
-                                    )
+            if gpu_count > 1:
+                rcnn_parallel.train_parallel(self.out_path, self.model, self.ds, self.optimizer, self.scheduler,
+                                             self.num_epochs, self.batch_size, self.save_model, world_size=gpu_count,
+                                             ex_name=ex_name)
+            else:
+                self.model = train_rcnn(self.base_scene, self.raw_trains, self.y_val, self.device, self.out_path,
+                                        self.model_name, self.model, self.full_ds, self.dl, self.checkpoint,
+                                        self.optimizer,
+                                        self.scheduler, self.criteria, num_epochs=self.num_epochs, lr=self.lr,
+                                        step_size=self.step_size, gamma=self.gamma, save_model=self.save_model,
+                                        rtpt_extra=rtpt_extra, ex_name=ex_name
+                                        )
         else:
             self.model = do_train(self.base_scene, self.raw_trains, self.y_val, self.device, self.out_path,
                                   self.model_name, self.model, self.full_ds, self.dl, self.checkpoint, self.optimizer,
@@ -157,6 +164,7 @@ class Trainer:
                                                 self.criteria, num_epochs=self.num_epochs, lr=self.lr,
                                                 step_size=self.step_size,
                                                 gamma=self.gamma, save_model=False, train='val')
+
         else:
             acc, precision, recall = do_train(self.base_scene, self.raw_trains, self.y_val, self.device, self.out_path,
                                               self.model_name,
@@ -240,27 +248,12 @@ class Trainer:
             'train': Subset(self.full_ds, tr_idx),
             'val': Subset(self.full_ds, val_idx)
         }
-        # collate = {
-        #     'rcnn':
-        # }
-        # self.sampler = {
-        #     'train': DistributedSampler(self.ds['train'], num_replicas=self.world_size, rank=self.rank, shuffle=False,
-        #                                 drop_last=True),
-        #     'val': DistributedSampler(self.ds['val'], num_replicas=self.world_size, rank=self.rank, shuffle=False,
-        #                               drop_last=True)
-        # }
-        # if self.model_name == 'rcnn':
-        #     self.dl = {'train': DataLoader(self.ds['train'], batch_size=self.batch_size, num_workers=0,
-        #                                    collate_fn=collate_fn_rcnn, sampler=self.sampler['train'], pin_memory=False),
-        #                'val': DataLoader(self.ds['val'], batch_size=self.batch_size, num_workers=0,
-        #                                  collate_fn=collate_fn_rcnn, sampler=self.sampler['val'], pin_memory=False)}
         if self.model_name == 'rcnn':
             self.dl = {'train': DataLoader(self.ds['train'], batch_size=self.batch_size, num_workers=self.num_worker,
                                            collate_fn=collate_fn_rcnn),
                        'val': DataLoader(self.ds['val'], batch_size=self.batch_size, num_workers=self.num_worker,
                                          collate_fn=collate_fn_rcnn)}
         else:
-
             self.dl = {'train': DataLoader(self.ds['train'], batch_size=self.batch_size, num_workers=self.num_worker),
                        'val': DataLoader(self.ds['val'], batch_size=self.batch_size, num_workers=self.num_worker)}
 

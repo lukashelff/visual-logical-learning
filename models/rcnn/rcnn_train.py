@@ -26,8 +26,6 @@ def train_rcnn(base_scene, raw_trains, y_val, device, out_path, model_name, mode
     if train == 'train':
         print(f'{train} settings: {out_path}')
 
-
-
     model.to(device)
     for epoch in range(num_epochs):
         rtpt.step()
@@ -47,10 +45,10 @@ def train_rcnn(base_scene, raw_trains, y_val, device, out_path, model_name, mode
         # do_train(dl['train'], model, optimizer, device, train_loss_hist, scheduler)
         # update the learning rate
         print('Infering symbolic')
-        _, _, acc, mean = infer_symbolic(model, dl['val'], device=device, debug=False)
+        _, _, acc, mean = infer_symbolic(model, dl['val'], device=device, debug=False, samples=500)
         # evaluate on the test dataset
         # print('Evaluating')
-        engine.evaluate(model, dl['val'], device=device)
+        # engine.evaluate(model, dl['val'], device=device)
         # validate(dl['val'], model, device, val_loss_hist)
 
         # train_loss, train_itr = do_train(dl['train'], model, optimizer, device, train_loss_hist, scheduler)
@@ -58,7 +56,7 @@ def train_rcnn(base_scene, raw_trains, y_val, device, out_path, model_name, mode
         # print(f"Epoch #{epoch + 1} train loss: {train_loss_hist.value:.3f}")
         # print(f"Epoch #{epoch + 1} validation loss: {val_loss_hist.value:.3f}")
         end = time.time()
-        print(f"Took {((end - start) / 60):.3f} minutes for epoch {epoch}")
+        print(f"Took {((end - start) / 60):.3f} minutes for epoch {epoch + 1}")
 
     # plot_prediction(model, dl['val'], device)
     os.makedirs(out_path, exist_ok=True)
@@ -69,9 +67,6 @@ def train_rcnn(base_scene, raw_trains, y_val, device, out_path, model_name, mode
             'optimizer_state_dict': optimizer.state_dict(),
             # 'loss': val_loss
         }, out_path + 'model.pth')
-
-
-
 
 
 # function for running training iterations
@@ -156,5 +151,3 @@ class Averager:
     def reset(self):
         self.current_total = 0.0
         self.iterations = 0.0
-
-
