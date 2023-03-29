@@ -14,13 +14,13 @@ from models.rcnn.plot_prediction import plot_mask
 from util import *
 
 
-def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samples=1000, debug=False):
+def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samples=None, debug=False):
     # out_path = f'output/models/rcnn/inferred_symbolic/{trainer.settings}'
     all_labels = []
     all_preds = []
     # if trainer.full_ds is None:
     #     trainer.setup_ds(val_size=samples)
-
+    samples = len(dl.dataset) if samples is None else samples
     model.eval()
     model.to(device)
     t_acc = []

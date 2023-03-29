@@ -1,6 +1,9 @@
 import timm
+import torch
 import torch.nn as nn
 import torchvision.models as models
+from torch.distributed import init_process_group
+from torch.nn.parallel import DistributedDataParallel
 from torchvision.models import ResNet18_Weights, ResNet50_Weights, ResNet101_Weights
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor, FastRCNNConvFCHead
 from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
@@ -9,7 +12,7 @@ from models.cnns.multi_label_nn import MultiLabelNeuralNetwork
 from models.cnns.set_transformer import SetTransformer
 from models.mlp.mlp import MLP
 from models.multioutput_regression.pos_net import PositionNetwork
-from models.rcnn.mask_rcnn import multi_head_maskrcnn_resnet50_fpn_v2
+from models.rcnn.model.mask_rcnn import multi_head_maskrcnn_resnet50_fpn_v2
 from models.spacial_attr_net.attr_net import AttributeNetwork
 
 
@@ -50,6 +53,10 @@ def get_model(model_name, pretrained, num_output, num_class):
         #                                                   box_nms_thresh=0.8,
         #                                                   # box_score_thresh=0.9
         #                                                   )
+        # model.roi_heads.box_head = FastRCNNConvFCHead(
+        #     (model.backbone.out_channels, 7, 7), [256, 256, 256, 256], [1024], norm_layer=None
+        # )
+        # for predicting masks
 
         model = multi_head_maskrcnn_resnet50_fpn_v2(weights=weights,
                                                           image_mean=[0.485, 0.456, 0.406],
@@ -60,12 +67,6 @@ def get_model(model_name, pretrained, num_output, num_class):
                                                           box_nms_thresh=0.8,
                                                           # box_score_thresh=0.9
                                                           )
-        # model.roi_heads.box_head = FastRCNNConvFCHead(
-        #     (model.backbone.out_channels, 7, 7), [256, 256, 256, 256], [1024], norm_layer=None
-        # )
-        # for predicting masks
-        # model = nn.DataParallel(model)
-
 
     elif model_name == 'attr_predictor':
         model = AttributeNetwork(dim_input=32)

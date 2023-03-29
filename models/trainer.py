@@ -16,6 +16,7 @@ from models.train_loop import do_train
 from util import *
 from visualization.vis_model import visualize_statistics, vis_confusion_matrix
 from visualization.vis_model_comparison import model_scene_imcount_comparison, csv_to_tex_table
+from torch.utils.data.distributed import DistributedSampler
 
 
 class Trainer:
@@ -61,7 +62,8 @@ class Trainer:
             self.full_ds = None
 
     def cross_val_train(self, train_size=None, label_noise=None, rules=None, visualizations=None, scenes=None,
-                        n_splits=5, model_path=None, save_models=False, replace=False, image_noise=None, ex_name=None, start_it=0):
+                        n_splits=5, model_path=None, save_models=False, replace=False, image_noise=None, ex_name=None,
+                        start_it=0):
         if train_size is None:
             train_size = [10000]
         if label_noise is None:
@@ -147,7 +149,8 @@ class Trainer:
             self.setup_ds(val_size=val_size)
             self.setup_model(self.resume, path=model_path)
         if self.model_name == 'rcnn':
-            acc, precision, recall = train_rcnn(self.base_scene, self.raw_trains, self.y_val, self.device, self.out_path,
+            acc, precision, recall = train_rcnn(self.base_scene, self.raw_trains, self.y_val, self.device,
+                                                self.out_path,
                                                 self.model_name,
                                                 self.model, self.full_ds, self.dl, self.checkpoint, self.optimizer,
                                                 self.scheduler,
@@ -240,13 +243,24 @@ class Trainer:
         # collate = {
         #     'rcnn':
         # }
-
+        # self.sampler = {
+        #     'train': DistributedSampler(self.ds['train'], num_replicas=self.world_size, rank=self.rank, shuffle=False,
+        #                                 drop_last=True),
+        #     'val': DistributedSampler(self.ds['val'], num_replicas=self.world_size, rank=self.rank, shuffle=False,
+        #                               drop_last=True)
+        # }
+        # if self.model_name == 'rcnn':
+        #     self.dl = {'train': DataLoader(self.ds['train'], batch_size=self.batch_size, num_workers=0,
+        #                                    collate_fn=collate_fn_rcnn, sampler=self.sampler['train'], pin_memory=False),
+        #                'val': DataLoader(self.ds['val'], batch_size=self.batch_size, num_workers=0,
+        #                                  collate_fn=collate_fn_rcnn, sampler=self.sampler['val'], pin_memory=False)}
         if self.model_name == 'rcnn':
             self.dl = {'train': DataLoader(self.ds['train'], batch_size=self.batch_size, num_workers=self.num_worker,
                                            collate_fn=collate_fn_rcnn),
                        'val': DataLoader(self.ds['val'], batch_size=self.batch_size, num_workers=self.num_worker,
                                          collate_fn=collate_fn_rcnn)}
         else:
+
             self.dl = {'train': DataLoader(self.ds['train'], batch_size=self.batch_size, num_workers=self.num_worker),
                        'val': DataLoader(self.ds['val'], batch_size=self.batch_size, num_workers=self.num_worker)}
 

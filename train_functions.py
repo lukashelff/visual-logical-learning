@@ -17,6 +17,7 @@ def train(args):
     max_cars = args.max_train_length
     min_cars = args.min_train_length
     device = torch.device("cpu" if not torch.cuda.is_available() or args.cuda == -1 else f"cuda:{args.cuda}")
+    device = torch.device("cpu" if not torch.cuda.is_available() or args.cuda == -1 else f"cuda")
     y_val = args.y_val
 
     if command == 'ilp_crossval':
@@ -81,7 +82,7 @@ def train(args):
     if command == 'perception':
         from models.trainer import Trainer
         # model_name = 'resnet18'
-        batch_size = 5
+        batch_size = 15
         # batch_size = 1
         lr = 0.001
         # every n training steps, the learning rate is reduced by gamma
