@@ -9,7 +9,7 @@ from models.cnns.multi_label_nn import MultiLabelNeuralNetwork
 from models.cnns.set_transformer import SetTransformer
 from models.mlp.mlp import MLP
 from models.multioutput_regression.pos_net import PositionNetwork
-from models.rcnn.rcnn import multi_head_maskrcnn_resnet50_fpn_v2
+from models.rcnn.mask_rcnn import multi_head_maskrcnn_resnet50_fpn_v2
 from models.spacial_attr_net.attr_net import AttributeNetwork
 
 
