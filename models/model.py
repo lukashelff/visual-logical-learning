@@ -45,14 +45,14 @@ def get_model(model_name, pretrained, num_output, num_class):
         weights = models.detection.MaskRCNN_ResNet50_FPN_V2_Weights.DEFAULT if pretrained else None
         # model_image_processing = models.detection.MaskRCNN_ResNet50_FPN_V2_Weights.DEFAULT.transforms()
         #
-        # model = models.detection.maskrcnn_resnet50_fpn_v2(weights=weights,
-        #                                                   image_mean=[0.485, 0.456, 0.406],
-        #                                                   image_std=[0.229, 0.224, 0.225],
-        #                                                   # num_classes=22 + 20,
-        #                                                   rpn_batch_size_per_image=256,
-        #                                                   box_nms_thresh=0.8,
-        #                                                   # box_score_thresh=0.9
-        #                                                   )
+        model = models.detection.maskrcnn_resnet50_fpn_v2(weights=weights,
+                                                          image_mean=[0.485, 0.456, 0.406],
+                                                          image_std=[0.229, 0.224, 0.225],
+                                                          # num_classes=22 + 20,
+                                                          rpn_batch_size_per_image=256,
+                                                          box_nms_thresh=0.8,
+                                                          # box_score_thresh=0.9
+                                                          )
         # model.roi_heads.box_head = FastRCNNConvFCHead(
         #     (model.backbone.out_channels, 7, 7), [256, 256, 256, 256], [1024], norm_layer=None
         # )

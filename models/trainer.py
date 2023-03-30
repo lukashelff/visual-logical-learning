@@ -180,7 +180,11 @@ class Trainer:
     def setup_model(self, resume=False, path=None):
         # set path
         path = self.out_path if path is None else path
-        set_up_txt = f'set up {self.model_name}'
+        set_up_txt = f'set up foundation model: {self.model_name}' if not resume else \
+            f'loading trained model: {self.model_name} from {path} model.pth'
+        set_up_txt += f' with lr {self.lr}, loss {self.loss_name},' \
+                      f' optimizer {self.optimizer_name}, scheduler: step size {self.step_size}, gamma {self.gamma},' \
+                      f' batch size {self.batch_size}, epochs {self.num_epochs}'
 
         if resume and os.path.isfile(path + 'model.pth') and os.path.isfile(path + 'metrics.json'):
             self.checkpoint = torch.load(path + 'model.pth', map_location=self.device)
@@ -241,7 +245,7 @@ class Trainer:
             tr_idx = arange(train_size)
             val_idx = arange(train_size, train_size + val_size)
         if len(tr_idx) > 0:
-            set_up_txt = f'setup ds with {len(tr_idx)} images for training and {len(val_idx)} images for validation'
+            set_up_txt = f'split ds into training ds with {len(tr_idx)} images and validation ds wit {len(val_idx)} images'
             print(set_up_txt)
 
         self.ds = {

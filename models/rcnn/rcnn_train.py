@@ -23,8 +23,7 @@ def train_rcnn(base_scene, raw_trains, y_val, device, out_path, model_name, mode
     # ... iterations till ena and plot graphs for all iterations
 
     epoch_init = 0
-    if train == 'train':
-        print(f'{train} settings: {out_path}')
+    print(f'settings: {out_path}')
 
     model.to(device)
     for epoch in range(num_epochs):

@@ -84,11 +84,11 @@ def train(args):
         # model_name = 'resnet18'
         batch_size = 5
         # batch_size = 1
-        num_epochs = 20
+        num_epochs = 60
         train_size = 10000
         val_size = 2000
         num_batches = (train_size * num_epochs) // batch_size
-        lr = 0.001
+        lr = 0.01
         # every n training steps, the learning rate is reduced by gamma
         step_size = num_batches // 4
         gamma = 0.1
@@ -96,7 +96,7 @@ def train(args):
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
                           y_val=y_val, resume=False, batch_size=batch_size, setup_model=False, setup_ds=False,
                           num_epochs=num_epochs, gamma=gamma, lr=lr, step_size=step_size, optimizer_='ADAMW')
-        trainer.train(set_up=True, train_size=train_size, val_size=val_size, ex_name=f'{action}_{model_name[:4]}_{command}')
+        trainer.train(set_up=True, train_size=train_size, val_size=val_size, ex_name=f'mul_head_rcnn_train')
 
     if command == 'rcnn_train_parallel':
         from models.trainer import Trainer
@@ -106,7 +106,7 @@ def train(args):
         train_size = 10000
         val_size = 2000
         num_batches = (train_size * num_epochs) // batch_size
-        lr = 0.001
+        lr = 0.01
         # every n training steps, the learning rate is reduced by gamma
         step_size = num_batches // 4
         gamma = 0.1
@@ -115,7 +115,7 @@ def train(args):
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
                           y_val=y_val, resume=False, batch_size=batch_size, setup_model=False, setup_ds=False,
                           num_epochs=num_epochs, gamma=gamma, lr=lr, step_size=step_size, optimizer_='ADAMW')
-        trainer.train(set_up=True, train_size=train_size, val_size=val_size, ex_name=f'multi_head_mask_{command}',
+        trainer.train(set_up=True, train_size=train_size, val_size=val_size, ex_name=f'mul_head_mask_{command}',
                       gpu_count=gpu_count)
 
     if command == 'rcnn_test':

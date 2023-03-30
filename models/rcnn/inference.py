@@ -44,8 +44,8 @@ def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samp
         length = max(len(symbolic), len(labels))
         symbolic = np.pad(symbolic, (0, length - len(symbolic)), 'constant', constant_values=0)
         labels = np.pad(labels, (0, length - len(labels)), 'constant', constant_values=0)
-        if debug:
-            plot_mask(output[0], i, image[0], tag='prediction')
+        # if debug:
+        #     plot_mask(output[0], i, image[0], tag='prediction')
         all_labels.append(labels)
         all_preds.append(symbolic)
         accuracy = accuracy_score(labels, symbolic)
@@ -81,7 +81,6 @@ def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samp
 
     # print(f'average train acc score: {np.mean(t_acc).round(3)}')
     return all_preds, all_labels, acc, np.mean(t_acc)
-
 
 
 def process_symbolics(prediction, threshold=.8):
