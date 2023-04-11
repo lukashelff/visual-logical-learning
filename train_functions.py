@@ -19,13 +19,15 @@ def train(args):
     device = torch.device("cpu" if not torch.cuda.is_available() or args.cuda == -1 else f"cuda:{args.cuda}")
     device = torch.device("cpu" if not torch.cuda.is_available() or args.cuda == -1 else f"cuda")
     y_val = args.y_val
+    tag = args.tag
 
     if command == 'ilp_crossval':
         from ilp.trainer import Ilp_trainer
         trainer = Ilp_trainer()
         rules = ['theoryx', 'numerical', 'complex']
-        models = [args.model_name] if args.model_name == 'popper' or args.model_name == 'aleph' else ['popper', 'aleph']
+        models = [model_name] if model_name == 'popper' or model_name == 'aleph' else ['popper', 'aleph']
         train_count = [100, 1000, 10000]
+        train_count = [10000]
         noise = [0, 0.1, 0.3]
         trainer.cross_val(raw_trains, folds=5, rules=rules, models=models, train_count=train_count, noise=noise,
                           log=False, complete_run=True)
@@ -84,27 +86,26 @@ def train(args):
         # model_name = 'resnet18'
         batch_size = 5
         # batch_size = 1
-        num_epochs = 60
-        train_size = 10000
-        val_size = 2000
+        num_epochs = 20
+        train_size, val_size = 10000, 2000
         num_batches = (train_size * num_epochs) // batch_size
-        lr = 0.01
         # every n training steps, the learning rate is reduced by gamma
-        step_size = num_batches // 4
+        step_size = num_batches // 3
+        # lr = 0.01
+        lr = 0.001
         gamma = 0.1
         model_name = 'rcnn'
-        trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
-                          y_val=y_val, resume=False, batch_size=batch_size, setup_model=False, setup_ds=False,
+        trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path,
+                          ds_size=ds_size, train_size=train_size, val_size=val_size, model_tag=tag,
+                          y_val=y_val, resume=False, batch_size=batch_size, setup_model=True, setup_ds=True,
                           num_epochs=num_epochs, gamma=gamma, lr=lr, step_size=step_size, optimizer_='ADAMW')
-        trainer.train(set_up=True, train_size=train_size, val_size=val_size, ex_name=f'mul_head_rcnn_train')
+        trainer.train(set_up=False, train_size=train_size, val_size=val_size, ex_name=f'{tag}_mul_head_rcnn_train')
 
     if command == 'rcnn_train_parallel':
         from models.trainer import Trainer
         batch_size = 5
-        # batch_size = 1
         num_epochs = 20
-        train_size = 10000
-        val_size = 2000
+        train_size, val_size = 10000, 2000
         num_batches = (train_size * num_epochs) // batch_size
         lr = 0.01
         # every n training steps, the learning rate is reduced by gamma
@@ -128,10 +129,15 @@ def train(args):
 
     if command == 'rcnn_infer':
         from models.trainer import Trainer
+        lr = 0.001
+        # every n training steps, the learning rate is reduced by gamma
+        step_size, gamma = 10000, 0.1
+
         batch_size = 2
         samples = 100
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
-                          y_val=y_val, resume=False, batch_size=batch_size, setup_model=True, setup_ds=True)
+                          lr=lr, step_size=step_size, gamma=gamma,
+                          y_val=y_val, resume=True, batch_size=batch_size, setup_model=True, setup_ds=True)
         from models.rcnn.inference import infer_symbolic
         infer_symbolic(trainer.model, trainer.dl['val'], device, segmentation_similarity_threshold=.8, samples=samples,
                        debug=False)

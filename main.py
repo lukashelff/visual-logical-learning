@@ -7,6 +7,7 @@ def parse():
     # Instantiate the parser
     parser = argparse.ArgumentParser(description='The Michalski Train Problem')
     parser.add_argument('--dataset_size', type=int, default=12000, help='Size of the dataset')
+    parser.add_argument('--tag', type=str, default='', help='Some kind of identification tag for the run')
     parser.add_argument('--ds_path', type=str, default="TrainGenerator/output/image_generator",
                         help='path to the dataset directories')
 
@@ -58,8 +59,8 @@ def main():
     action = args.action
     y_val = args.y_val
 
-    sys.path.insert(0, 'TrainGenerator/')
     sys.path.insert(0, 'ilp/rdm-master/')
+    sys.path.insert(0, 'TrainGenerator/')
 
     if action == 'plot':
         from plotter import plot

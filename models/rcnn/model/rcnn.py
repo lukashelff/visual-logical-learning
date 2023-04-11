@@ -102,6 +102,33 @@ class GeneralizedMultiHeadRCNN(nn.Module):
 
         super().load_state_dict(state_dict_rcnn, strict=strict)
 
+    def load_multi_head_state_dict(self, state_dict: Mapping[str, Any], strict: bool = True):
+        # copy state_dict so _load_from_state_dict can modify it
+        metadata = getattr(state_dict, "_metadata", None)
+        state_dict_rcnn = state_dict.copy()
+        state_dict_roid_head = state_dict.copy()
+        # if metadata is not None:
+        #     state_dict._metadata = metadata
+
+        # get number of roi_heads from the checkpoint
+        # num_roi_heads = len(self.roi_heads)
+
+        # if the checkpoint was saved with a single roi_head, we want to expand it
+        for key in list(state_dict.keys()):
+            if key.startswith("roi_heads."):
+                del state_dict_rcnn[key]
+                # rename key for roi_heads
+                new_key = key.replace("roi_heads.", "")
+                state_dict_roid_head[new_key] = state_dict_roid_head[key]
+                del state_dict_roid_head[key]
+
+            else:
+                del state_dict_roid_head[key]
+        for roi_head in self.roi_heads:
+            roi_head.load_state_dict(state_dict_roid_head, strict=strict)
+
+        super().load_state_dict(state_dict_rcnn, strict=strict)
+
     def forward(self, images, targets=None):
         # type: (List[Tensor], Optional[List[Dict[str, Tensor]]]) -> Tuple[Dict[str, Tensor], List[Dict[str, Tensor]]]
         """

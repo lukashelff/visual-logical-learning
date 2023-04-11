@@ -66,6 +66,7 @@ def train_rcnn(base_scene, raw_trains, y_val, device, out_path, model_name, mode
             'optimizer_state_dict': optimizer.state_dict(),
             # 'loss': val_loss
         }, out_path + 'model.pth')
+    print('Finished Training, model saved at ' + out_path + 'model.pth')
 
 
 # function for running training iterations

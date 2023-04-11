@@ -26,7 +26,7 @@ class Trainer:
                  resume=False, pretrained=True, resize=False, optimizer_='ADAM', loss='CrossEntropyLoss',
                  train_size=None, val_size=None, ds_size=10000, image_noise=0, label_noise=0,
                  batch_size=50, num_worker=4, lr=0.001, step_size=5, gamma=.8, momentum=0.9,
-                 num_epochs=25, setup_model=True, setup_ds=True, save_model=True):
+                 num_epochs=25, setup_model=True, setup_ds=True, save_model=True, model_tag=''):
 
         # ds_val setup
         self.settings = f'{train_vis}_{class_rule}_{raw_trains}_{base_scene}_len_{min_car}-{max_car}'
@@ -58,7 +58,7 @@ class Trainer:
                                         y_val=y_val, max_car=self.max_car, min_car=self.min_car,
                                         class_rule=self.class_rule,
                                         resize=self.resize, preprocessing=self.preprocess)
-            self.setup_ds(train_size, val_size)
+            self.setup_ds(train_size=train_size, val_size=val_size)
         else:
             self.full_ds = None
 
@@ -127,7 +127,7 @@ class Trainer:
             self.setup_model(self.resume)
             self.setup_ds(train_size=train_size, val_size=val_size)
         if self.model_name == 'rcnn':
-            if gpu_count >= 1:
+            if gpu_count > 1:
                 rcnn_parallel.train_parallel(self.out_path, self.model, self.ds, self.optimizer, self.scheduler,
                                              self.num_epochs, self.batch_size, self.save_model, world_size=gpu_count,
                                              ex_name=ex_name)
@@ -245,7 +245,7 @@ class Trainer:
             tr_idx = arange(train_size)
             val_idx = arange(train_size, train_size + val_size)
         if len(tr_idx) > 0:
-            set_up_txt = f'split ds into training ds with {len(tr_idx)} images and validation ds wit {len(val_idx)} images'
+            set_up_txt = f'split ds into training ds with {len(tr_idx)} images and validation ds with {len(val_idx)} images'
             print(set_up_txt)
 
         self.ds = {

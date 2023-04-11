@@ -10,12 +10,17 @@ from sklearn.model_selection import StratifiedShuffleSplit
 from raw.gen_raw_trains import read_trains
 
 
-def create_datasets(rules, num_samples, train_description, folds, ds_total_size, noise_vals, replace_existing=True):
+def create_datasets(rules, num_samples, train_description, folds, ds_total_size, noise_vals, replace_existing=True,
+                    min_cars=2, max_cars=4, tag='',
+                    tg_output_path=f'TrainGenerator/output'
+                    ):
     print(f'preparing {folds} fold cross-val {train_description} datasets for {rules} rules '
           f'with sample sizes of {num_samples} and noises of {noise_vals}')
     gen_ds = 0
     for num_tsamples, rule, noise in product(num_samples, rules, noise_vals):
-        ds_path = f'TrainGenerator/output/image_generator/dataset_descriptions/{train_description}_{rule}.txt'
+        #      ds_path = f'TrainGenerator/output/image_generator/dataset_descriptions/{train_description}_{rule}.txt'
+        ds_path = f'{tg_output_path}/image_generator/dataset_descriptions/{rule}/{tag}{train_description}_len_{min_cars}-{max_cars}.txt'
+
         with open(ds_path, "r") as file:
             all_data = file.readlines()
             if len(all_data) != ds_total_size:
@@ -146,7 +151,6 @@ def create_bk(ds_path, out_path, ds_size=None, noise=0, noise_type='label'):
                 payload_num = 3 - [load_obj1, load_obj2, load_obj3].count('none')
                 payload_n = ['zero', 'one', 'two', 'three'][payload_num]
                 wheel_num = ['two', 'three'][int(wheel_count[0]) - 2]
-
 
                 popper_bk.write(f'has_car(t{train_c},t{train_c}_c{car_number}).' + '\n')
                 popper_bk.write(f'car_num(t{train_c}_c{car_number},{car_number}).' + '\n')
