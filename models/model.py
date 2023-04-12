@@ -12,7 +12,7 @@ from models.cnns.multi_label_nn import MultiLabelNeuralNetwork
 from models.cnns.set_transformer import SetTransformer
 from models.mlp.mlp import MLP
 from models.multioutput_regression.pos_net import PositionNetwork
-from models.rcnn.model.mask_rcnn import multi_head_maskrcnn_resnet50_fpn_v2
+from models.rcnn.model.mask_rcnn import multi_head_maskrcnn_resnet50_fpn_v2, multi_label_maskrcnn_resnet50_fpn_v2
 from models.spacial_attr_net.attr_net import AttributeNetwork
 
 
@@ -36,6 +36,28 @@ def get_model(model_name, pretrained, num_output, num_class):
         model = timm.create_model('tf_efficientnetv2_l_in21k', pretrained=pretrained, num_classes=2)
     elif model_name == 'set_transformer':
         model = SetTransformer(dim_input=32, dim_output=num_output * num_class)
+    elif model_name == 'multi_label_rcnn':
+        weights = models.detection.MaskRCNN_ResNet50_FPN_V2_Weights.DEFAULT if pretrained else None
+        model = multi_label_maskrcnn_resnet50_fpn_v2(weights=weights,
+                                                     image_mean=[0.485, 0.456, 0.406],
+                                                     image_std=[0.229, 0.224, 0.225],
+                                                     # num_classes=22 + 20,
+                                                     rpn_batch_size_per_image=256,
+                                                     box_nms_thresh=0.8,
+                                                     # box_score_thresh=0.9
+                                                     )
+    elif model_name == 'multi_head_rcnn':
+        weights = models.detection.MaskRCNN_ResNet50_FPN_V2_Weights.DEFAULT if pretrained else None
+        model = multi_head_maskrcnn_resnet50_fpn_v2(weights=weights,
+                                                    image_mean=[0.485, 0.456, 0.406],
+                                                    image_std=[0.229, 0.224, 0.225],
+                                                    num_classes=91,
+                                                    # num_classes=22 + 20,
+                                                    rpn_batch_size_per_image=256,
+                                                    num_heads=3,
+                                                    box_nms_thresh=0.8,
+                                                    # box_score_thresh=0.9
+                                                    )
     elif model_name == 'rcnn':
         # model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True, classes=22, autoshape=False)
         # weights = models.detection.FasterRCNN_ResNet50_FPN_V2_Weights.DEFAULT
@@ -45,30 +67,14 @@ def get_model(model_name, pretrained, num_output, num_class):
         weights = models.detection.MaskRCNN_ResNet50_FPN_V2_Weights.DEFAULT if pretrained else None
         # model_image_processing = models.detection.MaskRCNN_ResNet50_FPN_V2_Weights.DEFAULT.transforms()
         #
-        # model = models.detection.maskrcnn_resnet50_fpn_v2(weights=weights,
-        #                                                   image_mean=[0.485, 0.456, 0.406],
-        #                                                   image_std=[0.229, 0.224, 0.225],
-        #                                                   # num_classes=22 + 20,
-        #                                                   rpn_batch_size_per_image=256,
-        #                                                   box_nms_thresh=0.8,
-        #                                                   # box_score_thresh=0.9
-        #                                                   )
-        # model.roi_heads.box_head = FastRCNNConvFCHead(
-        #     (model.backbone.out_channels, 7, 7), [256, 256, 256, 256], [1024], norm_layer=None
-        # )
-        # for predicting masks
-
-        model = multi_head_maskrcnn_resnet50_fpn_v2(weights=weights,
-                                                    image_mean=[0.485, 0.456, 0.406],
-                                                    image_std=[0.229, 0.224, 0.225],
-                                                    num_classes=91,
-                                                    # num_classes=22 + 20,
-                                                    rpn_batch_size_per_image=256,
-                                                    num_heads=2,
-                                                    box_nms_thresh=0.8,
-                                                    # box_score_thresh=0.9
-                                                    )
-
+        model = models.detection.maskrcnn_resnet50_fpn_v2(weights=weights,
+                                                          image_mean=[0.485, 0.456, 0.406],
+                                                          image_std=[0.229, 0.224, 0.225],
+                                                          # num_classes=22 + 20,
+                                                          rpn_batch_size_per_image=256,
+                                                          box_nms_thresh=0.8,
+                                                          # box_score_thresh=0.9
+                                                          )
     elif model_name == 'attr_predictor':
         model = AttributeNetwork(dim_input=32)
     elif model_name == 'pos_predictor':

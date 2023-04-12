@@ -85,8 +85,8 @@ def train(args):
         from models.trainer import Trainer
         # model_name = 'resnet18'
         batch_size = 5
-        # batch_size = 1
-        num_epochs = 20
+        batch_size = 1
+        num_epochs = 1
         train_size, val_size = 10000, 2000
         num_batches = (train_size * num_epochs) // batch_size
         # every n training steps, the learning rate is reduced by gamma
@@ -95,6 +95,8 @@ def train(args):
         lr = 0.001
         gamma = 0.1
         model_name = 'rcnn'
+        # model_name = 'multi_head_rcnn'
+        # model_name = 'multi_label_rcnn'
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path,
                           ds_size=ds_size, train_size=train_size, val_size=val_size, model_tag=tag,
                           y_val=y_val, resume=False, batch_size=batch_size, setup_model=True, setup_ds=True,

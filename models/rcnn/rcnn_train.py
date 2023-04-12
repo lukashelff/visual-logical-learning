@@ -14,6 +14,7 @@ def train_rcnn(base_scene, raw_trains, y_val, device, out_path, model_name, mode
                save_model=True, rtpt_extra=0, train='train', ex_name=None):
     ex_name = f'mask_rcnn_perception' if ex_name is None else ex_name
     rtpt = RTPT(name_initials='LH', experiment_name=ex_name, max_iterations=num_epochs + rtpt_extra)
+    # rtpt = RTPT(name_initials='LH', experiment_name=ex_name, max_iterations=1)
     rtpt.start()
     train_loss_hist = Averager()
     val_loss_hist = Averager()
