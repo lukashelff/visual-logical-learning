@@ -101,7 +101,7 @@ def train(args):
                           ds_size=ds_size, train_size=train_size, val_size=val_size, model_tag=tag,
                           y_val=y_val, resume=False, batch_size=batch_size, setup_model=True, setup_ds=True,
                           num_epochs=num_epochs, gamma=gamma, lr=lr, step_size=step_size, optimizer_='ADAMW')
-        trainer.train(set_up=False, train_size=train_size, val_size=val_size, ex_name=f'{tag}_mul_head_rcnn_train')
+        trainer.train(set_up=False, train_size=train_size, val_size=val_size, ex_name=f'{model_name}_train')
 
     if command == 'rcnn_train_parallel':
         from models.trainer import Trainer

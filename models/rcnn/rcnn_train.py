@@ -30,7 +30,7 @@ def train_rcnn(base_scene, raw_trains, y_val, device, out_path, model_name, mode
     for epoch in range(num_epochs):
         rtpt.step()
 
-        print(f"EPOCH {epoch + 1} of {num_epochs}")
+        print(f"EPOCH {epoch} of {num_epochs - 1}")
 
         # reset the training and validation loss histories for the current epoch
         train_loss_hist.reset()
@@ -56,7 +56,7 @@ def train_rcnn(base_scene, raw_trains, y_val, device, out_path, model_name, mode
         # print(f"Epoch #{epoch + 1} train loss: {train_loss_hist.value:.3f}")
         # print(f"Epoch #{epoch + 1} validation loss: {val_loss_hist.value:.3f}")
         end = time.time()
-        print(f"Took {((end - start) / 60):.3f} minutes for epoch {epoch + 1}")
+        print(f"Took {((end - start) / 60):.3f} minutes for epoch {epoch}")
 
     # plot_prediction(model, dl['val'], device)
     os.makedirs(out_path, exist_ok=True)

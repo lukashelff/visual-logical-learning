@@ -23,7 +23,7 @@ def infer_symbolic(trainer, use_transfer_trained_model=False, im_counts=None):
     # trainer.X_val = 'gt_mask'
 
     for im_count in im_counts:
-        out_path = f'output/models/inferred_symbolic/{trainer.model_name}/attribute_classification/{trainer.setting}'
+        out_path = f'output/models/{trainer.model_name}/inferred_symbolic/{trainer.settings}'
 
         print(
             f'{trainer.model_name} trained on {im_count}{trainer.raw_trains} images predicting train descriptions for the'
