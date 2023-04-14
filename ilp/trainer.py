@@ -11,7 +11,7 @@ import pandas as pd
 from pebble import ProcessPool
 
 from ilp import visualization
-from ilp.setup import create_bk, create_datasets
+from ilp.dataset_functions import create_bk, create_cv_datasets
 from raw.concept_tester import eval_rule
 from rdm.wrappers import Aleph
 
@@ -25,7 +25,7 @@ class Ilp_trainer():
     def cross_val(self, train_description, rules=['numerical', 'theoryx', 'complex'], models=['aleph', 'popper'],
                   folds=5, train_count=[100, 1000, 10000], ds_size=12000, noise=0, complete_run=True, log=False):
         noise_vals = noise if type(noise) is list else [noise]
-        create_datasets(rules, train_count, train_description, folds, ds_size, noise_vals, replace_existing=False)
+        create_cv_datasets(rules, train_count, train_description, folds, ds_size, noise_vals, replace_existing=False)
         ilp_stats_path = f'output/ilp/stats'
         os.makedirs(ilp_stats_path, exist_ok=True)
         t_its = len(models) * len(train_count) * len(rules) * len(noise_vals)

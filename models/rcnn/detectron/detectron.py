@@ -36,7 +36,7 @@ from blender_image_generator.json_util import encodeMask
 from pycocotools import mask as maskUtils
 
 from michalski_trains.dataset import rcnn_michalski_categories, get_datasets, michalski_labels
-from models.rcnn.inference import process_symbolics
+from models.rcnn.inference import prediction_to_symbolic
 
 
 def setup(path, base_scene, raw_trains, device):
@@ -336,7 +336,7 @@ def detectron_infer_symbolic(cfg, debug=True):
                 prediction["boxes"] = instances[:].pred_boxes
                 prediction["scores"] = instances[:].scores
                 prediction["masks"] = instances[:].pred_masks
-                symbolic, issues = process_symbolics(prediction, threshold=.8)
+                symbolic, issues = prediction_to_symbolic(prediction, threshold=.8)
                 symbolic = symbolic.to('cpu').numpy()
                 length = max(len(symbolic), len(labels))
                 symbolic = np.pad(symbolic, (0, length - len(symbolic)), 'constant', constant_values=0)

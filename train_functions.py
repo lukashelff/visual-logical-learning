@@ -27,7 +27,7 @@ def train(args):
         rules = ['theoryx', 'numerical', 'complex']
         models = [model_name] if model_name == 'popper' or model_name == 'aleph' else ['popper', 'aleph']
         train_count = [100, 1000, 10000]
-        train_count = [10000]
+        # train_count = [10000]
         noise = [0, 0.1, 0.3]
         trainer.cross_val(raw_trains, folds=5, rules=rules, models=models, train_count=train_count, noise=noise,
                           log=False, complete_run=True)
@@ -94,9 +94,7 @@ def train(args):
         # lr = 0.01
         lr = 0.001
         gamma = 0.1
-        model_name = 'rcnn'
-        # model_name = 'multi_head_rcnn'
-        model_name = 'multi_label_rcnn'
+        model_name = ['rcnn', 'multi_head_rcnn', 'multi_label_rcnn'][2]
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path,
                           ds_size=ds_size, train_size=train_size, val_size=val_size, model_tag=tag,
                           y_val=y_val, resume=False, batch_size=batch_size, setup_model=True, setup_ds=True,
@@ -107,13 +105,13 @@ def train(args):
         from models.trainer import Trainer
         batch_size = 5
         num_epochs = 20
+        model_name = ['rcnn', 'multi_head_rcnn', 'multi_label_rcnn'][2]
         train_size, val_size = 10000, 2000
         num_batches = (train_size * num_epochs) // batch_size
         lr = 0.01
         # every n training steps, the learning rate is reduced by gamma
         step_size = num_batches // 4
         gamma = 0.1
-        model_name = 'rcnn'
         gpu_count = 3
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
                           y_val=y_val, resume=False, batch_size=batch_size, setup_model=False, setup_ds=False,
@@ -131,12 +129,16 @@ def train(args):
 
     if command == 'rcnn_infer':
         from models.trainer import Trainer
-        lr = 0.001
+        batch_size = 5
+        num_epochs = 20
+        train_size, val_size = 10000, 2000
         # every n training steps, the learning rate is reduced by gamma
-        step_size, gamma = 10000, 0.1
-
-        batch_size = 2
-        samples = 100
+        num_batches = (train_size * num_epochs) // batch_size
+        step_size = num_batches // 3
+        lr = 0.001
+        gamma = 0.1
+        model_name = ['rcnn', 'multi_head_rcnn', 'multi_label_rcnn'][2]
+        samples = 10
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
                           lr=lr, step_size=step_size, gamma=gamma,
                           y_val=y_val, resume=True, batch_size=batch_size, setup_model=True, setup_ds=True)

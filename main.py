@@ -90,7 +90,7 @@ def main():
         ilp_generalization_test(ilp_pt, min_cars, max_cars)
 
     if action == 'split_ds':
-        from ilp.setup import setup_alpha_ilp_ds
+        from ilp.dataset_functions import setup_alpha_ilp_ds
         for rule in ['theoryx', 'numerical', 'complex']:
             setup_alpha_ilp_ds(base_scene, raw_trains, train_vis, ds_size, ds_path, rule)
 

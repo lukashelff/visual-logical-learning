@@ -7,24 +7,25 @@ import numpy as np
 import torch
 from sklearn.model_selection import StratifiedShuffleSplit
 
+from michalski_trains.m_train import BlenderCar, MichalskiTrain
 from raw.gen_raw_trains import read_trains
 
 
-def create_datasets(rules, num_samples, train_description, folds, ds_total_size, noise_vals, replace_existing=True,
-                    min_cars=2, max_cars=4, tag='',
-                    tg_output_path=f'TrainGenerator/output'
-                    ):
+def create_cv_datasets(rules, num_samples, train_description, folds, ds_total_size, noise_vals, replace_existing=True,
+                       min_cars=2, max_cars=4, tag='',
+                       symbolic_ds_path=f'TrainGenerator/output/image_generator/dataset_descriptions'
+                       ):
     print(f'preparing {folds} fold cross-val {train_description} datasets for {rules} rules '
           f'with sample sizes of {num_samples} and noises of {noise_vals}')
     gen_ds = 0
     for num_tsamples, rule, noise in product(num_samples, rules, noise_vals):
         #      ds_path = f'TrainGenerator/output/image_generator/dataset_descriptions/{train_description}_{rule}.txt'
-        ds_path = f'{tg_output_path}/image_generator/dataset_descriptions/{rule}/{tag}{train_description}_len_{min_cars}-{max_cars}.txt'
+        ds_path = f'{symbolic_ds_path}/{rule}/{tag}{train_description}_len_{min_cars}-{max_cars}.txt'
 
         with open(ds_path, "r") as file:
             all_data = file.readlines()
             if len(all_data) != ds_total_size:
-                raise f'datasets of size {ds_total_size} however only {len(all_data)} datasamples were generated'
+                raise f'datasets of size {ds_total_size} however only {len(all_data)} samples were generated'
             y = [l[0] for l in all_data]
             sss = StratifiedShuffleSplit(n_splits=folds, train_size=num_tsamples, test_size=2000,
                                          random_state=0)
@@ -56,10 +57,17 @@ def create_datasets(rules, num_samples, train_description, folds, ds_total_size,
     print(f'total of {n_ds} ds: found {n_ds - gen_ds} existing ds, generated {gen_ds} remaining ds')
 
 
-def create_bk(ds_path, out_path, ds_size=None, noise=0, noise_type='label'):
+def create_bk(ds, out_path, ds_size=None, noise=0, noise_type='label'):
     ''' creates a bk for a given dataset, ds_size is the number of trains to use for the bk
     noise is the percentage of noise to add to the bk
     noise_type is the type of noise to add, can be 'label' or 'attribute'
+
+    ds: path to the dataset or the dataset itself (list of trains)
+    out_path: path to the output directory
+    ds_size: number of trains to use for the bk
+    noise: percentage of noise to add to the bk
+    noise_type: type of noise either 'label' or 'attribute', noise can be applied to the classification labels or the
+    concepts (train attributes)
 
     the bk is created in the following format:
     popper: bk.pl, exs.pl, bias.pl
@@ -93,7 +101,7 @@ def create_bk(ds_path, out_path, ds_size=None, noise=0, noise_type='label'):
             except OSError:
                 pass
 
-    trains = read_trains(ds_path)
+    trains = read_trains(ds) if isinstance(ds, str) else ds
     with open(path_1 + '/exs.pl', 'w+') as exs_file, open(path_1 + '/bk.pl', 'w+') as popper_bk, \
             open(path_2 + '/bk.pl', 'w+') as popper_bk2, open(path_3 + '/bk.pl', 'w+') as popper_bk3, open(
         path_dilp + '/positive.dilp', 'w+') as pos, open(path_dilp + '/negative.dilp', 'w+') as neg, open(
