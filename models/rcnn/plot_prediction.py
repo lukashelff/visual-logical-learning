@@ -6,7 +6,7 @@ from torchvision.transforms import transforms
 from torchvision.transforms.functional import to_pil_image, to_tensor
 from torchvision.utils import draw_bounding_boxes, draw_segmentation_masks
 
-from michalski_trains.dataset import michalski_categories, rcnn_michalski_categories
+from michalski_trains.dataset import rcnn_blender_categories
 
 
 def predict_and_plot(model, dataloader, device):
@@ -24,7 +24,7 @@ def predict_and_plot(model, dataloader, device):
     torch_image = torch_image.to(device).unsqueeze(0)
     model.to(device)
     prediction = model(torch_image)[0]
-    labels = [rcnn_michalski_categories()[i] for i in prediction["labels"]]
+    labels = [rcnn_blender_categories()[i] for i in prediction["labels"]]
     boxes = [i for i in prediction["boxes"]]
     for c in range(len(labels)):
         box = draw_bounding_boxes(img, boxes=prediction["boxes"][c:c + 1],
@@ -61,7 +61,7 @@ def plot_mask(prediction, identifier, tensor_image, tag=''):
     img = tensor_image * 255
     # float tensor image to int tensor image
     img = img.to(torch.uint8).to('cpu')
-    labels = [rcnn_michalski_categories()[i] for i in prediction["labels"]]
+    labels = [rcnn_blender_categories()[i] for i in prediction["labels"]]
     boxes = [i for i in prediction["boxes"]]
     # for c in range(len(labels)):
     #     box = draw_bounding_boxes(img, boxes=prediction["boxes"][c:c + 1],

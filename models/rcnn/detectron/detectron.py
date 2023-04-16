@@ -148,7 +148,7 @@ def register_ds(full_ds, image_count=None):
     DatasetCatalog.register("michalski_train_ds", create_train_ds)
     DatasetCatalog.register("michalski_val_ds", create_val_ds)
     DatasetCatalog.register("michalski_ds", create_full_ds)
-    all_att = rcnn_michalski_categories()
+    all_att = rcnn_blender_categories()
     MetadataCatalog.get("michalski_train_ds").thing_classes = all_att
     MetadataCatalog.get("michalski_val_ds").thing_classes = all_att
     MetadataCatalog.get("michalski_ds").thing_classes = all_att

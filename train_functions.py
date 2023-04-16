@@ -3,6 +3,7 @@ import logging
 import torch
 
 
+
 def train(args):
     # michalski train dataset settings
     raw_trains = args.description
@@ -143,8 +144,11 @@ def train(args):
                           lr=lr, step_size=step_size, gamma=gamma,
                           y_val=y_val, resume=True, batch_size=batch_size, setup_model=True, setup_ds=True)
         from models.rcnn.inference import infer_symbolic
-        infer_symbolic(trainer.model, trainer.dl['val'], device, segmentation_similarity_threshold=.8, samples=samples,
-                       debug=False)
+        # infer_symbolic(trainer.model, trainer.dl['val'], device, segmentation_similarity_threshold=.8, samples=samples,
+        #                debug=False)
+        out_path = f'output/models/{model_name}/inferred_ds'
+        from models.rcnn.inference import infer_dataset
+        infer_dataset(trainer.model, trainer.dl['val'], device,out_path)
 
     if command == 'train_dtron':
         from detectron2.modeling import build_model

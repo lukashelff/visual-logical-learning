@@ -9,7 +9,7 @@ from detectron2.utils.visualizer import Visualizer
 from sklearn.metrics import accuracy_score
 from tqdm import tqdm
 
-from michalski_trains.dataset import michalski_categories, rcnn_michalski_categories, michalski_labels
+from michalski_trains.dataset import michalski_labels, blender_categories, original_categories, rcnn_blender_categories
 from michalski_trains.m_train import BlenderCar, MichalskiTrain
 from models.rcnn.plot_prediction import plot_mask
 from util import *
@@ -102,29 +102,32 @@ def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samp
 
 def infer_dataset(model, dl, device, out_dir):
     def symbolic_to_train(symbolic):
-        cars = []
-        for car_id, car in enumerate(symbolic):
-            car = BlenderCar(car_id, car)
 
+        symbolic = symbolic.reshape(-1, 8)
+        train = int_encoding_to_michalski_symbolic(symbolic)
+        cars = []
+        for car_id, car in enumerate(train):
+            car = BlenderCar(*car)
             cars.append(car)
         train = MichalskiTrain(cars, None, 0)
         return train
 
-    rcnn_symbolics, _, _, _ = infer_symbolic(model, dl, device)
+    rcnn_symbolics, _, _, _ = infer_symbolic(model, dl, device, samples=10)
     trains = []
-    for symbolic in rcnn_symbolics:
+    for s_i, symbolic in enumerate(rcnn_symbolics):
+        print(f'converting symbolic {s_i}/{len(rcnn_symbolics)}')
         train = symbolic_to_train(symbolic)
         trains.append(train)
 
     from ilp.dataset_functions import create_bk
     create_bk(trains, out_dir)
 
+
 def rcnn_decode(car_id, rcnn_symbolic):
     n = car_id
-    m_cat = michalski_categories()
 
+    # n, shape, length, double, roof, wheels, l_shape, l_num, scale
 
-    n, shape, length, double, roof, wheels, l_shape, l_num, scale
 
 def prediction_to_symbolic(prediction, threshold=.8):
     '''
@@ -137,11 +140,11 @@ def prediction_to_symbolic(prediction, threshold=.8):
     boxes = prediction["boxes"]
     masks = prediction["masks"]
     scores = prediction["scores"].to('cpu').tolist()
-    cars = sorted(labels[labels >= len(michalski_categories())].unique())
+    cars = sorted(labels[labels >= len(blender_categories())].unique())
     # labels = labels.tolist()
     label_names = []
     for l in labels:
-        cats = rcnn_michalski_categories()
+        cats = rcnn_blender_categories()
         if l < len(cats):
             label_names.append(cats[l])
         else:
@@ -185,7 +188,7 @@ def prediction_to_symbolic(prediction, threshold=.8):
         car_number = np.argmax(car_similarities) + 1
         similarity = car_similarities[car_number - 1]
         if similarity > threshold:
-            # class_int = michalski_categories().index(label_name)
+            # class_int = blender_categories().index(label_name)
             # binary_class = np.zeros(22)
             # binary_class[label] = 1
             label_category = class_to_label(label)
@@ -198,15 +201,15 @@ def prediction_to_symbolic(prediction, threshold=.8):
                     debug_info += f"Duplicate Mask: Mask for car {car_number} with label {label_name} was predicted twice."
                 elif train[idx] != label:
                     if scores[attribute_index] > train_scores[idx]:
-                        debug_info += f'Mask conflict: {michalski_categories()[train[idx]]} with score' \
-                                      f' {round(train_scores[idx], 3)} and {michalski_categories()[label]} with score' \
+                        debug_info += f'Mask conflict: {blender_categories()[train[idx]]} with score' \
+                                      f' {round(train_scores[idx], 3)} and {blender_categories()[label]} with score' \
                                       f' {round(scores[attribute_index], 3)} for car {car_number}. Selecting label with higher score.'
                         train[idx] = label
                         allocated = True
                         train_scores[idx] = scores[attribute_index]
                     else:
-                        debug_info += f'Mask conflict: {michalski_categories()[train[idx]]} with score ' \
-                                      f'{round(train_scores[idx], 3)} and {michalski_categories()[label]} with score' \
+                        debug_info += f'Mask conflict: {blender_categories()[train[idx]]} with score ' \
+                                      f'{round(train_scores[idx], 3)} and {blender_categories()[label]} with score' \
                                       f' {round(scores[attribute_index], 3)} for car {car_number}. Selecting label with higher score.'
             else:
                 train[idx] = label
@@ -253,7 +256,7 @@ def get_similarity_score(mask, whole_car_mask):
 
 
 def rcnn_to_car_number(label_val):
-    return label_val - len(michalski_categories()) + 1
+    return label_val - len(blender_categories()) + 1
 
 
 def class_to_label(class_int):
@@ -347,3 +350,44 @@ def inference(model, images, device, classes, detection_threshold=0.8):
     # calculate and print the average FPS
     avg_fps = total_fps / frame_count
     print(f"Average FPS: {avg_fps:.3f}")
+
+
+def int_encoding_to_michalski_symbolic(int_encoding):
+    '''
+    Convert int encoding to original Michalski trains representation
+    :param int_encoding: int encoding (n, 8), where n is the number of cars
+                    1st column: color
+                    2nd column: length
+                    3rd column: wall
+                    4th column: roof
+                    5th column: wheels
+                    6th column: load1
+                    7th column: load2
+                    8th column: load3
+    :return: original michalski representation (n, 8), where n is the number of cars
+                    1st column: car_id
+                    2nd column: shape
+                    3rd column: length
+                    4th column: double
+                    5th column: roof
+                    6th column: wheels
+                    7th column: l_shape
+                    8th column: l_num
+
+    '''
+    int_encoding = int_encoding.astype(int)
+    michalski_train = []
+    michalski_categories = original_categories()
+    for car_id, car in enumerate(int_encoding):
+        if sum(car) > 0:
+            n = str(car_id)
+            shape = michalski_categories[car[0]]
+            length = michalski_categories[car[1]]
+            double = michalski_categories[car[2]]
+            roof = michalski_categories[car[3]]
+            wheels = michalski_categories[car[4]]
+            l_shape = michalski_categories[car[5]]
+            l_num = sum(car[5:] != 0)
+            michalski_train += [[n, shape, length, double, roof, wheels, l_shape, l_num]]
+
+    return michalski_train
