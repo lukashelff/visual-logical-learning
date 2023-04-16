@@ -101,7 +101,7 @@ def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samp
 
 
 def infer_dataset(model, dl, device, out_dir):
-    def symbolic_to_train(symbolic):
+    def symbolic_to_train(symbolic, t_label):
 
         symbolic = symbolic.reshape(-1, 8)
         train = int_encoding_to_michalski_symbolic(symbolic)
@@ -109,14 +109,16 @@ def infer_dataset(model, dl, device, out_dir):
         for car_id, car in enumerate(train):
             car = BlenderCar(*car)
             cars.append(car)
-        train = MichalskiTrain(cars, None, 0)
+        train = MichalskiTrain(cars, t_label, 0)
         return train
 
     rcnn_symbolics, _, _, _ = infer_symbolic(model, dl, device, samples=10)
+    ds_labels = ['west', 'east']
+    train_labels = [ds_labels[dl.dataset.dataset.get_direction(i)] for i in range(dl.dataset.dataset.__len__())]
     trains = []
-    for s_i, symbolic in enumerate(rcnn_symbolics):
+    for s_i in range(len(rcnn_symbolics)):
         print(f'converting symbolic {s_i}/{len(rcnn_symbolics)}')
-        train = symbolic_to_train(symbolic)
+        train = symbolic_to_train(rcnn_symbolics[s_i], train_labels[s_i])
         trains.append(train)
 
     from ilp.dataset_functions import create_bk
