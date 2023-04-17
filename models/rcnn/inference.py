@@ -42,6 +42,7 @@ def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samp
     indices = dl.dataset.indices[:samples]
     ds = dl.dataset.dataset
     prog_bar = tqdm(indices, total=len(indices))
+    m_labels = michalski_labels()
 
     for i in tqdm(prog_bar):
 
@@ -68,6 +69,7 @@ def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samp
         debug_text = f"image {i}/{samples}, accuracy score: {round(accuracy * 100, 1)}%, " \
                      f"running accuracy score: {(np.mean(train_accuracies) * 100).round(3)}%, " \
                      f"Number of gt attributes {len(labels[labels > 0])}. "
+
         prog_bar.set_description(desc=f"Acc: {(np.mean(train_accuracies) * 100).round(3)}")
 
         if debug:
@@ -84,12 +86,11 @@ def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samp
         preds_padded[i][0:len(p)] = p
         labels_padded[i][0:len(l)] = l
 
-    labels = michalski_labels()
     average_acc = accuracy_score(preds_padded.flatten(), labels_padded.flatten())
-    txt = f'average symbolic accuracies: {round(average_acc, 3)}, '
+    txt = f'average accuracy over all symbols: {round(average_acc, 3)}, '
     label_acc = 'label accuracies:'
     # labels_car, car_predictions = labels_padded.reshape((-1, 8)), preds_padded.reshape((-1, 8))
-    for label_id, label in enumerate(labels):
+    for label_id, label in enumerate(m_labels):
         lab = labels_padded.reshape((-1, 8))[:, label_id]
         pred = preds_padded.reshape((-1, 8))[:, label_id]
         acc = accuracy_score(lab[lab > 0], pred[lab > 0])
@@ -101,34 +102,28 @@ def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samp
 
 
 def infer_dataset(model, dl, device, out_dir):
-    def symbolic_to_train(symbolic, t_label):
+    rcnn_symbolics, _, _, _ = infer_symbolic(model, dl, device, debug=False)
+    ds_labels = ['west', 'east']
+    train_labels = [ds_labels[dl.dataset.dataset.get_direction(i)] for i in range(dl.dataset.dataset.__len__())]
+    trains = rcnn_decode(train_labels, rcnn_symbolics)
+    from ilp.dataset_functions import create_bk
+    create_bk(trains, out_dir)
+    print('rcnn inferred symbolic saved to: ', out_dir)
 
-        symbolic = symbolic.reshape(-1, 8)
+
+def rcnn_decode(train_labels, rcnn_symbolics):
+    trains = []
+    prog_bar = tqdm(range(len(rcnn_symbolics)), total=len(rcnn_symbolics), desc='converting symbolic')
+    for s_i in prog_bar:
+        symbolic = rcnn_symbolics[s_i].reshape(-1, 8)
         train = int_encoding_to_michalski_symbolic(symbolic)
         cars = []
         for car_id, car in enumerate(train):
             car = BlenderCar(*car)
             cars.append(car)
-        train = MichalskiTrain(cars, t_label, 0)
-        return train
-
-    rcnn_symbolics, _, _, _ = infer_symbolic(model, dl, device, samples=10)
-    ds_labels = ['west', 'east']
-    train_labels = [ds_labels[dl.dataset.dataset.get_direction(i)] for i in range(dl.dataset.dataset.__len__())]
-    trains = []
-    for s_i in range(len(rcnn_symbolics)):
-        print(f'converting symbolic {s_i}/{len(rcnn_symbolics)}')
-        train = symbolic_to_train(rcnn_symbolics[s_i], train_labels[s_i])
+        train = MichalskiTrain(cars, train_labels[s_i], 0)
         trains.append(train)
-
-    from ilp.dataset_functions import create_bk
-    create_bk(trains, out_dir)
-
-
-def rcnn_decode(car_id, rcnn_symbolic):
-    n = car_id
-
-    # n, shape, length, double, roof, wheels, l_shape, l_num, scale
+    return trains
 
 
 def prediction_to_symbolic(prediction, threshold=.8):
@@ -154,8 +149,10 @@ def prediction_to_symbolic(prediction, threshold=.8):
 
     # get indices of all cars
     all_car_indices = []
+    # select valid cars
     selected_car_indices = []
     debug_info = ""
+    # get all cars, select car with highest score if there are multiple cars with same car number, others are discarded
     for car in cars:
         indices = ((labels == car).nonzero(as_tuple=True)[0])
         indices = indices.to('cpu').tolist()
@@ -169,15 +166,27 @@ def prediction_to_symbolic(prediction, threshold=.8):
             for i in indices[1:]:
                 if scores[i] > scores[idx]:
                     idx = i
-
         else:
             idx = indices[0]
         selected_car_indices.append(idx)
     # get indices of all attributes
     attribute_indices = [i for i in range(len(labels)) if i not in all_car_indices]
-    train = torch.zeros(len(cars) * 8, dtype=torch.uint8)
+
+
+    shape = ['rectangle', 'bucket', 'ellipse', 'hexagon', 'u_shaped']
+    length = ['short', 'long']
+    walls = ["double", 'not_double']
+    roofs = ['arc', 'flat', 'jagged', 'peaked']
+    wheel_count = ['2', '3']
+    load_obj = ["rectangle", "triangle", 'circle', 'diamond', 'hexagon', 'utriangle']
+    original_categories = ['none'] + shape + length + walls + roofs + wheel_count + load_obj
+    # initialize symbolic representation
+    car_init = [0, 6, 8, 0, 14, 0, 0, 0]
+    train = torch.tensor(car_init * len(cars), dtype=torch.uint8)
+    # train = torch.zeros(len(cars) * 8, dtype=torch.uint8)
     train_scores = [0] * len(cars) * 8
     skipped_indicies = []
+    # iterate over all predicted attributes
     for attribute_index in attribute_indices:
         allocated = False
         label = labels[attribute_index]
@@ -189,13 +198,16 @@ def prediction_to_symbolic(prediction, threshold=.8):
             continue
         car_number = np.argmax(car_similarities) + 1
         similarity = car_similarities[car_number - 1]
+        # if similarity higher than threshold allocate attribute to car
         if similarity > threshold:
             # class_int = blender_categories().index(label_name)
             # binary_class = np.zeros(22)
             # binary_class[label] = 1
             label_category = class_to_label(label)
             idx = (car_number - 1) * 8 + label_category
+            # if attribute is a payload, check if there is already a payload allocated to the car
             if label_category == 5:
+                # todo: sort payload by score to replace payload with lower score if there are to many payloads
                 while train[idx] != 0 and (idx % 8) < 7:
                     idx += 1
             if train[idx] != 0:
@@ -354,10 +366,10 @@ def inference(model, images, device, classes, detection_threshold=0.8):
     print(f"Average FPS: {avg_fps:.3f}")
 
 
-def int_encoding_to_michalski_symbolic(int_encoding):
+def int_encoding_to_michalski_symbolic(int_encoding: np.ndarray) -> [[str]]:
     '''
     Convert int encoding to original Michalski trains representation
-    :param int_encoding: int encoding (n, 8), where n is the number of cars
+    :param int_encoding: int encoding numpy array of size (n, 8), where n is the number of cars
                     1st column: color
                     2nd column: length
                     3rd column: wall
@@ -366,7 +378,7 @@ def int_encoding_to_michalski_symbolic(int_encoding):
                     6th column: load1
                     7th column: load2
                     8th column: load3
-    :return: original michalski representation (n, 8), where n is the number of cars
+    :return: original michalski representation List[List[str]] of size (n, 8), where n is the number of cars
                     1st column: car_id
                     2nd column: shape
                     3rd column: length
@@ -375,21 +387,36 @@ def int_encoding_to_michalski_symbolic(int_encoding):
                     6th column: wheels
                     7th column: l_shape
                     8th column: l_num
-
     '''
+
+    shape = ['rectangle', 'bucket', 'ellipse', 'hexagon', 'u_shaped']
+    length = ['short', 'long']
+    walls = ["double", 'not_double']
+    roofs = ['arc', 'flat', 'jagged', 'peaked']
+    wheel_count = ['2', '3']
+    load_obj = ["rectangle", "triangle", 'circle', 'diamond', 'hexagon', 'utriangle']
+    original_categories = ['none'] + shape + length + walls + roofs + wheel_count + load_obj
+
+    label_dict = {
+        'shape': ['none', 'rectangle', 'bucket', 'ellipse', 'hexagon', 'u_shaped'],
+        'length': ['short', 'long'],
+        'walls': ["double", 'not_double'],
+        'roofs': ['none', 'arc', 'flat', 'jagged', 'peaked'],
+        'wheel_count': ['2', '3'],
+        'load_obj': ["rectangle", "triangle", 'circle', 'diamond', 'hexagon', 'utriangle'],
+    }
+
     int_encoding = int_encoding.astype(int)
     michalski_train = []
-    michalski_categories = original_categories()
     for car_id, car in enumerate(int_encoding):
         if sum(car) > 0:
             n = str(car_id)
-            shape = michalski_categories[car[0]]
-            length = michalski_categories[car[1]]
-            double = michalski_categories[car[2]]
-            roof = michalski_categories[car[3]]
-            wheels = michalski_categories[car[4]]
-            l_shape = michalski_categories[car[5]]
+            shape = original_categories[car[0]]
+            length = original_categories[car[1]]
+            double = original_categories[car[2]]
+            roof = original_categories[car[3]]
+            wheels = original_categories[car[4]]
+            l_shape = original_categories[car[5]]
             l_num = sum(car[5:] != 0)
             michalski_train += [[n, shape, length, double, roof, wheels, l_shape, l_num]]
-
     return michalski_train

@@ -3,7 +3,6 @@ import logging
 import torch
 
 
-
 def train(args):
     # michalski train dataset settings
     raw_trains = args.description
@@ -95,7 +94,7 @@ def train(args):
         # lr = 0.01
         lr = 0.001
         gamma = 0.1
-        model_name = ['rcnn', 'multi_head_rcnn', 'multi_label_rcnn'][2]
+        # model_name = ['rcnn', 'multi_head_rcnn', 'multi_label_rcnn'][2]
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path,
                           ds_size=ds_size, train_size=train_size, val_size=val_size, model_tag=tag,
                           y_val=y_val, resume=False, batch_size=batch_size, setup_model=True, setup_ds=True,
@@ -132,7 +131,7 @@ def train(args):
         from models.trainer import Trainer
         batch_size = 5
         num_epochs = 20
-        train_size, val_size = 10000, 2000
+        train_size, val_size = 12000, 2000
         # every n training steps, the learning rate is reduced by gamma
         num_batches = (train_size * num_epochs) // batch_size
         step_size = num_batches // 3
@@ -142,13 +141,16 @@ def train(args):
         samples = 10
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
                           lr=lr, step_size=step_size, gamma=gamma,
-                          y_val=y_val, resume=True, batch_size=batch_size, setup_model=True, setup_ds=True)
+                          y_val=y_val, resume=True, batch_size=batch_size, setup_model=False, setup_ds=False)
         from models.rcnn.inference import infer_symbolic
         # infer_symbolic(trainer.model, trainer.dl['val'], device, segmentation_similarity_threshold=.8, samples=samples,
         #                debug=False)
-        out_path = f'output/models/{model_name}/inferred_ds'
+        model_path = 'output/models/multi_label_rcnn/mask_classification/Trains_theoryx_MichalskiTrains_base_scene/imcount_12000_X_val_image_pretrained_lr_0.001_step_13333_gamma0.1/'
+        trainer.setup_model(resume=True, path=model_path)
+        trainer.setup_ds(val_size=12000)
+        out_path = f'output/models/{model_name}/inferred_ds/{train_vis}_{class_rule}_{raw_trains}_{base_scene}_len_{min_cars}-{max_cars}/'
         from models.rcnn.inference import infer_dataset
-        infer_dataset(trainer.model, trainer.dl['val'], device,out_path)
+        infer_dataset(trainer.model, trainer.dl['val'], device, out_path)
 
     if command == 'train_dtron':
         from detectron2.modeling import build_model
