@@ -1,11 +1,13 @@
 import time
 
 import cv2
+import rtpt
 from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.data import (
     MetadataCatalog, build_detection_test_loader, )
 from detectron2.modeling import build_model
 from detectron2.utils.visualizer import Visualizer
+from rtpt import RTPT
 from sklearn.metrics import accuracy_score
 from tqdm import tqdm
 
@@ -27,8 +29,6 @@ def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samp
     :return: all_labels - 2d ndarray (samples, attributes) of ground truth labels
              all_preds - 2d ndarray (samples, attributes) of predicted labels
              avg_acc - average accuracy over all samples and all attributes (0-1)
-
-
     '''
     # out_path = f'output/models/rcnn/inferred_symbolic/{trainer.settings}'
     all_labels = []
@@ -43,15 +43,14 @@ def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samp
     ds = dl.dataset.dataset
     prog_bar = tqdm(indices, total=len(indices))
     m_labels = michalski_labels()
-
+    rtpt = RTPT(name_initials='LH', experiment_name='RCNN_infer_symbolic', max_iterations=len(indices))
+    rtpt.start()
     for i in tqdm(prog_bar):
-
         image, target = ds.__getitem__(i)
         image = image.to(device).unsqueeze(0)
         labels = ds.get_attributes(i).to('cpu').numpy()
         if debug:
             plot_mask(target, i, image[0], tag='gt')
-
         with torch.no_grad():
             output = model(image)
         output = [{k: v.to(device) for k, v in t.items()} for t in output]
@@ -71,9 +70,9 @@ def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samp
                      f"Number of gt attributes {len(labels[labels > 0])}. "
 
         prog_bar.set_description(desc=f"Acc: {(np.mean(train_accuracies) * 100).round(3)}")
-
         if debug:
             print(debug_text + issues)
+        rtpt.step()
 
     # create numpy array with all predictions and labels
     # pad with zeros to make all arrays the same length
@@ -85,7 +84,6 @@ def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samp
     for i, (p, l) in enumerate(zip(all_preds, all_labels)):
         preds_padded[i][0:len(p)] = p
         labels_padded[i][0:len(l)] = l
-
     average_acc = accuracy_score(preds_padded.flatten(), labels_padded.flatten())
     txt = f'average accuracy over all symbols: {round(average_acc, 3)}, '
     label_acc = 'label accuracies:'
@@ -96,7 +94,6 @@ def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samp
         acc = accuracy_score(lab[lab > 0], pred[lab > 0])
         label_acc += f' {label}: {round(acc * 100, 3)}%'
     print(txt + label_acc)
-
     # print(f'average train acc score: {np.mean(t_acc).round(3)}')
     return preds_padded, labels_padded, average_acc, np.mean(train_accuracies)
 
@@ -172,7 +169,6 @@ def prediction_to_symbolic(prediction, threshold=.8):
     # get indices of all attributes
     attribute_indices = [i for i in range(len(labels)) if i not in all_car_indices]
 
-
     shape = ['rectangle', 'bucket', 'ellipse', 'hexagon', 'u_shaped']
     length = ['short', 'long']
     walls = ["double", 'not_double']
@@ -181,7 +177,7 @@ def prediction_to_symbolic(prediction, threshold=.8):
     load_obj = ["rectangle", "triangle", 'circle', 'diamond', 'hexagon', 'utriangle']
     original_categories = ['none'] + shape + length + walls + roofs + wheel_count + load_obj
     # initialize symbolic representation
-    car_init = [0, 6, 8, 0, 14, 0, 0, 0]
+    car_init = [1, 6, 8, 0, 14, 0, 0, 0]
     train = torch.tensor(car_init * len(cars), dtype=torch.uint8)
     # train = torch.zeros(len(cars) * 8, dtype=torch.uint8)
     train_scores = [0] * len(cars) * 8

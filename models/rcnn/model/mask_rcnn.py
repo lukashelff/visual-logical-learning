@@ -305,6 +305,7 @@ class MultiLabelMaskRCNN(MultiLabelFasterRCNN):
         self,
         backbone,
         num_classes=None,
+        num_labels=3,
         # transform parameters
         min_size=800,
         max_size=1333,
@@ -369,6 +370,7 @@ class MultiLabelMaskRCNN(MultiLabelFasterRCNN):
         super().__init__(
             backbone,
             num_classes,
+            num_labels,
             # transform parameters
             min_size,
             max_size,
@@ -499,7 +501,7 @@ def multi_label_maskrcnn_resnet50_fpn_v2(
         weights: Optional[MaskRCNN_ResNet50_FPN_V2_Weights] = None,
         progress: bool = True,
         num_classes: int = None,
-        num_heads: int = 7,
+        num_labels: int = 3,
         weights_backbone: Optional[ResNet50_Weights] = None,
         trainable_backbone_layers: Optional[int] = None,
         **kwargs: Any,
@@ -556,6 +558,7 @@ def multi_label_maskrcnn_resnet50_fpn_v2(
     model = MultiLabelMaskRCNN(
         backbone,
         num_classes=num_classes,
+        num_labels=num_labels,
         rpn_anchor_generator=rpn_anchor_generator,
         rpn_head=rpn_head,
         box_head=box_head,

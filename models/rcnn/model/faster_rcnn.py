@@ -141,6 +141,7 @@ class MultiLabelFasterRCNN(GeneralizedRCNN):
             self,
             backbone,
             num_classes=None,
+            num_labels=3,
             # transform parameters
             min_size=800,
             max_size=1333,
@@ -233,6 +234,7 @@ class MultiLabelFasterRCNN(GeneralizedRCNN):
             box_predictor = FastRCNNPredictor(representation_size, num_classes)
 
         roi_heads = MultiLabelRoIHeads(
+            num_labels,
             # Box
             box_roi_pool,
             box_head,

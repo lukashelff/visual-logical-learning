@@ -16,7 +16,7 @@ from models.rcnn.model.mask_rcnn import multi_head_maskrcnn_resnet50_fpn_v2, mul
 from models.spacial_attr_net.attr_net import AttributeNetwork
 
 
-def get_model(model_name, pretrained, num_output, num_class):
+def get_model(model_name, pretrained, num_output, num_class, rcnn_labels_per_segment=3):
     model_image_processing = None
     if model_name == 'resnet18':
         weights = ResNet18_Weights.DEFAULT if pretrained else None
@@ -42,6 +42,7 @@ def get_model(model_name, pretrained, num_output, num_class):
                                                      image_mean=[0.485, 0.456, 0.406],
                                                      image_std=[0.229, 0.224, 0.225],
                                                      # num_classes=22 + 20,
+                                                     num_labels=rcnn_labels_per_segment,
                                                      rpn_batch_size_per_image=256,
                                                      box_nms_thresh=0.8,
                                                      # box_score_thresh=0.9

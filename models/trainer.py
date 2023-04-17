@@ -205,7 +205,8 @@ class Trainer:
         else:
             loss_fn = nn.CrossEntropyLoss()
         self.criteria = [loss_fn] * dim_out
-        self.model, self.preprocess = get_model(self.model_name, self.pretrained and not resume, dim_out, class_dim)
+        rcnn_labels_per_segment = 4 if self.train_vis == 'SimpleObjects' else 3
+        self.model, self.preprocess = get_model(self.model_name, self.pretrained and not resume, dim_out, class_dim, rcnn_labels_per_segment=rcnn_labels_per_segment)
 
         if self.checkpoint is not None:
             self.model.load_state_dict(self.checkpoint['model_state_dict'])

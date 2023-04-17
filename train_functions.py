@@ -94,7 +94,7 @@ def train(args):
         # lr = 0.01
         lr = 0.001
         gamma = 0.1
-        # model_name = ['rcnn', 'multi_head_rcnn', 'multi_label_rcnn'][2]
+        model_name = ['rcnn', 'multi_head_rcnn', 'multi_label_rcnn'][2]
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path,
                           ds_size=ds_size, train_size=train_size, val_size=val_size, model_tag=tag,
                           y_val=y_val, resume=False, batch_size=batch_size, setup_model=True, setup_ds=True,
