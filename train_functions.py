@@ -86,7 +86,7 @@ def train(args):
         # model_name = 'resnet18'
         batch_size = 5
         # batch_size = 1
-        num_epochs = 20
+        num_epochs = 30
         train_size, val_size = 10000, 2000
         # every n training steps, the learning rate is reduced by gamma
         num_batches = (train_size * num_epochs) // batch_size

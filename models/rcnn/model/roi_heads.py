@@ -84,6 +84,11 @@ class MultiLabelRoIHeads(RoIHeads):
                 color_idx = torch.logical_or((gt_labels_in_image == 5), torch.logical_or(color_idx1, color_idx2))
                 length_idx = torch.logical_or((gt_labels_in_image == 6), (gt_labels_in_image == 7))
 
+                if color_idx.size()[0] != match_quality_matrix.size()[0]:
+                    raise ValueError(
+                        f'color_idx size {color_idx.size()}, match_quality_matrix size {match_quality_matrix.size()}, '
+                        f'gt_labels_in_image size {gt_labels_in_image.size()}, gt_boxes_in_image size'
+                        '{gt_boxes_in_image.size()}, proposals_in_image size {proposals_in_image.size()}')
                 color_match_quality_matrix = (color_idx * match_quality_matrix.T).T
                 length_match_quality_matrix = (length_idx * match_quality_matrix.T).T
 
@@ -93,7 +98,8 @@ class MultiLabelRoIHeads(RoIHeads):
 
                 if self.labels_per_segment == 3:
                     other_idx = torch.logical_not(torch.logical_or(color_idx, length_idx))
-                    roof_matched_idxs_in_image = torch.empty((0,), dtype=torch.int64, device=color_matched_idxs_in_image.device)
+                    roof_matched_idxs_in_image = torch.empty((0,), dtype=torch.int64,
+                                                             device=color_matched_idxs_in_image.device)
                     multi_l_proposals.append(
                         torch.cat((proposals_in_image, proposals_in_image, proposals_in_image)))
                 elif self.labels_per_segment == 4:
@@ -111,8 +117,8 @@ class MultiLabelRoIHeads(RoIHeads):
                 other_match_quality_matrix = (other_idx * match_quality_matrix.T).T
                 other_matched_idxs_in_image = self.proposal_matcher(other_match_quality_matrix)
                 matched_idxs_in_image = torch.cat(
-                    (color_matched_idxs_in_image, length_matched_idxs_in_image, roof_matched_idxs_in_image, other_matched_idxs_in_image), dim=0)
-
+                    (color_matched_idxs_in_image, length_matched_idxs_in_image, roof_matched_idxs_in_image,
+                     other_matched_idxs_in_image), dim=0)
 
                 clamped_matched_idxs_in_image = matched_idxs_in_image.clamp(min=0)
 
