@@ -18,17 +18,20 @@ def prediction_to_symbolic_v2(prediction, label_names, threshold=.8):
     labels = prediction["labels"]
     boxes = prediction["boxes"]
     masks = prediction["masks"]
-    # scores = prediction["scores"].to('cpu').tolist()
     scores = prediction["scores"]
 
-    loco_indicies = (labels == 24).nonzero(as_tuple=True)[0]
-    loco_idx_with_highest_prob = loco_indicies[scores[labels == 24].argmax(dim=0)]
+    loco_indicies = (labels == label_names.index('locomotive')).nonzero(as_tuple=True)[0]
+    if len(loco_indicies) == 0:
+        car_init = [1, 6, 8, 0, 14, 0, 0, 0]
+        train = torch.tensor(car_init * 4, dtype=torch.uint8)
+        return train, debug_info
+    loco_idx_with_highest_prob = loco_indicies[scores[labels == label_names.index('locomotive')].argmax(dim=0)]
     loco_box = boxes[loco_idx_with_highest_prob]
     loco_mask = masks[loco_idx_with_highest_prob]
     loco_box_center = torch.tensor([(loco_box[0] + loco_box[2]) / 2, (loco_box[1] + loco_box[3]) / 2])
 
-    all_car_indices = (labels == 22).nonzero(as_tuple=True)[0]
-    all_car_boxes = boxes[labels == 22]
+    all_car_indices = (labels == label_names.index('car')).nonzero(as_tuple=True)[0]
+    all_car_boxes = boxes[labels == label_names.index('car')]
     all_car_box_centers = [torch.tensor([(box[0] + box[2]) / 2, (box[1] + box[3]) / 2]) for box in all_car_boxes]
     all_car_loco_distances = torch.tensor(
         [(loco_box_center - car_box_center).abs().sum() for car_box_center in all_car_box_centers])
@@ -37,33 +40,34 @@ def prediction_to_symbolic_v2(prediction, label_names, threshold=.8):
     all_car_indices = all_car_indices[torch.argsort(all_car_loco_distances)]
     selected_car_indices = []
     prev_mask = loco_mask
+    prev_score = 1
     for c in range(len(all_car_indices)):
         car_idx = all_car_indices[c]
         car_mask = masks[car_idx]
+        car_score = scores[car_idx]
         similarity = get_similarity_score(prev_mask, car_mask)
         if similarity < threshold:
             selected_car_indices.append(car_idx)
             prev_mask = car_mask
+            prev_score = car_score
         else:
-            debug_info += f"Car mask conflict between {car_idx} and {all_car_indices[c - 1]} for car " \
+            prev = all_car_indices[c - 1] if c > 0 else loco_idx_with_highest_prob
+            debug_info += f"Car mask conflict between {car_idx} and {prev} for car " \
                           f"{len(selected_car_indices)}. similarity = {similarity} > threshold: {threshold}). " \
                           f"Selecting car with highest prediction score. Mask {car_idx}: {scores[car_idx]}, " \
-                          f"Mask {all_car_indices[c - 1]} {scores[selected_car_indices[-1]]}."
-            if scores[car_idx] > scores[selected_car_indices[-1]]:
+                          f"Mask {prev}: {scores[prev]}."
+            if scores[car_idx] > prev_score:
                 selected_car_indices[-1] = car_idx
+                prev_mask = car_mask
+                prev_score = car_score
+
     selected_car_indices = torch.tensor(selected_car_indices)
 
     # get indices of all attributes
     attribute_indices = torch.tensor([i for i in range(len(labels)) if (i not in all_car_indices) and
                                       (i not in loco_indicies)])
-    shape = ['rectangle', 'bucket', 'ellipse', 'hexagon', 'u_shaped']
-    length = ['short', 'long']
-    walls = ["double", 'not_double']
-    roofs = ['arc', 'flat', 'jagged', 'peaked']
-    wheel_count = ['2', '3']
-    load_obj = ["rectangle", "triangle", 'circle', 'diamond', 'hexagon', 'utriangle']
-    original_categories = ['none'] + shape + length + walls + roofs + wheel_count + load_obj
     # initialize symbolic representation
+    scores = prediction["scores"].to('cpu').tolist()
     car_init = [1, 6, 8, 0, 14, 0, 0, 0]
     train = torch.tensor(car_init * len(selected_car_indices), dtype=torch.uint8)
     train_scores = [0] * len(selected_car_indices) * 8
@@ -72,7 +76,11 @@ def prediction_to_symbolic_v2(prediction, label_names, threshold=.8):
     for attribute_index in attribute_indices:
         allocated = False
         label = labels[attribute_index]
-        label_name = label_names[attribute_index]
+        try:
+            label_name = label_names[attribute_index]
+        except:
+            label_name = 'unknown'
+            # raise Exception(f"Label name not found for index {attribute_index} in {label_names}")
         car_similarities = get_all_similarities_score(masks, car_indices=selected_car_indices,
                                                       attribute_index=attribute_index)
         if len(car_similarities) == 0:

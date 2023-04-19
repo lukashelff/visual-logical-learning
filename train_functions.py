@@ -103,8 +103,7 @@ def train(args):
 
     if command == 'rcnn_train_v2':
         from models.trainer import Trainer
-        batch_size = 10
-        # batch_size = 1
+        batch_size = 10 if torch.cuda.get_device_properties(0).total_memory > 9000000000 else 1
         num_epochs = 30
         train_size, val_size = 10000, 2000
         # every n training steps, the learning rate is reduced by gamma
@@ -125,7 +124,7 @@ def train(args):
         # infer_symbolic(trainer.model, trainer.dl['val'], device, segmentation_similarity_threshold=.8, samples=10,
         #                debug=True)
 
-        train_size, val_size = 100, 20
+        # train_size, val_size = 1000, 200
         trainer.train(set_up=True, train_size=train_size, val_size=val_size, ex_name=f'{model_name}_train')
 
     if command == 'rcnn_train_parallel':
