@@ -22,7 +22,7 @@ def prediction_to_symbolic_v2(prediction, label_names, threshold=.8):
     scores = prediction["scores"]
 
     loco_indicies = (labels == 24).nonzero(as_tuple=True)[0]
-    loco_idx_with_highest_prob = loco_indicies[scores[labels == 24].argmax()]
+    loco_idx_with_highest_prob = loco_indicies[scores[labels == 24].argmax(dim=0)]
     loco_box = boxes[loco_idx_with_highest_prob]
     loco_mask = masks[loco_idx_with_highest_prob]
     loco_box_center = torch.tensor([(loco_box[0] + loco_box[2]) / 2, (loco_box[1] + loco_box[3]) / 2])
@@ -30,7 +30,8 @@ def prediction_to_symbolic_v2(prediction, label_names, threshold=.8):
     all_car_indices = (labels == 22).nonzero(as_tuple=True)[0]
     all_car_boxes = boxes[labels == 22]
     all_car_box_centers = [torch.tensor([(box[0] + box[2]) / 2, (box[1] + box[3]) / 2]) for box in all_car_boxes]
-    all_car_loco_distances = torch.tensor([(loco_box_center - car_box_center).abs().sum() for car_box_center in all_car_box_centers])
+    all_car_loco_distances = torch.tensor(
+        [(loco_box_center - car_box_center).abs().sum() for car_box_center in all_car_box_centers])
 
     # sort cars by distance to loco
     all_car_indices = all_car_indices[torch.argsort(all_car_loco_distances)]
@@ -50,9 +51,11 @@ def prediction_to_symbolic_v2(prediction, label_names, threshold=.8):
                           f"Mask {all_car_indices[c - 1]} {scores[selected_car_indices[-1]]}."
             if scores[car_idx] > scores[selected_car_indices[-1]]:
                 selected_car_indices[-1] = car_idx
+    selected_car_indices = torch.tensor(selected_car_indices)
 
     # get indices of all attributes
-    attribute_indices = torch.tensor([i for i in range(len(labels)) if i not in all_car_indices])
+    attribute_indices = torch.tensor([i for i in range(len(labels)) if (i not in all_car_indices) and
+                                      (i not in loco_indicies)])
     shape = ['rectangle', 'bucket', 'ellipse', 'hexagon', 'u_shaped']
     length = ['short', 'long']
     walls = ["double", 'not_double']
