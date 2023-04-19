@@ -1,20 +1,14 @@
 import time
 
 import cv2
-import rtpt
-from detectron2.checkpoint import DetectionCheckpointer
-from detectron2.data import (
-    MetadataCatalog, build_detection_test_loader, )
-from detectron2.modeling import build_model
-from detectron2.utils.visualizer import Visualizer
 from rtpt import RTPT
 from sklearn.metrics import accuracy_score
 from tqdm import tqdm
 
-from michalski_trains.dataset import michalski_labels, blender_categories, original_categories, rcnn_blender_categories
+from michalski_trains.dataset import michalski_labels, blender_categories
 from michalski_trains.m_train import BlenderCar, MichalskiTrain
 from models.rcnn.plot_prediction import plot_mask
-from models.rcnn.template_matcher import prediction_to_symbolic
+from models.rcnn.template_matcher import prediction_to_symbolic_v2
 from util import *
 
 
@@ -47,21 +41,23 @@ def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samp
     rtpt = RTPT(name_initials='LH', experiment_name='RCNN_infer_symbolic', max_iterations=len(indices))
     rtpt.start()
     for i in tqdm(prog_bar):
-        image, target = ds.__getitem__(i)
+        image = ds.get_image(i)
         image = image.to(device).unsqueeze(0)
         labels = ds.get_attributes(i).to('cpu').numpy()
-        if debug:
-            plot_mask(target, i, image[0], tag='gt')
+        # if debug:
+        #     image, target = ds.__getitem__(i)
+        #     plot_mask(target, i, image[0], tag='gt')
         with torch.no_grad():
             output = model(image)
         output = [{k: v.to(device) for k, v in t.items()} for t in output]
-        symbolic, issues = prediction_to_symbolic(output[0], segmentation_similarity_threshold)
+        # symbolic, issues = prediction_to_symbolic(output[0], segmentation_similarity_threshold)
+        symbolic, issues = prediction_to_symbolic_v2(output[0], ds.get_ds_classes(), segmentation_similarity_threshold)
         symbolic = symbolic.to('cpu').numpy()
         length = max(len(symbolic), len(labels))
         symbolic = np.pad(symbolic, (0, length - len(symbolic)), 'constant', constant_values=0)
         labels = np.pad(labels, (0, length - len(labels)), 'constant', constant_values=0)
-        # if debug:
-        #     plot_mask(output[0], i, image[0], tag='prediction')
+        if debug:
+            plot_mask(output[0], i, ds.get_pil_image(i), tag='prediction')
         all_labels.append(labels)
         all_preds.append(symbolic)
         accuracy = accuracy_score(labels, symbolic)
@@ -122,9 +118,6 @@ def rcnn_decode(train_labels, rcnn_symbolics):
         train = MichalskiTrain(cars, train_labels[s_i], 0)
         trains.append(train)
     return trains
-
-
-
 
 
 def rcnn_to_car_number(label_val):

@@ -78,7 +78,10 @@ class MultiLabelRoIHeads(RoIHeads):
                 labels_in_image = torch.zeros((proposals_in_image.shape[0],), dtype=torch.int64, device=device)
             else:
                 #  set to self.box_similarity when https://github.com/pytorch/pytorch/issues/27495 lands
+                # match quality matrix between ground-truth and proposals
                 match_quality_matrix = box_ops.box_iou(gt_boxes_in_image, proposals_in_image)
+
+                # index of the proposals with the highest IoU overlap with a ground-truth box
                 color_idx1 = torch.logical_or((gt_labels_in_image == 1), (gt_labels_in_image == 2))
                 color_idx2 = torch.logical_or((gt_labels_in_image == 3), (gt_labels_in_image == 4))
                 color_idx = torch.logical_or((gt_labels_in_image == 5), torch.logical_or(color_idx1, color_idx2))

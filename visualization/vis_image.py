@@ -12,6 +12,8 @@ def show_masked_im(train_ds):
         masks = train_ds.get_mask(im_id)
         # rle = masks['car_2']['wall']['mask']
         for car_id, car_masks in masks.items():
+            if 'car' not in car_id:
+                continue
             for obj_name, mask_dict in car_masks.items():
                 if isinstance(mask_dict, dict):
                     rle = None

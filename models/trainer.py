@@ -198,8 +198,10 @@ class Trainer:
             self.checkpoint = None
 
         print(set_up_txt)
-        dim_out = get_output_dim(self.y_val)
-        class_dim = get_class_dim(self.y_val)
+        # dim_out = get_output_dim(self.y_val)
+        # class_dim = get_class_dim(self.y_val)
+        dim_out = self.full_ds.get_output_dim()
+        class_dim = self.full_ds.get_class_dim()
         if self.loss_name == 'MSELoss':
             loss_fn = nn.MSELoss()
         else:

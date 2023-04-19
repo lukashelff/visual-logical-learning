@@ -51,14 +51,19 @@ def predict_and_plot(model, dataloader, device):
         im.save(pth)
 
 
-def plot_mask(prediction, identifier, tensor_image, tag=''):
-    inv_normalize = transforms.Normalize(
-        mean=[-0.485 / 0.229, -0.456 / 0.224, -0.406 / 0.255],
-        std=[1 / 0.229, 1 / 0.224, 1 / 0.255]
-    )
-    tensor_image = inv_normalize(tensor_image)
+def plot_mask(prediction, identifier, pil_img, tag=''):
+    # inv_normalize = transforms.Normalize(
+    #     mean=[-0.485 / 0.229, -0.456 / 0.224, -0.406 / 0.255],
+    #     std=[1 / 0.229, 1 / 0.224, 1 / 0.255]
+    # )
+    # tensor_image = inv_normalize(tensor_image)
     # tensor to image
-    img = tensor_image * 255
+    # img = tensor_image * 255
+
+
+    # transform = transforms.Compose([transforms.ToTensor()])
+    # img = transform(pil_img).to('cpu')
+    img = to_tensor(pil_img) * 255
     # float tensor image to int tensor image
     img = img.to(torch.uint8).to('cpu')
     labels = [rcnn_blender_categories()[i] for i in prediction["labels"]]

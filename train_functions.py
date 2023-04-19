@@ -101,6 +101,33 @@ def train(args):
                           num_epochs=num_epochs, gamma=gamma, lr=lr, step_size=step_size, optimizer_='ADAMW')
         trainer.train(set_up=False, train_size=train_size, val_size=val_size, ex_name=f'{model_name}_train')
 
+    if command == 'rcnn_train_v2':
+        from models.trainer import Trainer
+        batch_size = 10
+        # batch_size = 1
+        num_epochs = 30
+        train_size, val_size = 10000, 2000
+        # every n training steps, the learning rate is reduced by gamma
+        num_batches = (train_size * num_epochs) // batch_size
+        step_size = num_batches // 3
+        lr = 0.001
+        gamma = 0.1
+        model_name = ['rcnn', 'multi_head_rcnn', 'multi_label_rcnn'][2]
+        y_val = 'maskv2'
+        trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path,
+                          ds_size=ds_size, train_size=train_size, val_size=val_size, model_tag=tag,
+                          y_val=y_val, resume=False, batch_size=batch_size, setup_model=False, setup_ds=False,
+                          num_epochs=num_epochs, gamma=gamma, lr=lr, step_size=step_size, optimizer_='ADAMW')
+        model_path = f"output/models/multi_label_rcnn/mask_classification/{train_vis}_theoryx_RandomTrains_base_scene/imcount_12000_X_val_image_pretrained_lr_0.001_step_10000_gamma0.1/"
+        # trainer.setup_ds(val_size=ds_size)
+        # trainer.setup_model(resume=True, path=model_path)
+        # from models.rcnn.inference import infer_symbolic
+        # infer_symbolic(trainer.model, trainer.dl['val'], device, segmentation_similarity_threshold=.8, samples=10,
+        #                debug=True)
+
+        train_size, val_size = 100, 20
+        trainer.train(set_up=True, train_size=train_size, val_size=val_size, ex_name=f'{model_name}_train')
+
     if command == 'rcnn_train_parallel':
         from models.trainer import Trainer
         batch_size = 5
@@ -127,7 +154,7 @@ def train(args):
         from models.rcnn.plot_prediction import predict_and_plot
         predict_and_plot(trainer.model, trainer.dl['val'], device)
 
-    if command == 'rcnn_infer':
+    if command == 'rcnn_infer_ds':
         from models.trainer import Trainer
         batch_size = 5
         num_epochs = 20
@@ -140,17 +167,37 @@ def train(args):
         model_name = ['rcnn', 'multi_head_rcnn', 'multi_label_rcnn'][2]
         samples = 10
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
-                          lr=lr, step_size=step_size, gamma=gamma,
+                          lr=lr, step_size=step_size, gamma=gamma, min_car=min_cars, max_car=max_cars,
                           y_val=y_val, resume=True, batch_size=batch_size, setup_model=False, setup_ds=False)
-        from models.rcnn.inference import infer_symbolic
-        # infer_symbolic(trainer.model, trainer.dl['val'], device, segmentation_similarity_threshold=.8, samples=samples,
-        #                debug=False)
-        model_path = 'output/models/multi_label_rcnn/mask_classification/Trains_theoryx_MichalskiTrains_base_scene/imcount_12000_X_val_image_pretrained_lr_0.001_step_13333_gamma0.1/'
+        #  model_path = f'output/models/multi_label_rcnn/mask_classification/{train_vis}_theoryx_RandomTrains_base_scene/imcount_12000_X_val_image_pretrained_lr_0.001_step_13333_gamma0.1/'
+        model_path = f"output/models/multi_label_rcnn/mask_classification/{train_vis}_theoryx_RandomTrains_base_scene/imcount_12000_X_val_image_pretrained_lr_0.001_step_10000_gamma0.1/"
         trainer.setup_model(resume=True, path=model_path)
-        trainer.setup_ds(val_size=12000)
+        trainer.setup_ds(val_size=ds_size)
         out_path = f'output/models/{model_name}/inferred_ds/{train_vis}_{class_rule}_{raw_trains}_{base_scene}_len_{min_cars}-{max_cars}/'
         from models.rcnn.inference import infer_dataset
         infer_dataset(trainer.model, trainer.dl['val'], device, out_path)
+
+    if command == 'rcnn_infer_debug':
+        from models.trainer import Trainer
+        batch_size = 5
+        num_epochs = 20
+        train_size, val_size = 12000, 2000
+        # every n training steps, the learning rate is reduced by gamma
+        num_batches = (train_size * num_epochs) // batch_size
+        step_size = num_batches // 3
+        lr = 0.001
+        gamma = 0.1
+        model_name = ['rcnn', 'multi_head_rcnn', 'multi_label_rcnn'][2]
+        samples = 10
+        trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
+                          lr=lr, step_size=step_size, gamma=gamma, min_car=min_cars, max_car=max_cars,
+                          y_val=y_val, resume=True, batch_size=batch_size, setup_model=False, setup_ds=False)
+        model_path = f"output/models/multi_label_rcnn/mask_classification/{train_vis}_theoryx_RandomTrains_base_scene/imcount_12000_X_val_image_pretrained_lr_0.001_step_10000_gamma0.1/"
+        trainer.setup_model(resume=True, path=model_path)
+        trainer.setup_ds(val_size=ds_size)
+        from models.rcnn.inference import infer_symbolic
+        infer_symbolic(trainer.model, trainer.dl['val'], device, segmentation_similarity_threshold=.8, samples=samples,
+                       debug=True)
 
     if command == 'train_dtron':
         from detectron2.modeling import build_model
