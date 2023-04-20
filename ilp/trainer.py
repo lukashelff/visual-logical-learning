@@ -23,21 +23,27 @@ class Ilp_trainer():
 
     # cmd = f"echo \"read_all(trains2/train). induce.\" | yap -s5000 -h20000 -l aleph.pl > log.txt 2>&1"
     def cross_val(self, train_description, rules=['numerical', 'theoryx', 'complex'], models=['aleph', 'popper'],
-                  folds=5, train_count=[100, 1000, 10000], ds_size=12000, noise=0, complete_run=True, log=False):
+                  folds=5, train_count=[100, 1000, 10000], ds_size=12000, noise=0, complete_run=True, log=False,
+                  output_dir='output/ilp', tag='', min_cars=2, max_cars=4,
+                  symbolic_ds_path=f'TrainGenerator/output/image_generator/dataset_descriptions'):
+        ilp_stats_path = output_dir + '/stats'
+        ds_path = output_dir + f'/datasets'
         noise_vals = noise if type(noise) is list else [noise]
-        create_cv_datasets(rules, train_count, train_description, folds, ds_size, noise_vals, replace_existing=False)
-        ilp_stats_path = f'output/ilp/stats'
+        create_cv_datasets(rules, train_count, train_description, folds, ds_size, noise_vals, replace_existing=False,
+                           output_dir=ds_path, symbolic_ds_path=symbolic_ds_path, tag=tag, min_cars=min_cars,
+                           max_cars=max_cars)
         os.makedirs(ilp_stats_path, exist_ok=True)
         t_its = len(models) * len(train_count) * len(rules) * len(noise_vals)
 
         for it, (model, num_tsamples, rule, noise) in enumerate(product(models, train_count, rules, noise_vals)):
             self.model, self.num_tsamples, self.rule, self.noise = model, num_tsamples, rule, noise
+            txt = f'iteration ({it}/{t_its}): {model} learning {rule} rule: {folds}-fold Cross-Validation' \
+                  f' with {num_tsamples} training samples with {noise * 100}% noise'
+            txt += tag if tag == '' else f' with tag {tag}'
+            print(txt)
 
-            print(f'iteration ({it}/{t_its}): {model} learning {rule} rule: {folds}-fold Cross-Validation'
-                  f' with {num_tsamples} training samples with {noise * 100}% noise')
-
-            csv = f'{ilp_stats_path}/{model}_{rule}_{num_tsamples}smpl_{noise}noise.csv' if noise > 0 else \
-                f'{ilp_stats_path}/{model}_{rule}_{num_tsamples}smpl.csv'
+            csv = f'{ilp_stats_path}/{tag}{model}_{rule}_{num_tsamples}smpl_{noise}noise.csv' if noise > 0 else \
+                f'{ilp_stats_path}/{tag}{model}_{rule}_{num_tsamples}smpl.csv'
             # if complete_run and os.path.exists(csv) and not pd.read_csv(open(csv)).empty:
             if complete_run and os.path.exists(csv):
                 print('found training results of previous run, skipping training')
@@ -46,7 +52,7 @@ class Ilp_trainer():
                     os.remove(csv)
                 except:
                     pass
-                inputs = [f'output/ilp/datasets/{rule}/{train_description}{num_tsamples}_{noise}noise/cv_{fold}'
+                inputs = [f'{ds_path}/{rule}/{tag}{train_description}{num_tsamples}_{noise}noise/cv_{fold}'
                           for fold in range(folds)]
                 # self.popper_train(out_path)
                 if model == 'popper':

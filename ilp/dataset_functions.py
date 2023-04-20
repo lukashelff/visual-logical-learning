@@ -12,9 +12,8 @@ from raw.gen_raw_trains import read_trains
 
 
 def create_cv_datasets(rules, num_samples, train_description, folds, ds_total_size, noise_vals, replace_existing=True,
-                       min_cars=2, max_cars=4, tag='',
-                       symbolic_ds_path=f'TrainGenerator/output/image_generator/dataset_descriptions'
-                       ):
+                       min_cars=2, max_cars=4, tag='', output_dir='output/ilp/datasets',
+                       symbolic_ds_path=f'TrainGenerator/output/image_generator/dataset_descriptions'):
     print(f'preparing {folds} fold cross-val {train_description} datasets for {rules} rules '
           f'with sample sizes of {num_samples} and noises of {noise_vals}')
     gen_ds = 0
@@ -30,7 +29,7 @@ def create_cv_datasets(rules, num_samples, train_description, folds, ds_total_si
             sss = StratifiedShuffleSplit(n_splits=folds, train_size=num_tsamples, test_size=2000,
                                          random_state=0)
             for fold, (tr_idx, val_idx) in enumerate(sss.split(np.zeros(len(y)), y)):
-                out_path = f'output/ilp/datasets/{rule}/{train_description}{num_tsamples}_{noise}noise/cv_{fold}'
+                out_path = f'{output_dir}/{rule}/{tag}{train_description}{num_tsamples}_{noise}noise/cv_{fold}'
                 os.makedirs(out_path, exist_ok=True)
                 train_path = f'{out_path}/train_samples.txt'
                 val_path = f'{out_path}/val_samples.txt'
@@ -55,7 +54,6 @@ def create_cv_datasets(rules, num_samples, train_description, folds, ds_total_si
                     gen_ds += 1
     n_ds = len(num_samples) * len(rules) * len(noise_vals) * folds
     print(f'total of {n_ds} ds: found {n_ds - gen_ds} existing ds, generated {gen_ds} remaining ds')
-
 
 def create_bk(ds, out_path, ds_size=None, noise=0, noise_type='label'):
     ''' creates a bk for a given dataset, ds_size is the number of trains to use for the bk

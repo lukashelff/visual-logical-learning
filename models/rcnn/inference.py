@@ -112,13 +112,23 @@ def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samp
     return preds_padded, labels_padded, average_acc, np.mean(train_accuracies)
 
 
-def infer_dataset(model, dl, device, out_dir):
+def infer_dataset(model, dl, device, out_dir, train_vis, rule, train_description, min_cars, max_cars):
     rcnn_symbolics, _, _, _ = infer_symbolic(model, dl, device, debug=False)
     ds_labels = ['west', 'east']
     train_labels = [ds_labels[dl.dataset.dataset.get_direction(i)] for i in range(dl.dataset.dataset.__len__())]
     trains = rcnn_decode(train_labels, rcnn_symbolics)
-    from ilp.dataset_functions import create_bk
-    create_bk(trains, out_dir)
+    # from ilp.dataset_functions import create_bk
+    # create_bk(trains, out_dir)
+    # save trains to file
+    pred_dir = f'{out_dir}/prediction/{rule}/'
+    os.makedirs(pred_dir, exist_ok=True)
+    with open(f'{pred_dir}/{train_vis}_{train_description}_len_{min_cars}-{max_cars}.txt', 'w+') as f:
+        trains_txt = ''
+        for train in trains:
+            trains_txt += train.to_txt() + '\n'
+        f.write(trains_txt)
+    # from ilp.dataset_functions import create_cv_datasets
+    # create_cv_datasets(symbolic_ds_path=pred_dir, out_dir=ilp_dir, train_vis=train_vis, tag=tag,)
     print('rcnn inferred symbolic saved to: ', out_dir)
 
 
@@ -278,7 +288,7 @@ def int_encoding_to_michalski_symbolic(int_encoding: np.ndarray) -> [[str]]:
     michalski_train = []
     for car_id, car in enumerate(int_encoding):
         if sum(car) > 0:
-            n = str(car_id)
+            n = str(car_id + 1)
             shape = original_categories[car[0]]
             length = original_categories[car[1]]
             double = original_categories[car[2]]

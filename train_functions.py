@@ -27,10 +27,25 @@ def train(args):
         rules = ['theoryx', 'numerical', 'complex']
         models = [model_name] if model_name == 'popper' or model_name == 'aleph' else ['popper', 'aleph']
         train_count = [100, 1000, 10000]
-        # train_count = [10000]
+        train_count = [1000]
         noise = [0, 0.1, 0.3]
+        noise = [0]
         trainer.cross_val(raw_trains, folds=5, rules=rules, models=models, train_count=train_count, noise=noise,
                           log=False, complete_run=True)
+
+    if command == 'ns_crossval':
+        from ilp.trainer import Ilp_trainer
+        trainer = Ilp_trainer()
+        rules = ['theoryx']
+        models = [model_name] if model_name == 'popper' or model_name == 'aleph' else ['popper', 'aleph']
+        train_count = [1000]
+        noise = [0]
+        output_dir = 'output/neuro-symbolic'
+        pred_dir = f'output/models/multi_label_rcnn/inferred_ds/prediction'
+        tag = train_vis + '_'
+        trainer.cross_val(raw_trains, folds=5, rules=rules, models=models, train_count=train_count, noise=noise,
+                          log=False, complete_run=True, output_dir=output_dir, symbolic_ds_path=pred_dir, tag=tag)
+
     if command == 'ilp':
         from ilp.trainer import Ilp_trainer
         trainer = Ilp_trainer()
@@ -157,9 +172,10 @@ def train(args):
         model_path = f"output/models/multi_label_rcnn/mask{v2}_classification/{train_vis}_theoryx_RandomTrains_base_scene/imcount_12000_X_val_image_pretrained_lr_0.001_step_10000_gamma0.1/"
         trainer.setup_ds(val_size=ds_size)
         trainer.setup_model(resume=True, path=model_path)
-        out_path = f'output/models/{model_name}/inferred_ds/{train_vis}_{class_rule}_{raw_trains}_{base_scene}_len_{min_cars}-{max_cars}/'
+        out_path = f'output/models/{model_name}/inferred_ds/'
+
         from models.rcnn.inference import infer_dataset
-        infer_dataset(trainer.model, trainer.dl['val'], device, out_path)
+        infer_dataset(trainer.model, trainer.dl['val'], device, out_path, train_vis, class_rule, 'MichalskiTrains', min_cars, max_cars,)
 
     if command == 'rcnn_infer_debug':
         from models.trainer import Trainer
