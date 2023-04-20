@@ -25,6 +25,7 @@ def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samp
              all_preds - 2d ndarray (samples, attributes) of predicted labels
              avg_acc - average accuracy over all samples and all attributes (0-1)
     '''
+    labs = ['color', 'length', 'walls', 'roofs', 'wheel_count', 'load_obj1', 'load_obj2', 'load_obj3']
     # out_path = f'output/models/rcnn/inferred_symbolic/{trainer.settings}'
     all_labels = []
     all_preds = []
@@ -36,11 +37,11 @@ def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samp
     train_accuracies = []
     indices = dl.dataset.indices[:samples]
     ds = dl.dataset.dataset
-    prog_bar = tqdm(indices, total=len(indices))
+    prog_bar = tqdm(indices, total=len(indices), disable=debug)
     m_labels = michalski_labels()
     rtpt = RTPT(name_initials='LH', experiment_name='RCNN_infer_symbolic', max_iterations=len(indices))
     rtpt.start()
-    for i in tqdm(prog_bar):
+    for i in tqdm(prog_bar, disable=debug):
         image = ds.get_image(i)
         image = image.to(device).unsqueeze(0)
         labels = ds.get_attributes(i).to('cpu').numpy()
@@ -56,19 +57,35 @@ def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samp
         length = max(len(symbolic), len(labels))
         symbolic = np.pad(symbolic, (0, length - len(symbolic)), 'constant', constant_values=0)
         labels = np.pad(labels, (0, length - len(labels)), 'constant', constant_values=0)
-        if debug:
-            plot_mask(output[0], i, ds.get_pil_image(i), tag='prediction')
+
         all_labels.append(labels)
         all_preds.append(symbolic)
         accuracy = accuracy_score(labels, symbolic)
+        if accuracy != 1:
+            debug_text = f'image {i} incorrect labels, '
+
+            for t_number, train in enumerate((labels == symbolic).reshape((-1, 8))):
+                if not np.all(train):
+                    incorrect_indx = np.where(train == 0)[0]
+                    i_labels = ''
+                    for idx in incorrect_indx:
+                        i_labels += f' {labs[idx]} (gt: {ds.get_ds_classes()[labels.reshape((-1, 8))[t_number][idx]]},' \
+                                    f' assigned: {ds.get_ds_classes()[symbolic.reshape((-1, 8))[t_number][idx]]})'
+                    debug_text += f'car {t_number + 1}:{i_labels}. \n'
+
+            if debug:
+                plot_mask(output[0], i, ds.get_pil_image(i), tag='prediction')
         train_accuracies.append(accuracy)
-        debug_text = f"image {i}/{samples}, accuracy score: {round(accuracy * 100, 1)}%, " \
-                     f"running accuracy score: {(np.mean(train_accuracies) * 100).round(3)}%, " \
-                     f"Number of gt attributes {len(labels[labels > 0])}. "
+        # debug_text = f"image {i}/{samples}, accuracy score: {round(accuracy * 100, 1)}%, " \
+        #              f"running accuracy score: {(np.mean(train_accuracies) * 100).round(3)}%, " \
+        #              f"Number of gt attributes {len(labels[labels > 0])}. "
 
         prog_bar.set_description(desc=f"Acc: {(np.mean(train_accuracies) * 100).round(3)}")
-        if debug:
-            print(debug_text + issues)
+        if debug and accuracy != 1:
+            print(debug_text)
+            # print(issues)
+            print(symbolic)
+            print(labels)
         rtpt.step()
 
     # create numpy array with all predictions and labels

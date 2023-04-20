@@ -51,7 +51,7 @@ def predict_and_plot(model, dataloader, device):
         im.save(pth)
 
 
-def plot_mask(prediction, identifier, pil_img, tag=''):
+def plot_mask(prediction, identifier, pil_img, tag='', output_dir='output/models/multi_label_rcnn/masks_prediction'):
     # inv_normalize = transforms.Normalize(
     #     mean=[-0.485 / 0.229, -0.456 / 0.224, -0.406 / 0.255],
     #     std=[1 / 0.229, 1 / 0.224, 1 / 0.255]
@@ -87,6 +87,6 @@ def plot_mask(prediction, identifier, pil_img, tag=''):
         im = to_pil_image(box.detach())
         # save pil image
         tag = tag if tag == '' else '/' + tag
-        pth = f'output/models/rcnn/test/masks{tag}/im_{identifier}_{labels[c]}_mask{c}.png'
+        pth = f'{output_dir}/masks{tag}/im_{identifier}/{labels[c]}_mask{c}.png'
         os.makedirs(os.path.dirname(pth), exist_ok=True)
         im.save(pth)

@@ -45,8 +45,8 @@ def prediction_to_symbolic_v2(prediction, label_names, threshold=.8):
         car_idx = all_car_indices[c]
         car_mask = masks[car_idx]
         car_score = scores[car_idx]
-        similarity = get_similarity_score(prev_mask, car_mask)
-        if similarity < threshold:
+        similarity = get_inclusion_rate(prev_mask, car_mask)
+        if similarity < 0.2:
             selected_car_indices.append(car_idx)
             prev_mask = car_mask
             prev_score = car_score
@@ -71,18 +71,19 @@ def prediction_to_symbolic_v2(prediction, label_names, threshold=.8):
     car_init = [1, 6, 8, 0, 14, 0, 0, 0]
     train = torch.tensor(car_init * len(selected_car_indices), dtype=torch.uint8)
     train_scores = [0] * len(selected_car_indices) * 8
+    train_masks = torch.zeros((len(selected_car_indices) * 8, masks.size()[-2], masks.size()[-1])).to(masks.device)
     skipped_indicies = []
     # iterate over all predicted attributes
     for attribute_index in attribute_indices:
         allocated = False
         label = labels[attribute_index]
         try:
-            label_name = label_names[attribute_index]
+            label_name = label_names[label]
         except:
             label_name = 'unknown'
             # raise Exception(f"Label name not found for index {attribute_index} in {label_names}")
-        car_similarities = get_all_similarities_score(masks, car_indices=selected_car_indices,
-                                                      attribute_index=attribute_index)
+        car_similarities = get_inclusion_rates(masks, car_indices=selected_car_indices,
+                                               attribute_index=attribute_index)
         if len(car_similarities) == 0:
             debug_info += f"Attribute {label_name} not allocated to any car. "
             continue
@@ -94,34 +95,39 @@ def prediction_to_symbolic_v2(prediction, label_names, threshold=.8):
             # binary_class = np.zeros(22)
             # binary_class[label] = 1
             label_category = class_to_label(label)
-            idx = (car_number - 1) * 8 + label_category
+            train_idx = (car_number - 1) * 8 + label_category
             # if attribute is a payload, check if there is already a payload allocated to the car
             if label_category == 5:
                 # todo: sort payload by score to replace payload with lower score if there are to many payloads
-                while train[idx] != 0 and (idx % 8) < 7:
-                    idx += 1
-            if train[idx] != 0:
-                if train[idx] == label:
+                while train[train_idx] != 0 and (train_idx % 8) < 7 and \
+                        mask_similarity(masks[attribute_index], train_masks[train_idx].unsqueeze(dim=0)) < 0.3:
+                    train_idx += 1
+            if train[train_idx] == label:
+                if train_scores != 0:
                     debug_info += f"Duplicate Mask: Mask for car {car_number} with label {label_name} was predicted" \
                                   f" twice."
-                elif train[idx] != label:
-                    if scores[attribute_index] > train_scores[idx]:
-                        debug_info += f'Mask conflict: {blender_categories()[train[idx]]} with score' \
-                                      f' {round(train_scores[idx], 3)} and {blender_categories()[label]} with score' \
+                train_scores[train_idx] = max(train_scores[train_idx], scores[attribute_index])
+            elif train[train_idx] != label:
+                if scores[attribute_index] > train_scores[train_idx]:
+                    if train_scores[train_idx] != 0:
+                        debug_info += f'Mask conflict: {blender_categories()[train[train_idx]]} with score' \
+                                      f' {round(train_scores[train_idx], 3)} and {blender_categories()[label]} with score' \
                                       f' {round(scores[attribute_index], 3)} for car {car_number}. Selecting label' \
                                       f' with higher score.'
-                        train[idx] = label
-                        allocated = True
-                        train_scores[idx] = scores[attribute_index]
-                    else:
-                        debug_info += f'Mask conflict: {blender_categories()[train[idx]]} with score ' \
-                                      f'{round(train_scores[idx], 3)} and {blender_categories()[label]} with score' \
-                                      f' {round(scores[attribute_index], 3)} for car {car_number}. Selecting label' \
-                                      f' with higher score.'
+                    train[train_idx] = label
+                    allocated = True
+                    train_scores[train_idx] = scores[attribute_index]
+                    train_masks[train_idx] = masks[attribute_index]
+                else:
+                    debug_info += f'Mask conflict: {blender_categories()[train[train_idx]]} with score ' \
+                                  f'{round(train_scores[train_idx], 3)} and {blender_categories()[label]} with score' \
+                                  f' {round(scores[attribute_index], 3)} for car {car_number}. Selecting label' \
+                                  f' with higher score.'
             else:
-                train[idx] = label
+                train[train_idx] = label
                 allocated = True
-                train_scores[idx] = scores[attribute_index]
+                train_scores[train_idx] = scores[attribute_index]
+                train_masks[train_idx] = masks[attribute_index]
             # break
         if not allocated:
             skipped_indicies.append(attribute_index)
@@ -198,8 +204,8 @@ def prediction_to_symbolic(prediction, threshold=.8):
         allocated = False
         label = labels[attribute_index]
         label_name = label_names[attribute_index]
-        car_similarities = get_all_similarities_score(masks, car_indices=selected_car_indices,
-                                                      attribute_index=attribute_index)
+        car_similarities = get_inclusion_rates(masks, car_indices=selected_car_indices,
+                                               attribute_index=attribute_index)
         if len(car_similarities) == 0:
             debug_info += f"Attribute {label_name} not allocated to any car. "
             continue
@@ -215,7 +221,7 @@ def prediction_to_symbolic(prediction, threshold=.8):
             # if attribute is a payload, check if there is already a payload allocated to the car
             if label_category == 5:
                 # todo: sort payload by score to replace payload with lower score if there are to many payloads
-                while train[idx] != 0 and (idx % 8) < 7:
+                while train[idx] != 0 and (idx % 8) < 7 and mask_similarity(masks[attribute_index], masks[idx]) < 0.3:
                     idx += 1
             if train[idx] != 0:
                 if train[idx] == label:
@@ -251,22 +257,29 @@ def prediction_to_symbolic(prediction, threshold=.8):
     return train, debug_info
 
 
-def get_all_similarities_score(masks, attribute_index, car_indices):
+def get_inclusion_rates(masks, attribute_index, car_indices):
+    '''
+    Calculate rate of inclusion of attribute mask in car mask
+    :param masks: ndarray of shape (number of masks, height, width)
+    :param attribute_index: index of attribute mask
+    :param car_indices: indices of car masks
+    :return: list of inclusion rates for each car
+    '''
     car_similarities = []
     for car_n, car_index in enumerate(car_indices):
         whole_car_mask = masks[car_index]
         mask = masks[attribute_index]
-        similarity = get_similarity_score(mask, whole_car_mask)
+        similarity = get_inclusion_rate(mask, whole_car_mask)
         car_similarities += [similarity.item()]
     return car_similarities
 
 
-def get_similarity_score(mask, whole_car_mask):
+def get_inclusion_rate(mask, whole_car_mask):
     '''
-    Calculate similarity between mask and whole car mask
-    :param mask: mask of attribute ndarray of shape (height, width)
-    :param whole_car_mask: mask of whole car ndarray of shape (height, width)
-    :return: similarity score float
+    Calculate rate of inclusion of attribute mask in car mask
+    :param mask: ndarray of shape (height, width)
+    :param whole_car_mask: ndarray of shape (height, width)
+    :return: inclusion rate of attribute mask in car mask
     '''
     # determine to which degree mask is included in whole car mask
     # calculate similarity value by summing up all values in mask where mask is smaller than whole car mask
@@ -285,7 +298,24 @@ def get_similarity_score(mask, whole_car_mask):
     return similarity
 
 
+def mask_similarity(mask1, mask2):
+    '''
+    Calculate similarity between two masks
+    :param mask1: ndarray of shape (height, width)
+    :param mask2: ndarray of shape (height, width)
+    :return: similarity value
+    '''
+    similarity = mask1[mask1 <= mask2].sum() + mask2[mask2 <= mask1].sum()
+    similarity = similarity / (mask1.sum() + mask2.sum())
+    return similarity
+
+
 def class_to_label(class_int):
+    '''
+    Convert class integer to label integer
+    :param class_int: class integer
+    :return: label integer
+    '''
     none = [-1] * len(['none'])
     color = [0] * len(['yellow', 'green', 'grey', 'red', 'blue'])
     length = [1] * len(['short', 'long'])
