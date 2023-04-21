@@ -34,17 +34,46 @@ def train(args):
                           log=False, complete_run=True)
 
     if command == 'ns_crossval':
-        from ilp.trainer import Ilp_trainer
-        trainer = Ilp_trainer()
-        rules = ['theoryx']
-        models = [model_name] if model_name == 'popper' or model_name == 'aleph' else ['popper', 'aleph']
-        train_count = [1000]
-        noise = [0]
-        output_dir = 'output/neuro-symbolic'
-        pred_dir = f'output/models/multi_label_rcnn/inferred_ds/prediction'
-        tag = train_vis + '_'
-        trainer.cross_val(raw_trains, folds=5, rules=rules, models=models, train_count=train_count, noise=noise,
-                          log=False, complete_run=True, output_dir=output_dir, symbolic_ds_path=pred_dir, tag=tag)
+        from models.neuro_symbolic.ns_infer import inference
+        rules = ['theoryx', 'numerical', 'complex'][1:]
+        inference(base_scene, raw_trains, train_vis, device, ds_path, ds_size, rules, min_cars, max_cars)
+        # from models.trainer import Trainer
+        #
+        # batch_size = 10 if torch.cuda.get_device_properties(0).total_memory > 9000000000 else 1
+        # num_epochs = 30
+        # train_size, val_size = 12000, 2000
+        # # every n training steps, the learning rate is reduced by gamma
+        # num_batches = (train_size * num_epochs) // batch_size
+        # step_size = num_batches // 3
+        # lr = 0.001
+        # gamma = 0.1
+        # v2 = 'v2'
+        # model_name = ['rcnn', 'multi_head_rcnn', 'multi_label_rcnn'][2]
+        # samples = 10
+        # y_val = f'mask{v2}'
+        # trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
+        #                   lr=lr, step_size=step_size, gamma=gamma, min_car=min_cars, max_car=max_cars,
+        #                   y_val=y_val, resume=True, batch_size=batch_size, setup_model=False, setup_ds=False)
+        # #  model_path = f'output/models/multi_label_rcnn/mask_classification/{train_vis}_theoryx_RandomTrains_base_scene/imcount_12000_X_val_image_pretrained_lr_0.001_step_13333_gamma0.1/'
+        # model_path = f"output/models/multi_label_rcnn/mask{v2}_classification/{train_vis}_theoryx_RandomTrains_base_scene/imcount_12000_X_val_image_pretrained_lr_0.001_step_10000_gamma0.1/"
+        # trainer.setup_ds(val_size=ds_size)
+        # trainer.setup_model(resume=True, path=model_path)
+        # out_path = f'output/models/{model_name}/inferred_ds/'
+        # from models.rcnn.inference import infer_dataset
+        # infer_dataset(trainer.model, trainer.dl['val'], device, out_path, train_vis, class_rule, 'MichalskiTrains', min_cars, max_cars,)
+        #
+        #
+        # from ilp.trainer import Ilp_trainer
+        # trainer = Ilp_trainer()
+        # rules = ['theoryx']
+        # models = [model_name] if model_name == 'popper' or model_name == 'aleph' else ['popper', 'aleph']
+        # train_count = [1000]
+        # noise = [0]
+        # output_dir = 'output/neuro-symbolic'
+        # pred_dir = f'output/models/multi_label_rcnn/inferred_ds/prediction'
+        # tag = train_vis + '_'
+        # trainer.cross_val(raw_trains, folds=5, rules=rules, models=models, train_count=train_count, noise=noise,
+        #                   log=False, complete_run=True, output_dir=output_dir, symbolic_ds_path=pred_dir, tag=tag)
 
     if command == 'ilp':
         from ilp.trainer import Ilp_trainer
@@ -149,33 +178,6 @@ def train(args):
                           y_val=y_val, resume=True, batch_size=batch_size, setup_model=True, setup_ds=True)
         from models.rcnn.plot_prediction import predict_and_plot
         predict_and_plot(trainer.model, trainer.dl['val'], device)
-
-    if command == 'rcnn_infer_ds':
-        from models.trainer import Trainer
-
-        batch_size = 10 if torch.cuda.get_device_properties(0).total_memory > 9000000000 else 1
-        num_epochs = 30
-        train_size, val_size = 12000, 2000
-        # every n training steps, the learning rate is reduced by gamma
-        num_batches = (train_size * num_epochs) // batch_size
-        step_size = num_batches // 3
-        lr = 0.001
-        gamma = 0.1
-        v2 = 'v2'
-        model_name = ['rcnn', 'multi_head_rcnn', 'multi_label_rcnn'][2]
-        samples = 10
-        y_val = f'mask{v2}'
-        trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
-                          lr=lr, step_size=step_size, gamma=gamma, min_car=min_cars, max_car=max_cars,
-                          y_val=y_val, resume=True, batch_size=batch_size, setup_model=False, setup_ds=False)
-        #  model_path = f'output/models/multi_label_rcnn/mask_classification/{train_vis}_theoryx_RandomTrains_base_scene/imcount_12000_X_val_image_pretrained_lr_0.001_step_13333_gamma0.1/'
-        model_path = f"output/models/multi_label_rcnn/mask{v2}_classification/{train_vis}_theoryx_RandomTrains_base_scene/imcount_12000_X_val_image_pretrained_lr_0.001_step_10000_gamma0.1/"
-        trainer.setup_ds(val_size=ds_size)
-        trainer.setup_model(resume=True, path=model_path)
-        out_path = f'output/models/{model_name}/inferred_ds/'
-
-        from models.rcnn.inference import infer_dataset
-        infer_dataset(trainer.model, trainer.dl['val'], device, out_path, train_vis, class_rule, 'MichalskiTrains', min_cars, max_cars,)
 
     if command == 'rcnn_infer_debug':
         from models.trainer import Trainer

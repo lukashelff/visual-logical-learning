@@ -236,6 +236,7 @@ class Trainer:
                                         ds_path=self.ds_path, y_val=self.y_val, max_car=self.max_car,
                                         min_car=self.min_car, class_rule=self.class_rule, resize=self.resize,
                                         preprocessing=self.preprocess)
+            print(f'set up dataset to directory: {self.ds_path}')
         if tr_idx is None or val_idx is None:
             if train_size is None and val_size is None:
                 train_size = int(0.8 * self.ds_size)

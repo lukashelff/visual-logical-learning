@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 
-def get_cv_data(out_path, y_val):
+def get_cv_data(out_path, y_val, models=['EfficientNet', 'resnet18', 'VisionTransformer']):
     data = pd.DataFrame(
         columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'cv iteration', 'label', 'epoch',
                  'Validation acc', 'noise', 'noise type'])
@@ -14,10 +14,11 @@ def get_cv_data(out_path, y_val):
         columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'cv iteration', 'epoch',
                  'Validation acc', 'Train acc', 'noise', 'noise type'])
     data_ev = pd.DataFrame(
-        columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'mean', 'variance', 'std', 'noise', 'noise type'])
-    models = os.listdir('output/models/')
-    if 'old' in models:
-        models.remove('old')
+        columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'mean', 'variance', 'std', 'noise',
+                 'noise type'])
+    # models = os.listdir('output/models/')
+    # if 'old' in models:
+    #     models.remove('old')
     for model_name in models:
 
         path1 = f'output/models/{model_name}/{y_val}_classification/'
@@ -50,7 +51,10 @@ def get_cv_data(out_path, y_val):
                 configs.insert(0, configs.pop())
                 for config in configs:
                     conf = config.split('_')
-                    imcount = int(conf[1])
+                    try:
+                        imcount = int(conf[1])
+                    except:
+                        print('default')
                     cv_paths = glob.glob(path3 + config + '/*/metrics.json')
                     final_acc = []
                     for iteration, path in enumerate(cv_paths):
@@ -105,14 +109,22 @@ def get_cv_data(out_path, y_val):
     data_ev.to_csv(out_path + '/mean_variance_comparison.csv')
 
 
-def get_ilp_neural_data(ilp_stats_path, neural_stats_path, vis='Train'):
-    dirs = glob.glob(ilp_stats_path + '/*.csv')
-    if ilp_stats_path is None:
-        ilp_data = pd.DataFrame(
-            columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'cv iteration', 'epoch',
-                     'Validation acc', 'noise'])
-        ilp_models = []
-    else:
+def get_ilp_neural_data(ilp_stats_path, neural_stats_path, neuro_symbolic_stats_path, vis='Train'):
+    ilp_data = pd.DataFrame(
+        columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'cv iteration', 'epoch',
+                 'Validation acc', 'noise'])
+    ilp_models = []
+    neuro_symbolic_data = pd.DataFrame(
+        columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'cv iteration', 'epoch',
+                 'Validation acc', 'noise'])
+    neuro_symbolic_models = []
+    neur_data = pd.DataFrame(
+        columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'cv iteration', 'epoch',
+                 'Validation acc', 'noise', 'noise type'])
+    neural_models = []
+
+    if ilp_stats_path is not None:
+        dirs = glob.glob(ilp_stats_path + '/*.csv')
         ilp_data = []
         for dir in dirs:
             with open(dir, 'r') as f:
@@ -121,14 +133,37 @@ def get_ilp_neural_data(ilp_stats_path, neural_stats_path, vis='Train'):
         ilp_data['visualization'] = 'Trains'
         ilp_data['noise type'] = 'label noise'
         ilp_data.loc[ilp_data['noise'] == 0, 'noise type'] = 'no noise'
+        ilp_data['Methods'] = ilp_data['Methods'].apply(lambda x: 'GT ' + x)
         ilp_models = sorted(ilp_data['Methods'].unique())
 
-    if neural_stats_path is None:
-        neur_data = pd.DataFrame(
-            columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'cv iteration', 'epoch',
-                     'Validation acc', 'noise', 'noise type'])
-        neural_models = []
-    else:
+
+    if neuro_symbolic_stats_path is not None:
+        dirs = glob.glob(neuro_symbolic_stats_path + '/*.csv')
+        simple_objects_data, trains_data = [], []
+        simple_objects_dirs, trains_dirs = [], []
+        for dir in dirs:
+            if 'SimpleObjects' in dir:
+                simple_objects_dirs.append(dir)
+            else:
+                trains_dirs.append(dir)
+        for dir in simple_objects_dirs:
+            with open(dir, 'r') as f:
+                simple_objects_data.append(pd.read_csv(f))
+        simple_objects_data = pd.concat(simple_objects_data, ignore_index=True)
+        simple_objects_data['visualization'] = 'SimpleObjects'
+
+        for dir in trains_dirs:
+            with open(dir, 'r') as f:
+                trains_data.append(pd.read_csv(f))
+        trains_data = pd.concat(trains_data, ignore_index=True)
+        trains_data['visualization'] = 'Trains'
+        neuro_symbolic_data = pd.concat([simple_objects_data, trains_data], ignore_index=True)
+        neuro_symbolic_data['noise type'] = 'label noise'
+        neuro_symbolic_data.loc[neuro_symbolic_data['noise'] == 0, 'noise type'] = 'no noise'
+        neuro_symbolic_data['Methods'] = neuro_symbolic_data['Methods'].apply(lambda x: 'RCNN ' + x)
+        neuro_symbolic_models = sorted(neuro_symbolic_data['Methods'].unique())
+
+    if neural_stats_path is not None:
         with open(neural_stats_path, 'r') as f:
             neur_data = pd.read_csv(f)
             neur_data = neur_data.loc[neur_data['epoch'] == 24]
@@ -137,7 +172,7 @@ def get_ilp_neural_data(ilp_stats_path, neural_stats_path, vis='Train'):
         neur_data = neur_data.rename({'number of images': 'training samples'}, axis='columns')
         neural_models = sorted(neur_data['Methods'].unique())
 
-    data = pd.concat([ilp_data, neur_data], ignore_index=True)
+    data = pd.concat([ilp_data, neur_data, neuro_symbolic_data], ignore_index=True)
     data['Validation acc'] = data['Validation acc'].apply(lambda x: x * 100)
     data.reset_index(drop=True, inplace=True)
-    return data, ilp_models, neural_models
+    return data, ilp_models, neural_models, neuro_symbolic_models

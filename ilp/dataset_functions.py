@@ -8,7 +8,6 @@ import torch
 from sklearn.model_selection import StratifiedShuffleSplit
 
 from michalski_trains.m_train import BlenderCar, MichalskiTrain
-from raw.gen_raw_trains import read_trains
 
 
 def create_cv_datasets(rules, num_samples, train_description, folds, ds_total_size, noise_vals, replace_existing=True,
@@ -78,6 +77,7 @@ def create_bk(ds, out_path, ds_size=None, noise=0, noise_type='label'):
 
 
     '''
+    from raw.gen_raw_trains import read_trains
     train_c = 0
     path_1 = f'{out_path}/popper/gt1'
     path_2 = f'{out_path}/popper/gt2'

@@ -59,11 +59,14 @@ def plot(args):
 
     if command == 'elementary_vs_realistic':
         ilp_pt = 'output/ilp'
+        neuro_symbolic_path = 'output/neuro-symbolic'
         neural_path = 'output/neural'
         out_path = 'output/model_comparison'
+        from visualization.data_handler import get_cv_data
+        get_cv_data(f'{neural_path}/', 'direction')
         for s in [100, 1000, 10000]:
             from visualization.ilp_and_neural_elementary_vs_realistic import elementary_vs_realistic_plot
-            elementary_vs_realistic_plot(neural_path, ilp_pt, out_path, tr_samples=s)
+            elementary_vs_realistic_plot(neural_path, ilp_pt, neuro_symbolic_path, out_path, tr_samples=s)
 
     if command == 'generalization':
         train_vis = 'Trains'

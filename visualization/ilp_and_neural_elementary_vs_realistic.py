@@ -12,12 +12,13 @@ from visualization.data_handler import get_ilp_neural_data
 from visualization.vis_util import make_3_im_legend
 
 
-def elementary_vs_realistic_plot(neural_path, ilp_pth, outpath, tr_samples=1000):
+def elementary_vs_realistic_plot(neural_path, ilp_pth, neuro_symbolic_pth, outpath, tr_samples=1000):
     labelsize, fontsize = 15, 20
     ilp_stats_path = f'{ilp_pth}/stats'
+    neuro_symbolic_stats_path = f'{neuro_symbolic_pth}/stats'
     neural_stats_path = neural_path + '/label_acc_over_epoch.csv'
-    data, ilp_models, neural_models = get_ilp_neural_data(ilp_stats_path, neural_stats_path, 'all')
-    models = np.append(neural_models, ilp_models)
+    data, ilp_models, neural_models, neuro_symbolic_models = get_ilp_neural_data(ilp_stats_path, neural_stats_path, neuro_symbolic_stats_path, 'all')
+    models = np.append(neural_models, ilp_models + neuro_symbolic_models)
     data = data.loc[data['training samples'] == tr_samples].loc[data['noise'] == 0]
 
     scenes = data['scene'].unique()
@@ -31,7 +32,7 @@ def elementary_vs_realistic_plot(neural_path, ilp_pth, outpath, tr_samples=1000)
     rules = ['theoryx', 'numerical', 'complex']
 
     out_path = f'{outpath}/elementary_vs_realistic'
-    materials_s = ["///", "//", '/', '\\', '\\\\']
+    materials_s = ["///", "//", '/', '\\', '\\\\', 'x', '+', 'o', 'O', '.', '*']
     mt = {model: materials_s[n] for n, model in enumerate(models)}
     sns.set_theme(style="whitegrid")
     fig = plt.figure(figsize=(16, 7))
@@ -63,7 +64,7 @@ def elementary_vs_realistic_plot(neural_path, ilp_pth, outpath, tr_samples=1000)
         else:
             ax.set_ylabel('Accuracy', fontsize=fontsize)
 
-    make_3_im_legend(fig, axes, visualizations, 'Visualizations', models, colors, mt)
+    make_3_im_legend(fig, axes, visualizations, 'Visualizations', models, colors, mt, legend_h_offset=-0.1)
 
 
     os.makedirs(out_path, exist_ok=True)
