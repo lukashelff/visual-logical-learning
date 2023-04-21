@@ -133,7 +133,7 @@ def get_ilp_neural_data(ilp_stats_path, neural_stats_path, neuro_symbolic_stats_
         ilp_data['visualization'] = 'Trains'
         ilp_data['noise type'] = 'label noise'
         ilp_data.loc[ilp_data['noise'] == 0, 'noise type'] = 'no noise'
-        ilp_data['Methods'] = ilp_data['Methods'].apply(lambda x: 'GT ' + x)
+        ilp_data['Methods'] = ilp_data['Methods'].apply(lambda x: x.title() + ' (Symb.)')
         ilp_models = sorted(ilp_data['Methods'].unique())
 
 
@@ -160,7 +160,7 @@ def get_ilp_neural_data(ilp_stats_path, neural_stats_path, neuro_symbolic_stats_
         neuro_symbolic_data = pd.concat([simple_objects_data, trains_data], ignore_index=True)
         neuro_symbolic_data['noise type'] = 'label noise'
         neuro_symbolic_data.loc[neuro_symbolic_data['noise'] == 0, 'noise type'] = 'no noise'
-        neuro_symbolic_data['Methods'] = neuro_symbolic_data['Methods'].apply(lambda x: 'RCNN ' + x)
+        neuro_symbolic_data['Methods'] = neuro_symbolic_data['Methods'].apply(lambda x: 'RCNN-' + x.title() + ' (NeSy)')
         neuro_symbolic_models = sorted(neuro_symbolic_data['Methods'].unique())
 
     if neural_stats_path is not None:
@@ -170,9 +170,15 @@ def get_ilp_neural_data(ilp_stats_path, neural_stats_path, neuro_symbolic_stats_
             if vis is not None and vis != 'all':
                 neur_data = neur_data.loc[neur_data['visualization'] == vis]
         neur_data = neur_data.rename({'number of images': 'training samples'}, axis='columns')
+        neur_data['Methods'] = neur_data['Methods'].apply(lambda x: x.replace('resnet18', 'ResNet18'))
         neural_models = sorted(neur_data['Methods'].unique())
 
     data = pd.concat([ilp_data, neur_data, neuro_symbolic_data], ignore_index=True)
     data['Validation acc'] = data['Validation acc'].apply(lambda x: x * 100)
+    # replace 'simpleobjects' with 'block' in visualization column of data
+    # replace 'trains' with 'michalski' in visualization column of data
+    data['visualization'] = data['visualization'].apply(lambda x: x.replace('SimpleObjects', 'Block'))
+    data['visualization'] = data['visualization'].apply(lambda x: x.replace('Trains', 'Michalski'))
+
     data.reset_index(drop=True, inplace=True)
     return data, ilp_models, neural_models, neuro_symbolic_models

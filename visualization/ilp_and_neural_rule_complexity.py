@@ -15,7 +15,7 @@ def rule_complexity_plot(neural_path, ilp_pth, outpath, vis='Trains', im_count=1
     labelsize, fontsize = 15, 20
     ilp_stats_path = f'{ilp_pth}/stats'
     neural_stats_path = neural_path + '/label_acc_over_epoch.csv'
-    data, ilp_models, neural_models = get_ilp_neural_data(ilp_stats_path, neural_stats_path, vis)
+    data, ilp_models, neural_models, _ = get_ilp_neural_data(ilp_stats_path, neural_stats_path, None, vis)
     models = neural_models + ilp_models
     data = data.loc[data['noise'] == 0].loc[data['training samples'] == im_count]
 
@@ -28,14 +28,14 @@ def rule_complexity_plot(neural_path, ilp_pth, outpath, vis='Trains', im_count=1
     materials_s = ["///", "//", '/', '\\', '\\\\']
     mt = {model: materials_s[n] for n, model in enumerate(models)}
     sns.set_theme(style="whitegrid")
-    fig = plt.figure(figsize=(12, 7))
-    gs = fig.add_gridspec(2, 2, wspace=.05, hspace=.15)
+    fig = plt.figure(figsize=(12, 3))
+    gs = fig.add_gridspec(1, 3, wspace=.05, hspace=.15)
     axes = gs.subplots(sharex=True, sharey=True, )
     axes = axes if isinstance(axes, np.ndarray) else [axes]
 
     sns.set_theme(style="whitegrid")
     for c, rule in enumerate(rules):
-        ax = axes[c // 2, c % 2]
+        ax = axes[c]
         ax.grid(axis='x')
         ax.set_title(rule.title(), fontsize=fontsize)
         ax.tick_params(bottom=False, left=False, labelsize=labelsize)
@@ -47,15 +47,16 @@ def rule_complexity_plot(neural_path, ilp_pth, outpath, vis='Trains', im_count=1
             sns.barplot(x='Methods', y='Validation acc', hue='training samples', data=data_temp,
                         palette="dark", alpha=.7, ax=ax, orient='v', hatch=mt[model], order=models
                         )
+        for container in ax.containers:
+            ax.bar_label(container, fmt='%.1f', label_type='edge', fontsize=labelsize, padding=3)
         ax.get_legend().remove()
-        ax.set_ylim([50, 100])
+        ax.set_ylim([50, 108])
         ax.get_xaxis().set_visible(False)
-        if c % 2:
+        if c != 0:
             ax.set_ylabel('')
         else:
             ax.set_ylabel('Accuracy', fontsize=fontsize)
 
-    axes[1, 1].set_axis_off()
     white = [mlines.Line2D([], [], color='white', marker='X', linestyle='None', markersize=0)]
     plt.rcParams.update({'hatch.color': 'black'})
 
@@ -63,16 +64,17 @@ def rule_complexity_plot(neural_path, ilp_pth, outpath, vis='Trains', im_count=1
     leg = fig.legend(
         white +
         handels,
-        ['Models:'] + [m.title() for m in models],
+        ['Models:'] + [m for m in models],
         loc='lower left',
-        bbox_to_anchor=(.515, 0.248),
+        bbox_to_anchor=(.12, -.05),
         frameon=True,
         handletextpad=0,
-        ncol=1, handleheight=1.2, handlelength=2.5
+        ncol=len(handels)+1, handleheight=1.2, handlelength=2.5
     )
-    for vpack in leg._legend_handle_box.get_children():
-        for hpack in vpack.get_children()[:1]:
+    for vpack in leg._legend_handle_box.get_children()[:1]:
+        for hpack in vpack.get_children():
             hpack.get_children()[0].set_width(0)
+
 
     os.makedirs(out_path, exist_ok=True)
     plt.savefig(out_path + f'/rules_{im_count}_sample.png', bbox_inches='tight', dpi=400)
