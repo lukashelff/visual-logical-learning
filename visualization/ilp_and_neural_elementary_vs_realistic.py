@@ -41,7 +41,7 @@ def elementary_vs_realistic_plot(neural_path, ilp_pth, neuro_symbolic_pth, outpa
     materials_s = ["///", "//", '/', '\\', '\\\\', 'x', '+', 'o', 'O', '.', '*']
     mt = {model: materials_s[n] for n, model in enumerate(models)}
     sns.set_theme(style="whitegrid")
-    fig = plt.figure(figsize=(16, 3))
+    fig = plt.figure(figsize=(16, 2.5))
     gs = fig.add_gridspec(1, 1, wspace=.05, hspace=.15)
     ax = gs.subplots(sharex=True, sharey=True, )
 

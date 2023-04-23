@@ -28,7 +28,7 @@ def rule_complexity_plot(neural_path, ilp_pth, outpath, vis='Trains', im_count=1
     materials_s = ["///", "//", '/', '\\', '\\\\']
     mt = {model: materials_s[n] for n, model in enumerate(models)}
     sns.set_theme(style="whitegrid")
-    fig = plt.figure(figsize=(12, 3))
+    fig = plt.figure(figsize=(16, 2.5))
     gs = fig.add_gridspec(1, 3, wspace=.05, hspace=.15)
     axes = gs.subplots(sharex=True, sharey=True, )
     axes = axes if isinstance(axes, np.ndarray) else [axes]
@@ -66,7 +66,7 @@ def rule_complexity_plot(neural_path, ilp_pth, outpath, vis='Trains', im_count=1
         handels,
         ['Models:'] + [m for m in models],
         loc='lower left',
-        bbox_to_anchor=(.12, -.05),
+        bbox_to_anchor=(.12, -.08),
         frameon=True,
         handletextpad=0,
         ncol=len(handels)+1, handleheight=1.2, handlelength=2.5

@@ -61,7 +61,7 @@ def make_1_im_legend(fig, ax, category, category_name, models, colors, mt, fonts
     leg = fig.legend(
         sym, txt,
         loc='lower center',
-        bbox_to_anchor=(.5, -.35),
+        bbox_to_anchor=(.5, -.35 + legend_h_offset),
         frameon=True,
         handletextpad=0,
         ncols=ncols, handleheight=1.2, handlelength=2.5, fontsize=fontsize,
