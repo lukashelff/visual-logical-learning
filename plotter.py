@@ -73,9 +73,12 @@ def plot(args):
         from visualization.ilp_and_neural_generalization import generalization_plot
         ilp_pt = 'output/ilp'
         neural_path = 'output/neural'
+        neuro_symbolic_path = 'output/neuro-symbolic'
+
         out_path = 'output/model_comparison'
-        for s in [100, 1000, 10000]:
-            generalization_plot(neural_path, ilp_pt, out_path, tr_samples=s)
+        sample_size = [100, 1000, 10000]
+        for s in sample_size:
+            generalization_plot(neural_path, ilp_pt, neuro_symbolic_path, out_path, tr_samples=s)
 
     if command == 'rule_complexity':
         neural_path = 'output/neural'

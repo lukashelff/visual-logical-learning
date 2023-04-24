@@ -182,3 +182,23 @@ def get_ilp_neural_data(ilp_stats_path, neural_stats_path, neuro_symbolic_stats_
 
     data.reset_index(drop=True, inplace=True)
     return data, ilp_models, neural_models, neuro_symbolic_models
+
+
+def read_csv_stats(csv_path, train_length=7, noise=0, symb=True, vis='Michalski'):
+    with open(csv_path, 'r') as f:
+        data = pd.read_csv(f)
+        data = data.rename({'number of images': 'training samples'}, axis='columns')
+        data['Train length'] = train_length
+        data['noise'] = noise
+        data['Validation acc'] = data['Validation acc'].apply(lambda x: x * 100)
+        data['Methods'] = data['Methods'].apply(lambda x: x.replace('resnet18', 'ResNet18'))
+        data['Methods'] = data['Methods'].apply(lambda x: x.replace('simpleobjects', 'Block'))
+        data['Methods'] = data['Methods'].apply(lambda x: x.replace('trains', 'Michalski'))
+        if symb:
+            data['Methods'] = data['Methods'].apply(lambda x: x.replace('popper', 'Popper (Symb.)'))
+            data['Methods'] = data['Methods'].apply(lambda x: x.replace('aleph', 'Aleph (Symb.)'))
+        else:
+            data['Methods'] = data['Methods'].apply(lambda x: x.replace('popper', 'RCNN-Popper (NeSy)'))
+            data['Methods'] = data['Methods'].apply(lambda x: x.replace('aleph', 'RCNN-Aleph (NeSy)'))
+        data['visualization'] = vis
+    return data

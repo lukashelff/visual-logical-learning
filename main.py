@@ -3,6 +3,7 @@ import sys
 import torch
 
 
+
 def parse():
     # Instantiate the parser
     parser = argparse.ArgumentParser(description='The Michalski Train Problem')
@@ -81,13 +82,18 @@ def main():
         # min_car, max_car = 2, 4
         ds_size = 2000
         train_vis = 'Trains'
-        from models.evaluation import ilp_generalization_test, generalization_test
+        # from models.evaluation import generalization_test
+        # from ilp.evaluation import ilp_generalization_test
+        from models.neuro_symbolic.generalization import neuro_symbolic_generalization_test
         ilp_pt = 'output/ilp'
         neural_path = 'output/model_comparison'
+        neural_symbolic_path = 'output/neuro-symbolic'
         # get generalization results for neural networks
-        generalization_test(min_cars, max_cars, base_scene, raw_trains, train_vis, device, ds_path, ds_size=None)
+        # generalization_test(min_cars, max_cars, base_scene, raw_trains, train_vis, device, ds_path, ds_size=None)
         # get generalization results for ilp
-        ilp_generalization_test(ilp_pt, min_cars, max_cars)
+        # ilp_generalization_test(ilp_pt, min_cars, max_cars)
+        # get generalization results for neural symbolic AI
+        neuro_symbolic_generalization_test(neural_symbolic_path, device)
 
     if action == 'split_ds':
         from ilp.dataset_functions import setup_alpha_ilp_ds

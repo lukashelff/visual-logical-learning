@@ -27,6 +27,9 @@ def rule_complexity_plot(neural_path, ilp_pth, outpath, vis='Trains', im_count=1
     out_path = f'{outpath}/rule_complexity'
     materials_s = ["///", "//", '/', '\\', '\\\\']
     mt = {model: materials_s[n] for n, model in enumerate(models)}
+    colors_s = sns.color_palette()[:len(models)]
+    colors = {m: colors_s[n] for n, m in enumerate(models)}
+
     sns.set_theme(style="whitegrid")
     fig = plt.figure(figsize=(16, 2))
     gs = fig.add_gridspec(1, 3, wspace=.05, hspace=.15)
@@ -45,8 +48,9 @@ def rule_complexity_plot(neural_path, ilp_pth, outpath, vis='Trains', im_count=1
         for model in models:
             data_temp = data_t.loc[data['Methods'] == model]
             sns.barplot(x='Methods', y='Validation acc', hue='training samples', data=data_temp,
-                        palette="dark", alpha=.7, ax=ax, orient='v', hatch=mt[model], order=models
-                        )
+                        palette="dark", alpha=.7, ax=ax, orient='v', hatch=mt[model], order=models)
+            # sns.barplot(x='Methods', y='Validation acc', data=data_temp, color=colors[model],
+            #             palette="dark", alpha=.7, ax=ax, orient='v', order=models)
         for container in ax.containers:
             ax.bar_label(container, fmt='%.1f', label_type='edge', fontsize=labelsize, padding=3)
         ax.get_legend().remove()
@@ -61,21 +65,23 @@ def rule_complexity_plot(neural_path, ilp_pth, outpath, vis='Trains', im_count=1
     plt.rcParams.update({'hatch.color': 'black'})
 
     handels = [mpatches.Patch(facecolor='grey', hatch=mt[m]) for m in models]
+    color_markers = [mlines.Line2D([], [], color=colors[c], marker='d', linestyle='None', markersize=10) for c in
+                     models]
     leg = fig.legend(
         white +
         handels,
+        # color_markers,
         ['Models:'] + [m for m in models],
         loc='lower left',
         bbox_to_anchor=(0.091, -.2),
         frameon=True,
         handletextpad=0,
         fontsize=labelsize,
-        ncol=len(handels)+1, handleheight=1.3, handlelength=2.5
+        ncol=len(handels) + 1, handleheight=1.3, handlelength=2.5
     )
     for vpack in leg._legend_handle_box.get_children()[:1]:
         for hpack in vpack.get_children():
             hpack.get_children()[0].set_width(0)
-
 
     os.makedirs(out_path, exist_ok=True)
     plt.savefig(out_path + f'/rules_{im_count}_sample.png', bbox_inches='tight', dpi=400)

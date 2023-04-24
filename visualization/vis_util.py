@@ -30,7 +30,7 @@ def make_3_im_legend(fig, axes, category, category_name, models, colors, mt, leg
 
 
 # horizontal legend
-def make_1_im_legend(fig, ax, category, category_name, models, colors, mt, fontsize=20, legend_h_offset=0):
+def make_1_im_legend(fig, ax, category, category_name, models, colors, mt, fontsize=15, legend_h_offset=0, ncols=5):
     dif = max(0, len(models) - len(category))
     white = [mlines.Line2D([], [], color='white', marker='X', linestyle='None', markersize=0)]
     color_markers = [mlines.Line2D([], [], color=colors[c], marker='d', linestyle='None', markersize=15) for c in
@@ -38,7 +38,6 @@ def make_1_im_legend(fig, ax, category, category_name, models, colors, mt, fonts
     plt.rcParams.update({'hatch.color': 'black'})
     # fontsize -= 3
     handels = [mpatches.Patch(facecolor='grey', hatch=mt[m]) for m in models]
-    ncols = 5
     models = models.tolist()
     t_r1 = ['Models:'] + models[:ncols - 1]
     t_r2 = [''] + models[ncols - 1:]
@@ -53,10 +52,12 @@ def make_1_im_legend(fig, ax, category, category_name, models, colors, mt, fonts
     txt, sym = [], []
     for i in range(ncols):
         sym.append(s_r1[i])
-        sym.append(s_r2[i])
+        if t_r2 != ['']*ncols:
+            sym.append(s_r2[i])
         sym.append(s_r3[i])
         txt.append(t_r1[i])
-        txt.append(t_r2[i])
+        if t_r2 != ['']*ncols:
+            txt.append(t_r2[i])
         txt.append(t_r3[i])
     leg = fig.legend(
         sym, txt,
