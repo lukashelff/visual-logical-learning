@@ -28,7 +28,7 @@ def rule_complexity_plot(neural_path, ilp_pth, outpath, vis='Trains', im_count=1
     materials_s = ["///", "//", '/', '\\', '\\\\']
     mt = {model: materials_s[n] for n, model in enumerate(models)}
     sns.set_theme(style="whitegrid")
-    fig = plt.figure(figsize=(16, 2.5))
+    fig = plt.figure(figsize=(16, 2))
     gs = fig.add_gridspec(1, 3, wspace=.05, hspace=.15)
     axes = gs.subplots(sharex=True, sharey=True, )
     axes = axes if isinstance(axes, np.ndarray) else [axes]
@@ -50,12 +50,12 @@ def rule_complexity_plot(neural_path, ilp_pth, outpath, vis='Trains', im_count=1
         for container in ax.containers:
             ax.bar_label(container, fmt='%.1f', label_type='edge', fontsize=labelsize, padding=3)
         ax.get_legend().remove()
-        ax.set_ylim([50, 108])
+        ax.set_ylim([50, 111])
         ax.get_xaxis().set_visible(False)
         if c != 0:
             ax.set_ylabel('')
         else:
-            ax.set_ylabel('Accuracy', fontsize=fontsize)
+            ax.set_ylabel('Accuracy', fontsize=labelsize)
 
     white = [mlines.Line2D([], [], color='white', marker='X', linestyle='None', markersize=0)]
     plt.rcParams.update({'hatch.color': 'black'})
@@ -66,10 +66,11 @@ def rule_complexity_plot(neural_path, ilp_pth, outpath, vis='Trains', im_count=1
         handels,
         ['Models:'] + [m for m in models],
         loc='lower left',
-        bbox_to_anchor=(.12, -.08),
+        bbox_to_anchor=(0.091, -.2),
         frameon=True,
         handletextpad=0,
-        ncol=len(handels)+1, handleheight=1.2, handlelength=2.5
+        fontsize=labelsize,
+        ncol=len(handels)+1, handleheight=1.3, handlelength=2.5
     )
     for vpack in leg._legend_handle_box.get_children()[:1]:
         for hpack in vpack.get_children():

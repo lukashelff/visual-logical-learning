@@ -13,7 +13,7 @@ from visualization.vis_util import make_3_im_legend, make_1_im_legend
 
 
 def elementary_vs_realistic_plot(neural_path, ilp_pth, neuro_symbolic_pth, outpath, rule='theoryx', tr_samples=1000):
-    labelsize, fontsize = 15, 20
+    labelsize = 15
     ilp_stats_path = f'{ilp_pth}/stats'
     neuro_symbolic_stats_path = f'{neuro_symbolic_pth}/stats'
     neural_stats_path = neural_path + '/label_acc_over_epoch.csv'
@@ -35,19 +35,23 @@ def elementary_vs_realistic_plot(neural_path, ilp_pth, neuro_symbolic_pth, outpa
     # models = np.append(neural_models, ilp_models)
     colors_s = sns.color_palette()[:len(visualizations) + 1]
     colors = {vis: colors_s[n] for n, vis in enumerate(visualizations)}
+
+    # colors_s = sns.color_palette()[:len(models) + 1]
+    # colors = {m: colors_s[n] for n, m in enumerate(models)}
     rules = ['theoryx', 'numerical', 'complex']
 
     out_path = f'{outpath}/elementary_vs_realistic'
     materials_s = ["///", "//", '/', '\\', '\\\\', 'x', '+', 'o', 'O', '.', '*']
     mt = {model: materials_s[n] for n, model in enumerate(models)}
+    # mt = {vis: materials_s[n] for n, vis in enumerate(visualizations)}
     sns.set_theme(style="whitegrid")
-    fig = plt.figure(figsize=(16, 2.5))
+    fig = plt.figure(figsize=(16, 2))
     gs = fig.add_gridspec(1, 1, wspace=.05, hspace=.15)
     ax = gs.subplots(sharex=True, sharey=True, )
 
     sns.set_theme(style="whitegrid")
     ax.grid(axis='x')
-    # ax.set_title(rule.title(), fontsize=fontsize)
+    # ax.set_title(rule.title(), fontsize=20)
     ax.tick_params(bottom=False, left=False, labelsize=labelsize)
     for spine in ax.spines.values():
         spine.set_edgecolor('gray')
@@ -60,16 +64,16 @@ def elementary_vs_realistic_plot(neural_path, ilp_pth, neuro_symbolic_pth, outpa
     for container in ax.containers:
         ax.bar_label(container, fmt='%.1f', label_type='edge', fontsize=labelsize, padding=3)
     ax.get_legend().remove()
-    ax.set_ylim([50, 108])
+    ax.set_ylim([50, 111])
     ax.get_xaxis().set_visible(False)
     # if c % 2:
     #     # ax.get_yaxis().set_visible(False)
     #     ax.set_ylabel('')
     #     # ax.set_yticklabels([''] * 9)
     # else:
-    ax.set_ylabel('Accuracy', fontsize=fontsize)
+    ax.set_ylabel('Accuracy', fontsize=labelsize)
 
-    make_1_im_legend(fig, [ax], visualizations, 'Visualizations', models, colors, mt, fontsize, legend_h_offset=-0.1)
+    make_1_im_legend(fig, [ax], visualizations, 'Visualizations', models, colors, mt, labelsize, legend_h_offset=-0.18)
 
     os.makedirs(out_path, exist_ok=True)
     plt.savefig(out_path + f'/elementary_vs_realistic_{tr_samples}_samples_{rule}.png', bbox_inches='tight', dpi=400)
@@ -139,5 +143,6 @@ def elementary_vs_realistic_plot_multi_rule(neural_path, ilp_pth, neuro_symbolic
 
     os.makedirs(out_path, exist_ok=True)
     plt.savefig(out_path + f'/elementary_vs_realistic_{tr_samples}_samples.png', bbox_inches='tight', dpi=400)
+    print(f'elementary_vs_realistic_{tr_samples}_samples.png saved to {out_path}.')
 
     plt.close()

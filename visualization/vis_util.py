@@ -36,7 +36,7 @@ def make_1_im_legend(fig, ax, category, category_name, models, colors, mt, fonts
     color_markers = [mlines.Line2D([], [], color=colors[c], marker='d', linestyle='None', markersize=15) for c in
                      category] + white * (dif + 1)
     plt.rcParams.update({'hatch.color': 'black'})
-    fontsize -= 3
+    # fontsize -= 3
     handels = [mpatches.Patch(facecolor='grey', hatch=mt[m]) for m in models]
     ncols = 5
     models = models.tolist()
@@ -61,10 +61,10 @@ def make_1_im_legend(fig, ax, category, category_name, models, colors, mt, fonts
     leg = fig.legend(
         sym, txt,
         loc='lower center',
-        bbox_to_anchor=(.5, -.35 + legend_h_offset),
+        bbox_to_anchor=(.496, -.35 + legend_h_offset),
         frameon=True,
         handletextpad=0,
-        ncols=ncols, handleheight=1.2, handlelength=2.5, fontsize=fontsize,
+        ncols=ncols, handleheight=1.3, handlelength=2.5, fontsize=fontsize,
     )
 
     for vpack in leg._legend_handle_box.get_children()[:1]:
