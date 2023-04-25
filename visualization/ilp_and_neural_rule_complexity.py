@@ -11,12 +11,16 @@ from matplotlib import pyplot as plt
 from visualization.data_handler import get_ilp_neural_data
 
 
-def rule_complexity_plot(neural_path, ilp_pth, outpath, vis='Trains', im_count=1000):
+def rule_complexity_plot(outpath, vis='Trains', im_count=1000):
     labelsize, fontsize = 15, 20
-    ilp_stats_path = f'{ilp_pth}/stats'
-    neural_stats_path = neural_path + '/label_acc_over_epoch.csv'
-    data, ilp_models, neural_models, _ = get_ilp_neural_data(ilp_stats_path, neural_stats_path, None, vis)
-    models = neural_models + ilp_models
+    use_materials = False
+    ilp_stats_path = f'{outpath}/ilp/stats'
+    neuro_symbolic_stats_path = f'{outpath}/neuro-symbolic/stats'
+    neural_stats_path = f'{outpath}/neural/label_acc_over_epoch.csv'
+    fig_path = f'{outpath}/model_comparison/rule_complexity'
+    data, ilp_models, neural_models, neuro_symbolic_models = get_ilp_neural_data(ilp_stats_path, neural_stats_path,
+                                                                                 neuro_symbolic_stats_path, vis)
+    models = neural_models + neuro_symbolic_models + ilp_models
     data = data.loc[data['noise'] == 0].loc[data['training samples'] == im_count]
 
     scenes = data['scene'].unique()
@@ -24,8 +28,7 @@ def rule_complexity_plot(neural_path, ilp_pth, outpath, vis='Trains', im_count=1
     noise = data['noise'].unique()
     rules = ['theoryx', 'numerical', 'complex']
 
-    out_path = f'{outpath}/rule_complexity'
-    materials_s = ["///", "//", '/', '\\', '\\\\']
+    materials_s = ["///", "//", '/', '\\', '\\\\', 'x', '+', 'o', 'O', '.', '*']
     mt = {model: materials_s[n] for n, model in enumerate(models)}
     colors_s = sns.color_palette()[:len(models)]
     colors = {m: colors_s[n] for n, m in enumerate(models)}
@@ -47,13 +50,18 @@ def rule_complexity_plot(neural_path, ilp_pth, outpath, vis='Trains', im_count=1
         data_t = data.loc[data['rule'] == rule]
         for model in models:
             data_temp = data_t.loc[data['Methods'] == model]
-            sns.barplot(x='Methods', y='Validation acc', hue='training samples', data=data_temp,
-                        palette="dark", alpha=.7, ax=ax, orient='v', hatch=mt[model], order=models)
-            # sns.barplot(x='Methods', y='Validation acc', data=data_temp, color=colors[model],
-            #             palette="dark", alpha=.7, ax=ax, orient='v', order=models)
+            if data_temp.empty:
+                continue
+            if use_materials:
+                sns.barplot(x='Methods', y='Validation acc', hue='training samples', data=data_temp,
+                            palette="dark", alpha=.7, ax=ax, orient='v', hatch=mt[model], order=models)
+            else:
+                sns.barplot(x='Methods', y='Validation acc', data=data_temp, color=colors[model],
+                            palette="dark", alpha=.7, ax=ax, orient='v', order=models)
         for container in ax.containers:
             ax.bar_label(container, fmt='%.1f', label_type='edge', fontsize=labelsize, padding=3)
-        ax.get_legend().remove()
+        if use_materials:
+            ax.get_legend().remove()
         ax.set_ylim([50, 111])
         ax.get_xaxis().set_visible(False)
         if c != 0:
@@ -64,27 +72,29 @@ def rule_complexity_plot(neural_path, ilp_pth, outpath, vis='Trains', im_count=1
     white = [mlines.Line2D([], [], color='white', marker='X', linestyle='None', markersize=0)]
     plt.rcParams.update({'hatch.color': 'black'})
 
-    handels = [mpatches.Patch(facecolor='grey', hatch=mt[m]) for m in models]
+    patch_markers = [mpatches.Patch(facecolor='grey', hatch=mt[m]) for m in models]
     color_markers = [mlines.Line2D([], [], color=colors[c], marker='d', linestyle='None', markersize=10) for c in
                      models]
+    handels = color_markers if not use_materials else patch_markers
     leg = fig.legend(
         white +
         handels,
-        # color_markers,
         ['Models:'] + [m for m in models],
         loc='lower left',
-        bbox_to_anchor=(0.091, -.2),
+        bbox_to_anchor=(0.2, -.35),
         frameon=True,
         handletextpad=0,
         fontsize=labelsize,
-        ncol=len(handels) + 1, handleheight=1.3, handlelength=2.5
+        ncol=(len(handels) + 1)//2, handleheight=1.3, handlelength=2.5
     )
     for vpack in leg._legend_handle_box.get_children()[:1]:
-        for hpack in vpack.get_children():
-            hpack.get_children()[0].set_width(0)
+        for idx, hpack in enumerate(vpack.get_children()):
+            print(f'{idx} {hpack}')
+            if idx == 0:
+                hpack.get_children()[0].set_width(0)
 
-    os.makedirs(out_path, exist_ok=True)
-    plt.savefig(out_path + f'/rules_{im_count}_sample.png', bbox_inches='tight', dpi=400)
+    os.makedirs(fig_path, exist_ok=True)
+    plt.savefig(fig_path + f'/rules_{im_count}_sample.png', bbox_inches='tight', dpi=400)
 
     plt.close()
 

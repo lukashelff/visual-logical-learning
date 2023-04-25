@@ -1,7 +1,9 @@
-from itertools import chain
+import math
+from itertools import chain, product
 
 import matplotlib.lines as mlines
 import matplotlib.patches as mpatches
+import numpy as np
 from matplotlib import pyplot as plt
 
 
@@ -30,39 +32,63 @@ def make_3_im_legend(fig, axes, category, category_name, models, colors, mt, leg
 
 
 # horizontal legend
-def make_1_im_legend(fig, ax, category, category_name, models, colors, mt, fontsize=15, legend_h_offset=0, ncols=5):
-    dif = max(0, len(models) - len(category))
+# def make_1_im_legend(fig, ax, category, category_name, models, colors, mt, fontsize=15, legend_h_offset=0, ncols=5):
+
+def make_1_im_legend(fig, colors_category, colors, colors_category_name, material_category, materials, material_category_name='Models',
+                     fontsize=15, legend_h_offset=0, legend_v_offset=0, ncols=5):
+    dif = max(0, len(material_category) - len(colors_category))
     white = [mlines.Line2D([], [], color='white', marker='X', linestyle='None', markersize=0)]
-    color_markers = [mlines.Line2D([], [], color=colors[c], marker='d', linestyle='None', markersize=15) for c in
-                     category] + white * (dif + 1)
+    color_markers = [mlines.Line2D([], [], color=colors[c], marker='d', linestyle='None', markersize=10) for c in
+                     colors_category]
     plt.rcParams.update({'hatch.color': 'black'})
-    # fontsize -= 3
-    handels = [mpatches.Patch(facecolor='grey', hatch=mt[m]) for m in models]
-    models = models.tolist()
-    t_r1 = ['Models:'] + models[:ncols - 1]
-    t_r2 = [''] + models[ncols - 1:]
-    t_r2 += [''] * (ncols - len(t_r2))
-    t_r3 = [f'{category_name}:'] + category[:ncols - 1]
-    t_r3 += [''] * (ncols - len(t_r3))
-    s_r1 = white + handels[:ncols - 1]
-    s_r2 = white + handels[ncols - 1:]
-    s_r2 += white * (ncols - len(s_r2))
-    s_r3 = white + color_markers[:ncols - 1]
-    s_r3 += white * (ncols - len(s_r3))
-    txt, sym = [], []
-    for i in range(ncols):
-        sym.append(s_r1[i])
-        if t_r2 != ['']*ncols:
-            sym.append(s_r2[i])
-        sym.append(s_r3[i])
-        txt.append(t_r1[i])
-        if t_r2 != ['']*ncols:
-            txt.append(t_r2[i])
-        txt.append(t_r3[i])
+    mt_markers = [mpatches.Patch(facecolor='grey', hatch=materials[m]) for m in material_category]
+
+    color_rows = math.ceil((len(colors_category) + 1) / (ncols - 1))
+    mt_rows = math.ceil((len(material_category) + 1) / (ncols - 1))
+    nrows = color_rows + mt_rows
+
+    colors_category += [''] * (color_rows * (ncols - 1) - len(colors_category))
+    material_category += [''] * (mt_rows * (ncols - 1) - len(material_category))
+    color_markers += white * (color_rows * (ncols - 1) - len(color_markers))
+    mt_markers += white * (mt_rows * (ncols - 1) - len(mt_markers))
+
+    # t_r1 = [f'{mt_category_name}:'] + mt_category[:ncols - 1]
+    # t_r2 = [''] + mt_category[ncols - 1:]
+    # t_r2 += [''] * (ncols - len(t_r2))
+    # t_r3 = [f'{colors_category_name}:'] + colors_category[:ncols - 1]
+    # t_r3 += [''] * (ncols - len(t_r3))
+    # s_r1 = white + patches[:ncols - 1]
+    # s_r2 = white + patches[ncols - 1:]
+    # s_r2 += white * (ncols - len(s_r2))
+    # s_r3 = white + color_markers[:ncols - 1]
+    # s_r3 += white * (ncols - len(s_r3))
+    # txt, handles = [], []
+    # nrows = math.ceil((len(colors_category)+1) // ncols) + math.ceil((len(mt_category)+1) // ncols)
+    # for i in range(ncols):
+    #     handles.append(s_r1[i])
+    #     if t_r2 != [''] * ncols:
+    #         handles.append(s_r2[i])
+    #     handles.append(s_r3[i])
+    #     txt.append(t_r1[i])
+    #     if t_r2 != [''] * ncols:
+    #         txt.append(t_r2[i])
+    #     txt.append(t_r3[i])
+
+    first_col_txt = [f'{colors_category_name}:'] + [''] * (color_rows - 1) + [f'{material_category_name}:'] + [''] * (
+                mt_rows - 1)
+    first_col_handles = (color_rows + mt_rows) * white
+
+    txt = np.array(colors_category + material_category).reshape(nrows, (ncols - 1))
+    txt = np.concatenate((np.array(first_col_txt).reshape(nrows, 1), txt), axis=1)
+    handles = np.array(color_markers + mt_markers).reshape(nrows, (ncols - 1))
+    handles = np.concatenate((np.array(first_col_handles).reshape(nrows, 1), handles), axis=1)
+    handles = handles.T.flatten().tolist()
+    txt = txt.T.flatten().tolist()
+
     leg = fig.legend(
-        sym, txt,
+        handles, txt,
         loc='lower center',
-        bbox_to_anchor=(.496, -.35 + legend_h_offset),
+        bbox_to_anchor=(.496 + legend_v_offset, -.35 + legend_h_offset),
         frameon=True,
         handletextpad=0,
         ncols=ncols, handleheight=1.3, handlelength=2.5, fontsize=fontsize,
