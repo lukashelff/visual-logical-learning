@@ -84,10 +84,10 @@ def plot(args):
 
     if command == 'data_efficiency':
         neural_path = 'output/neural'
-        out_path = 'output/model_comparison'
+        out_path = 'output'
         ilp_pth = 'output/ilp'
         from visualization.ilp_and_neural_data_efficiency import data_efficiency_plot
-        data_efficiency_plot(neural_path, ilp_pth, out_path)
+        data_efficiency_plot(out_path)
 
     ##############################
     # old code

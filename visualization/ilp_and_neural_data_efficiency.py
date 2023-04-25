@@ -12,11 +12,17 @@ from visualization.data_handler import get_ilp_neural_data
 from visualization.vis_util import make_3_im_legend, make_1_im_legend
 
 
-def data_efficiency_plot(neural_path, ilp_pth, outpath, vis='Trains'):
+def data_efficiency_plot(outpath, vis='Trains'):
     labelsize, fontsize = 15, 20
-    ilp_stats_path = f'{ilp_pth}/stats'
-    neural_stats_path = neural_path + '/label_acc_over_epoch.csv'
-    data, ilp_models, neural_models, neuro_symbolic_models = get_ilp_neural_data(ilp_stats_path, neural_stats_path, None, vis)
+    # ilp_stats_path = f'{ilp_pth}/stats'
+    # neural_stats_path = neural_path + '/label_acc_over_epoch.csv'
+    ilp_stats_path = f'{outpath}/ilp/stats'
+    neural_stats_path = f'{outpath}/neural/label_acc_over_epoch.csv'
+    neuro_sym_path = f'{outpath}/neuro-symbolic/stats'
+    fig_path = f'{outpath}/model_comparison/data_efficiency'
+
+    data, ilp_models, neural_models, neuro_symbolic_models = get_ilp_neural_data(ilp_stats_path, neural_stats_path,
+                                                                                 neuro_sym_path, vis)
     models = np.append(neural_models, ilp_models)
     data = data.loc[data['noise'] == 0]
 
@@ -29,7 +35,6 @@ def data_efficiency_plot(neural_path, ilp_pth, outpath, vis='Trains'):
     colors = {count: colors_s[n] for n, count in enumerate(im_count)}
     rules = ['theoryx', 'numerical', 'complex']
 
-    out_path = f'{outpath}/data_efficiency'
     materials_s = ["///", "//", '/', '\\', '\\\\']
     mt = {model: materials_s[n] for n, model in enumerate(models)}
     sns.set_theme(style="whitegrid")
@@ -68,7 +73,7 @@ def data_efficiency_plot(neural_path, ilp_pth, outpath, vis='Trains'):
 
     make_1_im_legend(fig, axes, im_count, 'Training Samples', models, colors, mt, legend_h_offset=0, ncols=6)
 
-    os.makedirs(out_path, exist_ok=True)
-    plt.savefig(out_path + f'/data_efficiency.png', bbox_inches='tight', dpi=400)
+    os.makedirs(fig_path, exist_ok=True)
+    plt.savefig(fig_path + f'/data_efficiency.png', bbox_inches='tight', dpi=400)
 
     plt.close()
