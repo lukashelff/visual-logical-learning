@@ -25,7 +25,7 @@ def data_efficiency_plot(outpath, vis='Trains'):
 
     data, ilp_models, neural_models, neuro_symbolic_models = get_ilp_neural_data(ilp_stats_path, neural_stats_path,
                                                                                  neuro_sym_path, vis)
-    models = neural_models + ilp_models + neuro_symbolic_models
+    models = neural_models + neuro_symbolic_models + ilp_models
     data = data.loc[data['noise'] == 0].loc[data['visualization'] == 'Michalski']
 
     scenes = data['scene'].unique()

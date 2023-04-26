@@ -43,8 +43,8 @@ def make_1_im_legend(fig, colors_category, colors, colors_category_name, materia
     plt.rcParams.update({'hatch.color': 'black'})
     mt_markers = [mpatches.Patch(facecolor='grey', hatch=materials[m]) for m in material_category]
 
-    color_rows = math.ceil((len(colors_category) + 1) / (ncols - 1))
-    mt_rows = math.ceil((len(material_category) + 1) / (ncols - 1))
+    color_rows = math.ceil((len(colors_category)) / (ncols - 1))
+    mt_rows = math.ceil((len(material_category)) / (ncols - 1))
     nrows = color_rows + mt_rows
 
     colors_category += [''] * (color_rows * (ncols - 1) - len(colors_category))
@@ -74,7 +74,7 @@ def make_1_im_legend(fig, colors_category, colors, colors_category_name, materia
     #         txt.append(t_r2[i])
     #     txt.append(t_r3[i])
 
-    first_col_txt = [f'{colors_category_name}:'] + [''] * (color_rows - 1) + [f'{material_category_name}:'] + [''] * (
+    first_col_txt = [f'{colors_category_name.title()}:'] + [''] * (color_rows - 1) + [f'{material_category_name.title()}:'] + [''] * (
                 mt_rows - 1)
     first_col_handles = (color_rows + mt_rows) * white
 

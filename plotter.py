@@ -24,8 +24,8 @@ def plot(args):
         # for s in [10000]:
         for s in [100, 1000, 10000]:
             from visualization.ilp_and_neural_label_noise import label_noise_plot, label_noise_degradation_plot
-            label_noise_plot(neural_path, ilp_pt, out_path, training_samples=s)
-            label_noise_degradation_plot(neural_path, ilp_pt, out_path, training_samples=s)
+            label_noise_plot('output', training_samples=s)
+            # label_noise_degradation_plot(neural_path, ilp_pt, out_path, training_samples=s)
 
     if command == 'image_noise':
         ilp_pt = 'output/ilp'
