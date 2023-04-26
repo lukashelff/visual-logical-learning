@@ -62,18 +62,6 @@ def elementary_vs_realistic_plot(outpath, rule='theoryx', tr_samples=1000):
     for spine in ax.spines.values():
         spine.set_edgecolor('gray')
     data_t = data.loc[data['rule'] == rule]
-    # if use_materials:
-    #     for model in models:
-    #         data_temp = data_t.loc[data['Methods'] == model]
-    #         sns.barplot(x='Methods', y='Validation acc', hue='visualization', hue_order=visualizations,
-    #                     data=data_temp, palette="dark", alpha=.7, ax=ax, orient='v', hatch=mt[model], order=models
-    #                     )
-    # if not use_materials:
-    #     for vis in visualizations:
-    #         data_temp = data_t.loc[data['visualization'] == vis]
-    #         sns.barplot(x='visualization', y='Validation acc', hue='Methods', hue_order=models,
-    #                     data=data_temp, palette="dark", alpha=.7, ax=ax, orient='v', hatch=mt[vis], order=visualizations
-    #                     )
     for c, m in product(colors_category, material_category):
         data_temp = data_t.loc[data[colors_category_name] == c].loc[data[material_category_name] == m]
         try:

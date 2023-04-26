@@ -27,9 +27,9 @@ def train(args):
         rules = ['theoryx', 'numerical', 'complex']
         models = [model_name] if model_name == 'popper' or model_name == 'aleph' else ['popper', 'aleph']
         train_count = [100, 1000, 10000]
-        train_count = [1000]
+        # train_count = [1000]
         noise = [0, 0.1, 0.3]
-        noise = [0]
+        # noise = [0]
         trainer.cross_val(raw_trains, folds=5, rules=rules, models=models, train_count=train_count, noise=noise,
                           log=False, complete_run=True)
 

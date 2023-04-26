@@ -119,8 +119,8 @@ def label_noise_degradation_plot(outpath, training_samples=1000, vis='Trains'):
             data['cv iteration'] == cv]['Validation acc'].index
 
         if len(idx) > 0 and len(n_idx) > 0:
-            n_acc = data.loc[n_idx, 'Validation acc']
-            acc = data.loc[idx, 'Validation acc']
+            n_acc = data.loc[n_idx, 'Validation acc'] - 50
+            acc = data.loc[idx, 'Validation acc'] - 50
             # print(f'acc: {acc.values}, noise acc: {n_acc.values}, set: {rule}, {model}, {n}, {cv}')
             data.loc[n_idx, 'Noise Degradation'] = (acc.values - n_acc.values) / acc.values * 100
         else:
@@ -187,14 +187,14 @@ def label_noise_degradation_plot(outpath, training_samples=1000, vis='Trains'):
         for container in ax.containers:
             ax.bar_label(container, fmt='%1.f', label_type='edge', fontsize=labelsize, padding=3)
         ax.get_legend().remove()
-        ax.set_ylim([0, 60])
+        ax.set_ylim([0, 111])
         ax.get_xaxis().set_visible(False)
         if col != 0:
             # ax.get_yaxis().set_visible(False)
             ax.set_ylabel('')
             # ax.set_yticklabels([''] * 9)
         else:
-            ax.set_ylabel('Loss in Accuracy', fontsize=labelsize)
+            ax.set_ylabel('Degradation (%)', fontsize=labelsize)
 
     make_1_im_legend(fig, colors_category, colors, colors_category_name, material_category, mt, material_category_name,
                      labelsize, ncols=6, legend_h_offset=-0, legend_v_offset=0.)
