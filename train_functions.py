@@ -35,7 +35,7 @@ def train(args):
 
     if command == 'ns_crossval':
         from models.neuro_symbolic.ns_pipe import inference
-        rules = ['theoryx', 'numerical', 'complex'][2:]
+        rules = ['theoryx', 'numerical', 'complex']
         sample_sizes = [100, 1000, 10000]
         inference(train_vis, device, ds_path, ds_size, rules, min_cars, max_cars, sample_sizes=sample_sizes)
 
