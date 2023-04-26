@@ -1,5 +1,6 @@
 import glob
 import os
+import warnings
 from itertools import product
 
 import matplotlib.lines as mlines
@@ -36,7 +37,7 @@ def data_efficiency_plot(outpath, vis='Trains'):
 
     colors_s = sns.color_palette()
     colors_category = im_count if use_materials else models
-    colors_category_name = 'Training Samples' if use_materials else 'Models'
+    colors_category_name = 'training samples' if use_materials else 'Models'
     colors = {vis: colors_s[n] for n, vis in enumerate(colors_category)}
 
     # colors_s = sns.color_palette()[:len(im_count)]
@@ -48,7 +49,7 @@ def data_efficiency_plot(outpath, vis='Trains'):
                                                                                                         '/', '\\', 'o',
                                                                                                         'O', '.', '*']
     material_category = models if use_materials else im_count
-    material_category_name = 'Models' if use_materials else 'Training Samples'
+    material_category_name = 'Models' if use_materials else 'training samples'
     mt = {model: materials_s[n] for n, model in enumerate(material_category)}
 
     # mt = {model: materials_s[n] for n, model in enumerate(models)}
@@ -59,8 +60,8 @@ def data_efficiency_plot(outpath, vis='Trains'):
     axes = axes if isinstance(axes, np.ndarray) else [axes]
 
     sns.set_theme(style="whitegrid")
-    for c, rule in enumerate(rules):
-        ax = axes[c]
+    for col, rule in enumerate(rules):
+        ax = axes[col]
         ax.grid(axis='x')
         ax.set_title(rule.title(), fontsize=fontsize)
         ax.tick_params(bottom=False, left=False, labelsize=labelsize)
@@ -69,28 +70,15 @@ def data_efficiency_plot(outpath, vis='Trains'):
         data_t = data.loc[data['rule'] == rule]
         if data_t.empty:
             continue
-        if use_materials:
-            for model in models:
-                data_temp = data_t.loc[data['Methods'] == model]
-                try:
-                    sns.barplot(x='Methods', y='Validation acc', hue='training samples', hue_order=im_count,
-                                data=data_temp,
-                                palette="dark", alpha=.7, ax=ax, orient='v', hatch=mt[model], order=models
-                                )
-                except:
-                    continue
-        else:
-            for count, model in product(im_count, models):
-                data_temp = data_t.loc[data['training samples'] == count].loc[data['Methods'] == model]
-                # for count in im_count:
-                #     data_temp = data_t.loc[data['training samples'] == count]
-                try:
-                    sns.barplot(x='training samples', y='Validation acc', hue='Methods', hue_order=models,
-                                order=im_count, color=colors[model], data=data_temp, palette="dark", alpha=.7, ax=ax,
-                                orient='v', hatch=mt[count]
-                                )
-                except:
-                    continue
+        for c, m in product(colors_category, material_category):
+            data_temp = data_t.loc[data[colors_category_name] == c].loc[data[material_category_name] == m]
+            try:
+                sns.barplot(x=material_category_name, order=material_category, y='Validation acc',
+                            hue=colors_category_name,
+                            hue_order=colors_category, data=data_temp, palette="dark", alpha=.7, ax=ax, orient='v',
+                            hatch=mt[m])
+            except:
+                warnings.warn(f'No data for {c}, {m}, {rule}')
 
         for container in ax.containers:
             ax.bar_label(container, fmt='%1.f', label_type='edge', fontsize=labelsize, padding=3)
@@ -100,7 +88,7 @@ def data_efficiency_plot(outpath, vis='Trains'):
             pass
         ax.set_ylim([50, 111])
         ax.get_xaxis().set_visible(False)
-        if c != 0:
+        if col != 0:
             # ax.get_yaxis().set_visible(False)
             ax.set_ylabel('')
             # ax.set_yticklabels([''] * 9)

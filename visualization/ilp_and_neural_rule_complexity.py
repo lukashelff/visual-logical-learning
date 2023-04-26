@@ -40,8 +40,8 @@ def rule_complexity_plot(outpath, vis='Trains', im_count=1000):
     axes = axes if isinstance(axes, np.ndarray) else [axes]
 
     sns.set_theme(style="whitegrid")
-    for c, rule in enumerate(rules):
-        ax = axes[c]
+    for col, rule in enumerate(rules):
+        ax = axes[col]
         ax.grid(axis='x')
         ax.set_title(rule.title(), fontsize=fontsize)
         ax.tick_params(bottom=False, left=False, labelsize=labelsize)
@@ -64,7 +64,7 @@ def rule_complexity_plot(outpath, vis='Trains', im_count=1000):
             ax.get_legend().remove()
         ax.set_ylim([50, 111])
         ax.get_xaxis().set_visible(False)
-        if c != 0:
+        if col != 0:
             ax.set_ylabel('')
         else:
             ax.set_ylabel('Accuracy', fontsize=labelsize)
@@ -85,7 +85,7 @@ def rule_complexity_plot(outpath, vis='Trains', im_count=1000):
         frameon=True,
         handletextpad=0,
         fontsize=labelsize,
-        ncol=(len(handels) + 1)//2, handleheight=1.3, handlelength=2.5
+        ncol=(len(handels) + 1) // 2, handleheight=1.3, handlelength=2.5
     )
     for vpack in leg._legend_handle_box.get_children()[:1]:
         for idx, hpack in enumerate(vpack.get_children()):

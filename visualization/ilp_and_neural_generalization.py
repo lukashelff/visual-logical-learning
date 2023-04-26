@@ -1,5 +1,7 @@
 import glob
 import os
+import warnings
+from itertools import product
 
 import matplotlib.lines as mlines
 import matplotlib.patches as mpatches
@@ -24,9 +26,8 @@ def generalization_plot(outpath, vis='Trains', min_cars=7, max_cars=7, tr_sample
                                   train_length='7', noise=0, symb=True)
     data_gen_cnn = read_csv_stats(fig_path + f'/cnn_generalization_{min_cars}_{max_cars}.csv',
                                   train_length='7', noise=0, symb=False)
-    data_gen_neuro_symbolic = read_csv_stats(
-        fig_path + f'/neuro_symbolic_generalization_{min_cars}_{max_cars}.csv',
-        train_length='7', noise=0, symb=False)
+    data_gen_neuro_symbolic = read_csv_stats(fig_path + f'/neuro_symbolic_generalization_{min_cars}_{max_cars}.csv',
+                                             train_length='7', noise=0, symb=False)
 
     # neural_stats_path = neural_path + '/label_acc_over_epoch.csv'
     # ilp_stats_path = f'{ilp_pth}/stats'
@@ -50,7 +51,7 @@ def generalization_plot(outpath, vis='Trains', min_cars=7, max_cars=7, tr_sample
 
     colors_s = sns.color_palette()
     colors_category = train_lengths if use_materials else models
-    colors_category_name = 'Train Length' if use_materials else 'Models'
+    colors_category_name = 'Train length' if use_materials else 'Models'
     colors = {vis: colors_s[n] for n, vis in enumerate(colors_category)}
 
     rules = ['theoryx', 'numerical', 'complex']
@@ -60,7 +61,7 @@ def generalization_plot(outpath, vis='Trains', min_cars=7, max_cars=7, tr_sample
                                                                                                         '/', '\\', 'o',
                                                                                                         'O', '.', '*']
     material_category = models if use_materials else train_lengths
-    material_category_name = 'Models' if use_materials else 'Train Length'
+    material_category_name = 'Models' if use_materials else 'Train length'
     mt = {model: materials_s[n] for n, model in enumerate(material_category)}
 
     sns.set_theme(style="whitegrid")
@@ -69,39 +70,30 @@ def generalization_plot(outpath, vis='Trains', min_cars=7, max_cars=7, tr_sample
     axes = gs.subplots(sharex=True, sharey=True, )
     axes = axes if isinstance(axes, np.ndarray) else [axes]
 
-    for c, rule in enumerate(rules):
-        ax = axes[c]
+    for col, rule in enumerate(rules):
+        ax = axes[col]
         ax.grid(axis='x')
         ax.set_title(rule.title(), fontsize=fontsize)
         ax.tick_params(bottom=False, left=False, labelsize=labelsize)
         for spine in ax.spines.values():
             spine.set_edgecolor('gray')
         data_t = data.loc[data['rule'] == rule]
-        if use_materials:
-            for model in models:
-                data_temp = data_t.loc[data['Methods'] == model]
-                try:
-                    sns.barplot(x='Methods', y='Validation acc', hue='Train length', data=data_temp, hue_order=train_lengths,
-                                palette="dark", alpha=.7, ax=ax, orient='v', hatch=mt[model], order=models
-                                )
-                except:
-                    pass
-        else:
-            for ds in train_lengths:
-                data_temp = data_t.loc[data['Train length'] == ds]
-                try:
-                    sns.barplot(x='Train length', y='Validation acc', hue='Methods', data=data_temp, hue_order=models,
-                                palette="dark", alpha=.7, ax=ax, orient='v', hatch=mt[ds], order=train_lengths
-                                )
-                except:
-                    pass
+        for c, m in product(colors_category, material_category):
+            data_temp = data_t.loc[data[colors_category_name] == c].loc[data[material_category_name] == m]
+            try:
+                sns.barplot(x=material_category_name, order=material_category, y='Validation acc',
+                            hue=colors_category_name,
+                            hue_order=colors_category, data=data_temp, palette="dark", alpha=.7, ax=ax, orient='v',
+                            hatch=mt[m])
+            except:
+                warnings.warn(f'No data for {c}, {m}, {rule}')
 
         for container in ax.containers:
             ax.bar_label(container, fmt='%1.f', label_type='edge', fontsize=labelsize, padding=3)
         ax.get_legend().remove()
         ax.set_ylim([50, 111])
         ax.get_xaxis().set_visible(False)
-        if c != 0:
+        if col != 0:
             ax.set_ylabel('')
         else:
             ax.set_ylabel('Accuracy', fontsize=labelsize)

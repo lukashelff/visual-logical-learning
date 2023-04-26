@@ -179,7 +179,7 @@ def get_ilp_neural_data(ilp_stats_path, neural_stats_path, neuro_symbolic_stats_
     # replace 'trains' with 'michalski' in visualization column of data
     data['visualization'] = data['visualization'].apply(lambda x: x.replace('SimpleObjects', 'Block'))
     data['visualization'] = data['visualization'].apply(lambda x: x.replace('Trains', 'Michalski'))
-
+    data.rename(columns={'Methods': 'Models'}, inplace=True)
     data.reset_index(drop=True, inplace=True)
     return data, ilp_models, neural_models, neuro_symbolic_models
 
@@ -201,4 +201,6 @@ def read_csv_stats(csv_path, train_length=7, noise=0, symb=True, vis='Michalski'
             data['Methods'] = data['Methods'].apply(lambda x: x.replace('popper', 'RCNN-Popper (NeSy)'))
             data['Methods'] = data['Methods'].apply(lambda x: x.replace('aleph', 'RCNN-Aleph (NeSy)'))
         data['visualization'] = vis
+        data.rename(columns={'Methods': 'Models'}, inplace=True)
+
     return data
