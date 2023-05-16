@@ -154,7 +154,7 @@ def train(args):
         lr = 0.001
         gamma = 0.1
         model_name = ['rcnn', 'multi_head_rcnn', 'multi_label_rcnn'][2]
-        samples = 10
+        samples = 100
         v2 = 'v2'
         y_val = f'mask{v2}'
         trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
