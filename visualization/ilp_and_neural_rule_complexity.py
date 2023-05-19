@@ -13,22 +13,23 @@ from visualization.data_handler import get_ilp_neural_data
 
 def rule_complexity_plot(outpath, vis='Trains', im_count=1000):
     labelsize, fontsize = 15, 20
-    use_materials = False
+    use_materials = True
     ilp_stats_path = f'{outpath}/ilp/stats'
     neuro_symbolic_stats_path = f'{outpath}/neuro-symbolic/stats'
+    alpha_ilp = f'{outpath}/neuro-symbolic/alphailp/stats'
     neural_stats_path = f'{outpath}/neural/label_acc_over_epoch.csv'
     fig_path = f'{outpath}/model_comparison/rule_complexity'
     data, ilp_models, neural_models, neuro_symbolic_models = get_ilp_neural_data(ilp_stats_path, neural_stats_path,
-                                                                                 neuro_symbolic_stats_path, vis)
+                                                                                 neuro_symbolic_stats_path, alpha_ilp, vis)
     models = neural_models + neuro_symbolic_models + ilp_models
-    data = data.loc[data['noise'] == 0].loc[data['training samples'] == im_count]
+    data = data.loc[data['image noise'] == 0].loc[data['label noise'] == 0].loc[data['training samples'] == im_count]
 
     scenes = data['scene'].unique()
     rules = data['rule'].unique()
-    noise = data['noise'].unique()
     rules = ['theoryx', 'numerical', 'complex']
 
-    materials_s = ["///", "//", '/', '\\', '\\\\', 'x', '+', 'o', 'O', '.', '*']
+    materials_s = ["///", "//", '/', '\\', '\\\\', 'x', '.', 'o', '+', 'O', '*'] if use_materials else \
+        ["//", '\\\\', 'x', '+', "///", '/', '\\', 'o', 'O', '.', '*']
     mt = {model: materials_s[n] for n, model in enumerate(models)}
     colors_s = sns.color_palette()[:len(models)]
     colors = {m: colors_s[n] for n, m in enumerate(models)}
@@ -49,14 +50,14 @@ def rule_complexity_plot(outpath, vis='Trains', im_count=1000):
             spine.set_edgecolor('gray')
         data_t = data.loc[data['rule'] == rule]
         for model in models:
-            data_temp = data_t.loc[data['Methods'] == model]
+            data_temp = data_t.loc[data['Models'] == model]
             if data_temp.empty:
                 continue
             if use_materials:
-                sns.barplot(x='Methods', y='Validation acc', hue='training samples', data=data_temp,
+                sns.barplot(x='Models', y='Validation acc', hue='training samples', data=data_temp,
                             palette="dark", alpha=.7, ax=ax, orient='v', hatch=mt[model], order=models)
             else:
-                sns.barplot(x='Methods', y='Validation acc', data=data_temp, color=colors[model],
+                sns.barplot(x='Models', y='Validation acc', data=data_temp, color=colors[model],
                             palette="dark", alpha=.7, ax=ax, orient='v', order=models)
         for container in ax.containers:
             ax.bar_label(container, fmt='%.1f', label_type='edge', fontsize=labelsize, padding=3)

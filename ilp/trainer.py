@@ -75,7 +75,7 @@ class Ilp_trainer():
                     # out = []
                     # for c, input in enumerate(inputs):
                     #     out.append(self.aleph_train(input, print_stats=True))
-                    worker = 2 if num_tsamples > 1000 else 5
+                    worker = 1 if num_tsamples > 1000 else 5
                     with mp.Pool(worker) as p:
                         inputs = [(i, noise * num_tsamples, log) for i_c, i in enumerate(inputs)]
                         out = p.starmap(self.aleph_train, inputs)

@@ -16,39 +16,42 @@ from visualization.vis_util import make_3_im_legend, make_1_im_legend
 
 def elementary_vs_realistic_plot(outpath, rule='theoryx', tr_samples=1000):
     labelsize = 15
-    use_materials = False
+    use_materials = True
     ilp_stats_path = f'{outpath}/ilp/stats'
     neuro_symbolic_stats_path = f'{outpath}/neuro-symbolic/stats'
+    alpha_ilp = f'{outpath}/neuro-symbolic/alphailp/stats'
     neural_stats_path = f'{outpath}/neural/label_acc_over_epoch.csv'
     out_dir = f'{outpath}/model_comparison/elementary_vs_realistic'
     data, ilp_models, neural_models, neuro_symbolic_models = get_ilp_neural_data(ilp_stats_path, neural_stats_path,
-                                                                                 neuro_symbolic_stats_path, 'all')
+                                                                                 neuro_symbolic_stats_path, alpha_ilp,
+                                                                                 'all')
     models = neural_models + neuro_symbolic_models + ilp_models
-    data = data.loc[data['training samples'] == tr_samples].loc[data['noise'] == 0].loc[data['rule'] == rule]
+    data = \
+        data.loc[data['training samples'] == tr_samples].loc[data['label noise'] == 0].loc[
+            data['image noise'] == 0].loc[
+            data['rule'] == rule]
 
     # duplicate data for symbolic as both visualizations are the same
-    data_symbolic = data.loc[data['Methods'].isin(ilp_models)].copy()
+    data_symbolic = data.loc[data['Models'].isin(ilp_models)].copy()
     data_symbolic['visualization'] = 'Block'
     data = pd.concat([data, data_symbolic], ignore_index=True)
 
     scenes = data['scene'].unique()
     im_count = sorted(data['training samples'].unique())
     rules = data['rule'].unique()
-    noise = data['noise'].unique()
+
     visualizations = list(data['visualization'].unique())
     # models = np.append(neural_models, ilp_models)
     colors_s = sns.color_palette()
     colors_category = visualizations if use_materials else models
-    colors_category_name = 'Visualization' if use_materials else 'Models'
+    colors_category_name = 'visualization' if use_materials else 'Models'
     colors = {vis: colors_s[n] for n, vis in enumerate(colors_category)}
     rules = ['theoryx', 'numerical', 'complex']
 
-    materials_s = ["///", "//", '/', '\\', '\\\\', 'x', '+', 'o', 'O', '.', '*'] if use_materials else ["//", '\\\\', 'x',
-                                                                                                        '+', "///", '/',
-                                                                                                        '\\', 'o',
-                                                                                                        'O', '.', '*']
+    materials_s = ["///", "//", '/', '\\', '\\\\', 'x', '.', 'o', '+', 'O', '*'] if use_materials else \
+        ["//", '\\\\', 'x', '+', "///", '/', '\\', 'o', 'O', '.', '*']
     material_category = models if use_materials else visualizations
-    material_category_name = 'Models' if use_materials else 'Visualization'
+    material_category_name = 'Models' if use_materials else 'visualization'
     mt = {model: materials_s[n] for n, model in enumerate(material_category)}
     sns.set_theme(style="whitegrid")
     fig = plt.figure(figsize=(16, 2))

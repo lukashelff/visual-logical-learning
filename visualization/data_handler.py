@@ -109,7 +109,7 @@ def get_cv_data(out_path, y_val, models=['EfficientNet', 'resnet18', 'VisionTran
     data_ev.to_csv(out_path + '/mean_variance_comparison.csv')
 
 
-def get_ilp_neural_data(ilp_stats_path, neural_stats_path, neuro_symbolic_stats_path, vis='Train'):
+def get_ilp_neural_data(ilp_stats_path, neural_stats_path, neuro_symbolic_stats_path, alpha_ilp_path, vis='Train'):
     ilp_data = pd.DataFrame(
         columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'cv iteration', 'epoch',
                  'Validation acc', 'noise'])
@@ -122,6 +122,13 @@ def get_ilp_neural_data(ilp_stats_path, neural_stats_path, neuro_symbolic_stats_
         columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'cv iteration', 'epoch',
                  'Validation acc', 'noise', 'noise type'])
     neural_models = []
+    # alpha ilp data: ,Methods,training samples,rule,visualization,scene,cv iteration,label noise,image noise,theory,
+    # Validation acc,Train acc,Generalization acc,Validation rec,Train rec,Generalization rec,Validation th,
+    # Train th,Generalization th
+    alpha_ilp_data = pd.DataFrame(
+        columns=['Methods', 'training samples', 'rule', 'visualization', 'scene', 'cv iteration', 'label noise',
+                 'image noise', 'theory', 'Validation acc', 'Train acc', 'Generalization acc', 'Validation rec',
+                 'Train rec', 'Generalization rec', 'Validation th', 'Train th', 'Generalization th'])
 
     if ilp_stats_path is not None:
         dirs = glob.glob(ilp_stats_path + '/*.csv')
@@ -131,11 +138,12 @@ def get_ilp_neural_data(ilp_stats_path, neural_stats_path, neuro_symbolic_stats_
                 ilp_data.append(pd.read_csv(f))
         ilp_data = pd.concat(ilp_data, ignore_index=True)
         ilp_data['visualization'] = 'Trains'
-        ilp_data['noise type'] = 'label noise'
-        ilp_data.loc[ilp_data['noise'] == 0, 'noise type'] = 'no noise'
+        # ilp_data['noise type'] = 'label noise'
+        # ilp_data.loc[ilp_data['noise'] == 0, 'noise type'] = 'no noise'
+        ilp_data = ilp_data.rename({'noise': 'label noise'}, axis='columns')
+        ilp_data['image noise'] = 0
         ilp_data['Methods'] = ilp_data['Methods'].apply(lambda x: x.title() + ' (Symb.)')
         ilp_models = sorted(ilp_data['Methods'].unique())
-
 
     if neuro_symbolic_stats_path is not None:
         dirs = glob.glob(neuro_symbolic_stats_path + '/*.csv')
@@ -158,10 +166,28 @@ def get_ilp_neural_data(ilp_stats_path, neural_stats_path, neuro_symbolic_stats_
         trains_data = pd.concat(trains_data, ignore_index=True)
         trains_data['visualization'] = 'Trains'
         neuro_symbolic_data = pd.concat([simple_objects_data, trains_data], ignore_index=True)
-        neuro_symbolic_data['noise type'] = 'label noise'
-        neuro_symbolic_data.loc[neuro_symbolic_data['noise'] == 0, 'noise type'] = 'no noise'
+        # neuro_symbolic_data['noise type'] = 'label noise'
+        # neuro_symbolic_data.loc[neuro_symbolic_data['noise'] == 0, 'noise type'] = 'no noise'
+        neuro_symbolic_data = neuro_symbolic_data.rename({'noise': 'label noise'}, axis='columns')
+        neuro_symbolic_data['image noise'] = 0
         neuro_symbolic_data['Methods'] = neuro_symbolic_data['Methods'].apply(lambda x: 'RCNN-' + x.title() + ' (NeSy)')
         neuro_symbolic_models = sorted(neuro_symbolic_data['Methods'].unique())
+
+    # alpha ilp data: ,Methods,training samples,rule,visualization,scene,cv iteration,label noise,image noise,theory,
+    # Validation acc,Train acc,Generalization acc,Validation rec,Train rec,Generalization rec,Validation th,
+    # Train th,Generalization th
+    if alpha_ilp_path is not None:
+        dirs = glob.glob(alpha_ilp_path + '/*/*.csv')
+        data = []
+        for dir in dirs:
+            with open(dir, 'r') as f:
+                data.append(pd.read_csv(f))
+        alpha_ilp_data = pd.concat(data, ignore_index=True)
+        alpha_ilp_data['Methods'] = 'αILP'
+        neuro_symbolic_models += alpha_ilp_data['Methods'].unique().tolist()
+        alpha_ilp_data.drop(
+            ['Validation rec', 'Train rec', 'Generalization rec', 'Validation th', 'Train th', 'Generalization th'],
+            axis=1, inplace=True)
 
     if neural_stats_path is not None:
         with open(neural_stats_path, 'r') as f:
@@ -172,14 +198,23 @@ def get_ilp_neural_data(ilp_stats_path, neural_stats_path, neuro_symbolic_stats_
         neur_data = neur_data.rename({'number of images': 'training samples'}, axis='columns')
         neur_data['Methods'] = neur_data['Methods'].apply(lambda x: x.replace('resnet18', 'ResNet18'))
         neural_models = sorted(neur_data['Methods'].unique())
+        # neur_data = neur_data.rename({'noise': 'label noise'}, axis='columns')
+        # neur_data = neur_data.rename({'noise type': 'image noise'}, axis='columns')
+        # if noise type  is image noise, then noise to image noise column
+        neur_data['image noise'] = neur_data['noise']
+        neur_data['label noise'] = neur_data['noise']
+        neur_data.loc[neur_data['noise type'] == 'label noise', 'image noise'] = 0
+        neur_data.loc[neur_data['noise type'] == 'image noise', 'label noise'] = 0
 
-    data = pd.concat([ilp_data, neur_data, neuro_symbolic_data], ignore_index=True)
+    data = pd.concat([ilp_data, neur_data, neuro_symbolic_data, alpha_ilp_data], ignore_index=True)
     data['Validation acc'] = data['Validation acc'].apply(lambda x: x * 100)
     # replace 'simpleobjects' with 'block' in visualization column of data
     # replace 'trains' with 'michalski' in visualization column of data
     data['visualization'] = data['visualization'].apply(lambda x: x.replace('SimpleObjects', 'Block'))
     data['visualization'] = data['visualization'].apply(lambda x: x.replace('Trains', 'Michalski'))
     data.rename(columns={'Methods': 'Models'}, inplace=True)
+    # data.rename({'visualization': 'Visualization'}, axis='columns', inplace=True)
+    data.drop(['noise', 'noise type', 'epoch', 'label'], axis=1, inplace=True)
     data.reset_index(drop=True, inplace=True)
     return data, ilp_models, neural_models, neuro_symbolic_models
 
@@ -195,8 +230,8 @@ def read_csv_stats(csv_path, train_length=7, noise=0, symb=True, vis='Michalski'
         data['Methods'] = data['Methods'].apply(lambda x: x.replace('simpleobjects', 'Block'))
         data['Methods'] = data['Methods'].apply(lambda x: x.replace('trains', 'Michalski'))
         if symb:
-            data['Methods'] = data['Methods'].apply(lambda x: x.replace('popper', 'Popper (Symb.)'))
-            data['Methods'] = data['Methods'].apply(lambda x: x.replace('aleph', 'Aleph (Symb.)'))
+            data['Methods'] = data['Methods'].apply(lambda x: x.replace('popper', 'Popper (Symb)'))
+            data['Methods'] = data['Methods'].apply(lambda x: x.replace('aleph', 'Aleph (Symb)'))
         else:
             data['Methods'] = data['Methods'].apply(lambda x: x.replace('popper', 'RCNN-Popper (NeSy)'))
             data['Methods'] = data['Methods'].apply(lambda x: x.replace('aleph', 'RCNN-Aleph (NeSy)'))
