@@ -16,11 +16,12 @@ from visualization.vis_util import make_3_im_legend, make_1_im_legend
 
 def generalization_plot(outpath, vis='Trains', min_cars=7, max_cars=7, tr_samples=10000):
     labelsize, fontsize = 15, 20
-    use_materials = False
+    use_materials = True
     fig_path = f'{outpath}/model_comparison/generalization'
     neural_stats_path = f'{outpath}/neural/label_acc_over_epoch.csv'
     ilp_stats_path = f'{outpath}/ilp/stats'
     neuro_sym_path = f'{outpath}/neuro-symbolic/stats'
+    alpha_ilp = f'{outpath}/neuro-symbolic/alphailp/stats'
 
     data_gen_ilp = read_csv_stats(fig_path + f'/ilp_generalization_{min_cars}_{max_cars}.csv',
                                   train_length='7', noise=0, symb=True)
@@ -34,19 +35,17 @@ def generalization_plot(outpath, vis='Trains', min_cars=7, max_cars=7, tr_sample
     # neuro_sym_path = f'{neuro_symbolic_path}/stats'
 
     data, ilp_models, neural_models, neuro_symbolic_models = get_ilp_neural_data(ilp_stats_path, neural_stats_path,
-                                                                                 neuro_sym_path, vis)
-    data['Train length'] = '2-4'
+                                                                                 neuro_sym_path, alpha_ilp, vis)
 
     data = pd.concat([data, data_gen_ilp, data_gen_cnn, data_gen_neuro_symbolic], ignore_index=True)
     # data = pd.concat([data, data_gen_ilp, data_gen_cnn], ignore_index=True)
-    data = data.loc[data['training samples'] == tr_samples].loc[data['noise'] == 0].loc[
-        data['visualization'] == 'Michalski']
+    data = data.loc[data['training samples'] == tr_samples].loc[data['image noise'] == 0].loc[
+        data['label noise'] == 0].loc[data['visualization'] == 'Michalski']
 
     scenes = data['scene'].unique()
     im_count = sorted(data['training samples'].unique())
     train_lengths = list(data['Train length'].unique())
     rules = data['rule'].unique()
-    noise = data['noise'].unique()
     models = neural_models + neuro_symbolic_models + ilp_models
 
     colors_s = sns.color_palette()
@@ -56,10 +55,8 @@ def generalization_plot(outpath, vis='Trains', min_cars=7, max_cars=7, tr_sample
 
     rules = ['theoryx', 'numerical', 'complex']
 
-    materials_s = ["///", "//", '/', '\\', '\\\\', 'x', '+', 'o', 'O', '.', '*'] if use_materials else ["//", '\\\\',
-                                                                                                        'x', '+', "///",
-                                                                                                        '/', '\\', 'o',
-                                                                                                        'O', '.', '*']
+    materials_s = ["///", "//", '/', '\\', '\\\\', 'x', '.', 'o', '+', 'O', '*'] if use_materials else \
+        ["//", '\\\\', 'x', '+', "///", '/', '\\', 'o', 'O', '.', '*']
     material_category = models if use_materials else train_lengths
     material_category_name = 'Models' if use_materials else 'Train length'
     mt = {model: materials_s[n] for n, model in enumerate(material_category)}
@@ -82,9 +79,8 @@ def generalization_plot(outpath, vis='Trains', min_cars=7, max_cars=7, tr_sample
             data_temp = data_t.loc[data[colors_category_name] == c].loc[data[material_category_name] == m]
             try:
                 sns.barplot(x=material_category_name, order=material_category, y='Validation acc',
-                            hue=colors_category_name,
-                            hue_order=colors_category, data=data_temp, palette="dark", alpha=.7, ax=ax, orient='v',
-                            hatch=mt[m])
+                            hue=colors_category_name, hue_order=colors_category, data=data_temp, palette="dark",
+                            alpha=.7, ax=ax, orient='v', hatch=mt[m])
             except:
                 warnings.warn(f'No data for {c}, {m}, {rule}')
 

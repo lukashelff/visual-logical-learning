@@ -142,8 +142,10 @@ def get_ilp_neural_data(ilp_stats_path, neural_stats_path, neuro_symbolic_stats_
         # ilp_data.loc[ilp_data['noise'] == 0, 'noise type'] = 'no noise'
         ilp_data = ilp_data.rename({'noise': 'label noise'}, axis='columns')
         ilp_data['image noise'] = 0
-        ilp_data['Methods'] = ilp_data['Methods'].apply(lambda x: x.title() + ' (Symb.)')
+        ilp_data['Methods'] = ilp_data['Methods'].apply(lambda x: x.title() + ' (Symb)')
         ilp_models = sorted(ilp_data['Methods'].unique())
+        ilp_data['Train length'] = '2-4'
+
 
     if neuro_symbolic_stats_path is not None:
         dirs = glob.glob(neuro_symbolic_stats_path + '/*.csv')
@@ -172,6 +174,8 @@ def get_ilp_neural_data(ilp_stats_path, neural_stats_path, neuro_symbolic_stats_
         neuro_symbolic_data['image noise'] = 0
         neuro_symbolic_data['Methods'] = neuro_symbolic_data['Methods'].apply(lambda x: 'RCNN-' + x.title() + ' (NeSy)')
         neuro_symbolic_models = sorted(neuro_symbolic_data['Methods'].unique())
+        neuro_symbolic_data['Train length'] = '2-4'
+
 
     # alpha ilp data: ,Methods,training samples,rule,visualization,scene,cv iteration,label noise,image noise,theory,
     # Validation acc,Train acc,Generalization acc,Validation rec,Train rec,Generalization rec,Validation th,
@@ -183,11 +187,20 @@ def get_ilp_neural_data(ilp_stats_path, neural_stats_path, neuro_symbolic_stats_
             with open(dir, 'r') as f:
                 data.append(pd.read_csv(f))
         alpha_ilp_data = pd.concat(data, ignore_index=True)
+        neuro_symbolic_models.append('αILP')
         alpha_ilp_data['Methods'] = 'αILP'
-        neuro_symbolic_models += alpha_ilp_data['Methods'].unique().tolist()
         alpha_ilp_data.drop(
             ['Validation rec', 'Train rec', 'Generalization rec', 'Validation th', 'Train th', 'Generalization th'],
             axis=1, inplace=True)
+        alpha_ilp_data['Train length'] = '2-4'
+        alpha_ilp_data_gen = alpha_ilp_data.copy()
+        alpha_ilp_data_gen['Train length'] = '7'
+        alpha_ilp_data_gen['Validation acc'] = alpha_ilp_data_gen['Generalization acc']
+        alpha_ilp_data = pd.concat([alpha_ilp_data, alpha_ilp_data_gen], ignore_index=True)
+        alpha_ilp_data.drop(['Generalization acc'], axis=1, inplace=True)
+
+        # if generalization acc is not 0
+
 
     if neural_stats_path is not None:
         with open(neural_stats_path, 'r') as f:
@@ -205,6 +218,7 @@ def get_ilp_neural_data(ilp_stats_path, neural_stats_path, neuro_symbolic_stats_
         neur_data['label noise'] = neur_data['noise']
         neur_data.loc[neur_data['noise type'] == 'label noise', 'image noise'] = 0
         neur_data.loc[neur_data['noise type'] == 'image noise', 'label noise'] = 0
+        neur_data['Train length'] = '2-4'
 
     data = pd.concat([ilp_data, neur_data, neuro_symbolic_data, alpha_ilp_data], ignore_index=True)
     data['Validation acc'] = data['Validation acc'].apply(lambda x: x * 100)
@@ -224,7 +238,8 @@ def read_csv_stats(csv_path, train_length=7, noise=0, symb=True, vis='Michalski'
         data = pd.read_csv(f)
         data = data.rename({'number of images': 'training samples'}, axis='columns')
         data['Train length'] = train_length
-        data['noise'] = noise
+        data['image noise'] = noise
+        data['label noise'] = noise
         data['Validation acc'] = data['Validation acc'].apply(lambda x: x * 100)
         data['Methods'] = data['Methods'].apply(lambda x: x.replace('resnet18', 'ResNet18'))
         data['Methods'] = data['Methods'].apply(lambda x: x.replace('simpleobjects', 'Block'))

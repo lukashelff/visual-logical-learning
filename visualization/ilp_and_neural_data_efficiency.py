@@ -22,18 +22,18 @@ def data_efficiency_plot(outpath, vis='Trains'):
     ilp_stats_path = f'{outpath}/ilp/stats'
     neural_stats_path = f'{outpath}/neural/label_acc_over_epoch.csv'
     neuro_sym_path = f'{outpath}/neuro-symbolic/stats'
+    alpha_ilp = f'{outpath}/neuro-symbolic/alphailp/stats'
     fig_path = f'{outpath}/model_comparison/data_efficiency'
 
     data, ilp_models, neural_models, neuro_symbolic_models = get_ilp_neural_data(ilp_stats_path, neural_stats_path,
-                                                                                 neuro_sym_path, vis)
+                                                                                 neuro_sym_path, alpha_ilp, vis)
     models = neural_models + neuro_symbolic_models + ilp_models
-    data = data.loc[data['noise'] == 0].loc[data['visualization'] == 'Michalski']
+    data = data.loc[data['image noise'] == 0].loc[data['label noise'] == 0].loc[data['visualization'] == 'Michalski'].loc[data['Train length'] == '2-4']
 
     scenes = data['scene'].unique()
     im_count = sorted(data['training samples'].unique())
     im_count = [int(i) for i in im_count]
     rules = data['rule'].unique()
-    noise = data['noise'].unique()
 
     colors_s = sns.color_palette()
     colors_category = im_count if use_materials else models
@@ -44,10 +44,8 @@ def data_efficiency_plot(outpath, vis='Trains'):
     # colors = {count: colors_s[n] for n, count in enumerate(im_count)}
     rules = ['theoryx', 'numerical', 'complex']
 
-    materials_s = ["///", "//", '/', '\\', '\\\\', 'x', '+', 'o', 'O', '.', '*'] if use_materials else ["//", '\\\\',
-                                                                                                        'x', '+', "///",
-                                                                                                        '/', '\\', 'o',
-                                                                                                        'O', '.', '*']
+    materials_s = ["///", "//", '/', '\\', '\\\\', 'x', '.', 'o', '+', 'O', '*'] if use_materials else \
+        ["//", '\\\\', 'x', '+', "///", '/', '\\', 'o', 'O', '.', '*']
     material_category = models if use_materials else im_count
     material_category_name = 'Models' if use_materials else 'training samples'
     mt = {model: materials_s[n] for n, model in enumerate(material_category)}

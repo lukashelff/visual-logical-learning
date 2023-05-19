@@ -82,11 +82,11 @@ def rule_complexity_plot(outpath, vis='Trains', im_count=1000):
         handels,
         ['Models:'] + [m for m in models],
         loc='lower left',
-        bbox_to_anchor=(0.2, -.35),
+        bbox_to_anchor=(0.095, -.37),
         frameon=True,
         handletextpad=0,
         fontsize=labelsize,
-        ncol=(len(handels) + 1) // 2, handleheight=1.3, handlelength=2.5
+        ncol=5, handleheight=1.3, handlelength=2.5
     )
     for vpack in leg._legend_handle_box.get_children()[:1]:
         for idx, hpack in enumerate(vpack.get_children()):
