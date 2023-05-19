@@ -46,8 +46,8 @@ def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samp
         image = image.to(device).unsqueeze(0)
         labels = ds.get_attributes(i).to('cpu').numpy()
         # if debug:
-        #     image, target = ds.__getitem__(i)
-        #     plot_mask(target, i, image[0], tag='gt')
+        #     im, target = ds.__getitem__(i)
+        #     plot_mask(target, i, im[0], tag='gt')
         with torch.no_grad():
             output = model(image)
         output = [{k: v.to(device) for k, v in t.items()} for t in output]
@@ -61,7 +61,10 @@ def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samp
         all_labels.append(labels)
         all_preds.append(symbolic)
         accuracy = accuracy_score(labels, symbolic)
-        if accuracy != 1:
+        if accuracy != 1 and debug:
+            # print(f'image {i} incorrect labels, ')
+            # print_pred(symbolic)
+            # print_pred(labels)
             debug_text = f'image {i} incorrect labels, '
 
             for t_number, train in enumerate((labels == symbolic).reshape((-1, 8))):
@@ -73,8 +76,7 @@ def infer_symbolic(model, dl, device, segmentation_similarity_threshold=.8, samp
                                     f' assigned: {ds.get_ds_classes()[symbolic.reshape((-1, 8))[t_number][idx]]})'
                     debug_text += f'car {t_number + 1}:{i_labels}. \n'
 
-            if debug:
-                plot_mask(output[0], i, ds.get_pil_image(i), tag='prediction')
+            plot_mask(output[0], i, ds.get_pil_image(i), tag='prediction')
         train_accuracies.append(accuracy)
         # debug_text = f"image {i}/{samples}, accuracy score: {round(accuracy * 100, 1)}%, " \
         #              f"running accuracy score: {(np.mean(train_accuracies) * 100).round(3)}%, " \
@@ -298,3 +300,24 @@ def int_encoding_to_michalski_symbolic(int_encoding: np.ndarray) -> [[str]]:
             l_num = sum(car[5:] != 0)
             michalski_train += [[n, shape, length, double, roof, wheels, l_shape, l_num]]
     return michalski_train
+
+
+def print_pred(preds):
+    color = ['yellow', 'green', 'grey', 'red', 'blue']
+    length = ['short', 'long']
+    walls = ["braced_wall", 'solid_wall']
+    roofs = ["roof_foundation", 'solid_roof', 'braced_roof', 'peaked_roof']
+    wheel_count = ['2_wheels', '3_wheels']
+    load_obj = ["box", "golden_vase", 'barrel', 'diamond', 'metal_pot', 'oval_vase']
+    attribute_classes = ['none'] + color + length + walls + roofs + wheel_count + load_obj
+    attributes = ['color', 'length', 'wall', 'roof', 'wheels', 'load1', 'load2', 'load3']
+    # numpy unqueeze to add batch dimension
+    preds = np.expand_dims(preds, axis=0)
+    for i in range(preds.shape[0]):
+        print("Train", i)
+        for j in range(preds.shape[1] // 8):
+            car = 'Car' + str(j) + ': '
+            for k in range(8):
+                car += attributes[k] + '(' + attribute_classes[preds[i, j * 8 + k]] + f'{preds[i, j * 8 + k]})'
+                car += ', ' if k < 7 else ''
+            print(car)
