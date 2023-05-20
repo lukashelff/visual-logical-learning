@@ -48,7 +48,7 @@ def generalization_plot(outpath, vis='Trains', min_cars=7, max_cars=7, tr_sample
     rules = data['rule'].unique()
     models = neural_models + neuro_symbolic_models + ilp_models
 
-    colors_s = sns.color_palette()
+    colors_s = sns.color_palette('dark')
     colors_category = train_lengths if use_materials else models
     colors_category_name = 'Train length' if use_materials else 'Models'
     colors = {vis: colors_s[n] for n, vis in enumerate(colors_category)}
@@ -79,13 +79,24 @@ def generalization_plot(outpath, vis='Trains', min_cars=7, max_cars=7, tr_sample
             data_temp = data_t.loc[data[colors_category_name] == c].loc[data[material_category_name] == m]
             try:
                 sns.barplot(x=material_category_name, order=material_category, y='Validation acc',
-                            hue=colors_category_name, hue_order=colors_category, data=data_temp, palette="dark",
+                            hue=colors_category_name, hue_order=colors_category, data=data_temp,
+                            palette={m: col for m, col in zip(colors_category, ['gray']*len(colors_category))},
                             alpha=.7, ax=ax, orient='v', hatch=mt[m])
+                # sns.barplot(x=colors_category_name, order=colors_category, y='Validation acc',
+                #             hue=material_category_name, hue_order=material_category, data=data_temp,
+                #             # palette="dark",
+                #             palette={m: col for m, col in zip(material_category, ['gray', 'gray'])},
+                #             alpha=.7, ax=ax, orient='v', hatch=mt[m])
             except:
                 warnings.warn(f'No data for {c}, {m}, {rule}')
-
+        for bar_group, desaturate_value in zip(ax.containers, [1]*len(ax.containers)):
+            for c_bar, bar in enumerate(bar_group):
+                color = colors_s[c_bar]
+                # bar.set_color(sns.desaturate(color, desaturate_value))
+                bar.set_facecolor(sns.desaturate(color, desaturate_value))
         for container in ax.containers:
             ax.bar_label(container, fmt='%1.f', label_type='edge', fontsize=labelsize, padding=3)
+
         ax.get_legend().remove()
         ax.set_ylim([50, 111])
         ax.get_xaxis().set_visible(False)
