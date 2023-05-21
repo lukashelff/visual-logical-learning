@@ -11,12 +11,12 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 
 from visualization.data_handler import get_ilp_neural_data
-from visualization.vis_util import make_3_im_legend, make_1_im_legend
+from visualization.vis_util import make_3_im_legend, make_1_im_legend, make_1_line_im
 
 
 def elementary_vs_realistic_plot(outpath, rule='theoryx', tr_samples=1000):
     labelsize = 15
-    use_materials = True
+    use_materials = False
     ilp_stats_path = f'{outpath}/ilp/stats'
     neuro_symbolic_stats_path = f'{outpath}/neuro-symbolic/stats'
     alpha_ilp = f'{outpath}/neuro-symbolic/alphailp/stats'
@@ -26,10 +26,8 @@ def elementary_vs_realistic_plot(outpath, rule='theoryx', tr_samples=1000):
                                                                                  neuro_symbolic_stats_path, alpha_ilp,
                                                                                  'all')
     models = neural_models + neuro_symbolic_models + ilp_models
-    data = \
-        data.loc[data['training samples'] == tr_samples].loc[data['label noise'] == 0].loc[
-            data['image noise'] == 0].loc[
-            data['rule'] == rule]
+    data = data.loc[data['training samples'] == tr_samples].loc[data['label noise'] == 0].loc[
+        data['image noise'] == 0].loc[data['rule'] == rule].loc[data['Train length'] == '2-4']
 
     # duplicate data for symbolic as both visualizations are the same
     data_symbolic = data.loc[data['Models'].isin(ilp_models)].copy()
@@ -52,43 +50,47 @@ def elementary_vs_realistic_plot(outpath, rule='theoryx', tr_samples=1000):
         ["//", '\\\\', 'x', '+', "///", '/', '\\', 'o', 'O', '.', '*']
     material_category = models if use_materials else visualizations
     material_category_name = 'Models' if use_materials else 'visualization'
-    mt = {model: materials_s[n] for n, model in enumerate(material_category)}
-    sns.set_theme(style="whitegrid")
-    fig = plt.figure(figsize=(16, 2))
-    gs = fig.add_gridspec(1, 1, wspace=.05, hspace=.15)
-    ax = gs.subplots(sharex=True, sharey=True, )
 
-    sns.set_theme(style="whitegrid")
-    ax.grid(axis='x')
-    # ax.set_title(rule.title(), fontsize=20)
-    ax.tick_params(bottom=False, left=False, labelsize=labelsize)
-    for spine in ax.spines.values():
-        spine.set_edgecolor('gray')
-    data_t = data.loc[data['rule'] == rule]
-    for c, m in product(colors_category, material_category):
-        data_temp = data_t.loc[data[colors_category_name] == c].loc[data[material_category_name] == m]
-        try:
-            sns.barplot(x=material_category_name, order=material_category, y='Validation acc',
-                        hue=colors_category_name,
-                        hue_order=colors_category, data=data_temp, palette="dark", alpha=.7, ax=ax, orient='v',
-                        hatch=mt[m])
-        except:
-            warnings.warn(f'No data for {c}, {m}, {rule}')
-    for container in ax.containers:
-        ax.bar_label(container, fmt='%.1f', label_type='edge', fontsize=labelsize, padding=3)
-    # if use_materials:
-    ax.get_legend().remove()
-    ax.set_ylim([50, 111])
-    ax.get_xaxis().set_visible(False)
-    ax.set_ylabel('Accuracy', fontsize=labelsize)
-
-    make_1_im_legend(fig, colors_category, colors, colors_category_name, material_category, mt, material_category_name,
-                     labelsize, legend_h_offset=-0.18, legend_v_offset=0.026)
-
-    os.makedirs(out_dir, exist_ok=True)
-    plt.savefig(out_dir + f'/elementary_vs_realistic_{tr_samples}_samples_{rule}.png', bbox_inches='tight', dpi=400)
-
-    plt.close()
+    make_1_line_im(data, material_category, material_category_name, colors_category, colors_category_name,
+                   out_dir + f'/elementary_vs_realistic_{tr_samples}_samples_{rule}.png',
+                   figsize=(16, 2), rules=[rule])
+    # mt = {model: materials_s[n] for n, model in enumerate(material_category)}
+    # sns.set_theme(style="whitegrid")
+    # fig = plt.figure(figsize=(16, 2))
+    # gs = fig.add_gridspec(1, 1, wspace=.05, hspace=.15)
+    # ax = gs.subplots(sharex=True, sharey=True, )
+    #
+    # sns.set_theme(style="whitegrid")
+    # ax.grid(axis='x')
+    # # ax.set_title(rule.title(), fontsize=20)
+    # ax.tick_params(bottom=False, left=False, labelsize=labelsize)
+    # for spine in ax.spines.values():
+    #     spine.set_edgecolor('gray')
+    # data_t = data.loc[data['rule'] == rule]
+    # for c, m in product(colors_category, material_category):
+    #     data_temp = data_t.loc[data[colors_category_name] == c].loc[data[material_category_name] == m]
+    #     try:
+    #         sns.barplot(x=material_category_name, order=material_category, y='Validation acc',
+    #                     hue=colors_category_name,
+    #                     hue_order=colors_category, data=data_temp, palette="dark", alpha=.7, ax=ax, orient='v',
+    #                     hatch=mt[m])
+    #     except:
+    #         warnings.warn(f'No data for {c}, {m}, {rule}')
+    # for container in ax.containers:
+    #     ax.bar_label(container, fmt='%.1f', label_type='edge', fontsize=labelsize, padding=3)
+    # # if use_materials:
+    # ax.get_legend().remove()
+    # ax.set_ylim([50, 111])
+    # ax.get_xaxis().set_visible(False)
+    # ax.set_ylabel('Accuracy', fontsize=labelsize)
+    #
+    # make_1_im_legend(fig, colors_category, colors, colors_category_name, material_category, mt, material_category_name,
+    #                  labelsize, legend_h_offset=-0.18, legend_v_offset=0.026)
+    #
+    # os.makedirs(out_dir, exist_ok=True)
+    # plt.savefig(out_dir + f'/elementary_vs_realistic_{tr_samples}_samples_{rule}.png', bbox_inches='tight', dpi=400)
+    #
+    # plt.close()
 
 
 def elementary_vs_realistic_plot_multi_rule(neural_path, ilp_pth, neuro_symbolic_pth, outpath, tr_samples=1000):

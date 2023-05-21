@@ -13,7 +13,7 @@ from visualization.data_handler import get_ilp_neural_data
 
 def rule_complexity_plot(outpath, vis='Trains', im_count=1000):
     labelsize, fontsize = 15, 20
-    use_materials = True
+    use_materials = False
     ilp_stats_path = f'{outpath}/ilp/stats'
     neuro_symbolic_stats_path = f'{outpath}/neuro-symbolic/stats'
     alpha_ilp = f'{outpath}/neuro-symbolic/alphailp/stats'
@@ -22,7 +22,8 @@ def rule_complexity_plot(outpath, vis='Trains', im_count=1000):
     data, ilp_models, neural_models, neuro_symbolic_models = get_ilp_neural_data(ilp_stats_path, neural_stats_path,
                                                                                  neuro_symbolic_stats_path, alpha_ilp, vis)
     models = neural_models + neuro_symbolic_models + ilp_models
-    data = data.loc[data['image noise'] == 0].loc[data['label noise'] == 0].loc[data['training samples'] == im_count]
+    data = data.loc[data['image noise'] == 0].loc[data['label noise'] == 0].loc[data['training samples'] == im_count].loc[data['Train length'] == '2-4']
+
 
     scenes = data['scene'].unique()
     rules = data['rule'].unique()
@@ -54,13 +55,13 @@ def rule_complexity_plot(outpath, vis='Trains', im_count=1000):
             if data_temp.empty:
                 continue
             if use_materials:
-                sns.barplot(x='Models', y='Validation acc', hue='training samples', data=data_temp,
+                sns.barplot(x='Models', y='Validation acc', hue='training samples', data=data_temp, edgecolor='black',
                             palette="dark", alpha=.7, ax=ax, orient='v', hatch=mt[model], order=models)
             else:
-                sns.barplot(x='Models', y='Validation acc', data=data_temp, color=colors[model],
+                sns.barplot(x='Models', y='Validation acc', data=data_temp, color=colors[model], edgecolor='black',
                             palette="dark", alpha=.7, ax=ax, orient='v', order=models)
         for container in ax.containers:
-            ax.bar_label(container, fmt='%.1f', label_type='edge', fontsize=labelsize, padding=3)
+            ax.bar_label(container, fmt='%1.f', label_type='edge', fontsize=labelsize, padding=3)
         if use_materials:
             ax.get_legend().remove()
         ax.set_ylim([50, 111])

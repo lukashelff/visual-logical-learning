@@ -24,7 +24,15 @@ def plot(args):
         # for s in [10000]:
         for s in [100, 1000, 10000]:
             from visualization.ilp_and_neural_label_noise import label_noise_plot, label_noise_degradation_plot
-            # label_noise_plot('output', training_samples=s)
+            label_noise_plot('output', training_samples=s)
+
+    if command == 'label_noise_degradation':
+        ilp_pt = 'output/ilp'
+        neural_path = 'output/neural'
+        out_path = 'output/model_comparison'
+        # for s in [10000]:
+        for s in [100, 1000, 10000]:
+            from visualization.ilp_and_neural_label_noise import label_noise_plot, label_noise_degradation_plot
             label_noise_degradation_plot('output', training_samples=s)
 
     if command == 'image_noise':
