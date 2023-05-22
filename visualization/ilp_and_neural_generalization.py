@@ -11,7 +11,7 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 
 from visualization.data_handler import get_ilp_neural_data, read_csv_stats
-from visualization.vis_util import make_3_im_legend, make_1_im_legend, make_1_line_im
+from visualization.vis_util import make_3_im_legend, make_1_im_legend, make_1_line_im, make_3_im
 
 
 def generalization_plot(outpath, vis='Trains', min_cars=7, max_cars=7, tr_samples=10000):
@@ -53,8 +53,9 @@ def generalization_plot(outpath, vis='Trains', min_cars=7, max_cars=7, tr_sample
     material_category = models if use_materials else train_lengths
     material_category_name = 'Models' if use_materials else 'Train length'
 
-    make_1_line_im(data, material_category, material_category_name, colors_category, colors_category_name,
-                   fig_path + f'/generalization_{tr_samples}_tr_samples.png')
-
+    # make_1_line_im(data, material_category, material_category_name, colors_category, colors_category_name,
+    #                fig_path + f'/generalization_{tr_samples}_tr_samples.png')
+    make_3_im(data, material_category, material_category_name, colors_category, colors_category_name,
+              fig_path + f'/generalization_{tr_samples}_tr_samples.png', (26, 4), legend_offset=(0.43, 0.213), legend_cols=4)
 
 

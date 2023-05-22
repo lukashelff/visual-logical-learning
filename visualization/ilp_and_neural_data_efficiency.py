@@ -1,5 +1,5 @@
 from visualization.data_handler import get_ilp_neural_data
-from visualization.vis_util import make_1_line_im
+from visualization.vis_util import make_1_line_im, make_3_im
 
 
 def data_efficiency_plot(outpath, vis='Trains'):
@@ -16,8 +16,8 @@ def data_efficiency_plot(outpath, vis='Trains'):
                                                                                  neuro_sym_path, alpha_ilp, vis)
     models = neural_models + neuro_symbolic_models + ilp_models
     data = \
-    data.loc[data['image noise'] == 0].loc[data['label noise'] == 0].loc[data['visualization'] == 'Michalski'].loc[
-        data['Train length'] == '2-4']
+        data.loc[data['image noise'] == 0].loc[data['label noise'] == 0].loc[data['visualization'] == 'Michalski'].loc[
+            data['Train length'] == '2-4']
 
     scenes = data['scene'].unique()
     im_count = sorted(data['training samples'].unique())
@@ -30,5 +30,7 @@ def data_efficiency_plot(outpath, vis='Trains'):
     material_category = models if use_materials else im_count
     material_category_name = 'Models' if use_materials else 'training samples'
 
-    make_1_line_im(data, material_category, material_category_name, colors_category, colors_category_name,
-                   fig_path + f'/data_efficiency.png', (27, 2))
+    # make_1_line_im(data, material_category, material_category_name, colors_category, colors_category_name,
+    #                fig_path + f'/data_efficiency.png', (27, 2))
+    make_3_im(data, material_category, material_category_name, colors_category, colors_category_name,
+              fig_path + f'/data_efficiency.png', (27, 4), legend_offset=(0.43, 0.213), legend_cols=4)

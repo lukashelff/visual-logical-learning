@@ -10,7 +10,8 @@ from matplotlib import pyplot as plt
 import seaborn as sns
 
 
-def make_1_line_im(data, material_category, material_category_name, colors_category, colors_category_name, fig_path, figsize=(20, 2), rules=None):
+def make_1_line_im(data, material_category, material_category_name, colors_category, colors_category_name, fig_path,
+                   figsize=(20, 2), rules=None):
     labelsize, fontsize = 15, 20
     materials_s = ["//", '\\\\', 'x', "///", '/', '\\', '.', 'o', '+', 'O', '*']
     mt = {model: materials_s[n] for n, model in enumerate(material_category)}
@@ -58,7 +59,63 @@ def make_1_line_im(data, material_category, material_category_name, colors_categ
             ax.set_ylabel('Accuracy', fontsize=labelsize)
 
     make_1_im_legend(fig, colors_category, colors, colors_category_name, material_category, mt, material_category_name,
-                     labelsize, legend_h_offset=-0.18, legend_v_offset=0.)
+                     labelsize, legend_h_offset=-0.18, legend_v_offset=0.0)
+    os.makedirs(os.path.dirname(fig_path), exist_ok=True)
+    plt.savefig(fig_path, bbox_inches='tight', dpi=400)
+
+    plt.close()
+
+
+def make_3_im(data, material_category, material_category_name, colors_category, colors_category_name, fig_path,
+              figsize=(20, 4), rules=None, legend_offset=(0.14,0.0), legend_cols=5):
+    labelsize, fontsize = 15, 20
+    materials_s = ["//", '\\\\', 'x', "///", '/', '\\', '.', 'o', '+', 'O', '*']
+    mt = {model: materials_s[n] for n, model in enumerate(material_category)}
+
+    colors_s = sns.color_palette('dark')
+    colors = {vis: colors_s[n] for n, vis in enumerate(colors_category)}
+    rules = ['theoryx', 'numerical', 'complex'] if rules is None else rules
+
+    sns.set_theme(style="whitegrid")
+    fig = plt.figure(figsize=figsize)
+    gs = fig.add_gridspec(2, 2, wspace=.05, hspace=.3)
+    axes = gs.subplots(sharex=True, sharey=True, )
+    axes = axes if isinstance(axes, np.ndarray) else [axes]
+
+    for col, rule in enumerate(rules):
+        ax = axes[col // 2, col % 2]
+        ax.grid(axis='x')
+        ax.set_title(rule.title(), fontsize=fontsize)
+        ax.tick_params(bottom=False, left=False, labelsize=labelsize)
+        for spine in ax.spines.values():
+            spine.set_edgecolor('gray')
+        data_t = data.loc[data['rule'] == rule]
+        for c, m in product(colors_category, material_category):
+            data_temp = data_t.loc[data[colors_category_name] == c].loc[data[material_category_name] == m]
+            try:
+                sns.barplot(x=colors_category_name, order=colors_category, y='Validation acc',
+                            hue=material_category_name, hue_order=material_category, data=data_temp,
+                            palette={m: col for m, col in zip(material_category, ['gray' for _ in material_category])},
+                            alpha=.7, ax=ax, orient='v', hatch=mt[m])
+            except:
+                warnings.warn(f'No data for {c}, {m}, {rule}')
+        for bar_group, desaturate_value in zip(ax.containers, [1] * len(ax.containers)):
+            ax.bar_label(bar_group, fmt='%1.f', label_type='edge', fontsize=labelsize, padding=3)
+            for c_bar, bar in enumerate(bar_group):
+                color = colors_s[c_bar]
+                # bar.set_color(sns.desaturate(color, desaturate_value))
+                bar.set_facecolor(sns.desaturate(color, desaturate_value))
+                bar.set_edgecolor('black')
+        ax.get_legend().remove()
+        ax.set_ylim([50, 111])
+        ax.get_xaxis().set_visible(False)
+        if col != 0:
+            ax.set_ylabel('')
+        else:
+            ax.set_ylabel('Accuracy', fontsize=labelsize)
+    axes[1, 1].set_axis_off()
+    make_1_im_legend(fig, colors_category, colors, colors_category_name, material_category, mt, material_category_name,
+                     labelsize, legend_h_offset=legend_offset[0], legend_v_offset=legend_offset[1], ncols=legend_cols)
     os.makedirs(os.path.dirname(fig_path), exist_ok=True)
     plt.savefig(fig_path, bbox_inches='tight', dpi=400)
 
@@ -89,9 +146,6 @@ def make_3_im_legend(fig, axes, category, category_name, models, colors, mt, leg
             hpack.get_children()[0].set_width(0)
 
 
-# horizontal legend
-# def make_1_im_legend(fig, ax, category, category_name, models, colors, mt, fontsize=15, legend_h_offset=0, ncols=5):
-
 def make_1_im_legend(fig, colors_category, colors, colors_category_name, material_category, materials,
                      material_category_name='Models',
                      fontsize=15, legend_h_offset=0, legend_v_offset=0, ncols=5):
@@ -110,28 +164,6 @@ def make_1_im_legend(fig, colors_category, colors, colors_category_name, materia
     material_category += [''] * (mt_rows * (ncols - 1) - len(material_category))
     color_markers += white * (color_rows * (ncols - 1) - len(color_markers))
     mt_markers += white * (mt_rows * (ncols - 1) - len(mt_markers))
-
-    # t_r1 = [f'{mt_category_name}:'] + mt_category[:ncols - 1]
-    # t_r2 = [''] + mt_category[ncols - 1:]
-    # t_r2 += [''] * (ncols - len(t_r2))
-    # t_r3 = [f'{colors_category_name}:'] + colors_category[:ncols - 1]
-    # t_r3 += [''] * (ncols - len(t_r3))
-    # s_r1 = white + patches[:ncols - 1]
-    # s_r2 = white + patches[ncols - 1:]
-    # s_r2 += white * (ncols - len(s_r2))
-    # s_r3 = white + color_markers[:ncols - 1]
-    # s_r3 += white * (ncols - len(s_r3))
-    # txt, handles = [], []
-    # nrows = math.ceil((len(colors_category)+1) // ncols) + math.ceil((len(mt_category)+1) // ncols)
-    # for i in range(ncols):
-    #     handles.append(s_r1[i])
-    #     if t_r2 != [''] * ncols:
-    #         handles.append(s_r2[i])
-    #     handles.append(s_r3[i])
-    #     txt.append(t_r1[i])
-    #     if t_r2 != [''] * ncols:
-    #         txt.append(t_r2[i])
-    #     txt.append(t_r3[i])
 
     first_col_txt = [f'{colors_category_name.title()}:'] + [''] * (color_rows - 1) + [
         f'{material_category_name.title()}:'] + [''] * (

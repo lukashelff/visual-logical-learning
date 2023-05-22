@@ -11,7 +11,7 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 
 from visualization.data_handler import get_ilp_neural_data
-from visualization.vis_util import make_3_im_legend, make_1_im_legend, make_1_line_im
+from visualization.vis_util import make_3_im_legend, make_1_im_legend, make_1_line_im, make_3_im
 
 
 def label_noise_plot(outpath, training_samples=1000, vis='Trains'):
@@ -40,9 +40,10 @@ def label_noise_plot(outpath, training_samples=1000, vis='Trains'):
     material_category = models if use_materials else noise
     material_category_name = 'Models' if use_materials else 'label noise'
 
-    make_1_line_im(data, material_category, material_category_name, colors_category, colors_category_name,
-                   fig_path + f'/label_noise_{training_samples}_tr_samples.png', (27, 2))
-
+    # make_1_line_im(data, material_category, material_category_name, colors_category, colors_category_name,
+    #                fig_path + f'/label_noise_{training_samples}_tr_samples.png', (27, 2))
+    make_3_im(data, material_category, material_category_name, colors_category, colors_category_name,
+              fig_path + f'/label_noise_{training_samples}_tr_samples.png', (27, 4), legend_offset=(0.45, 0.21), legend_cols=5)
 
 
 def label_noise_degradation_plot(outpath, training_samples=1000, vis='Trains'):
