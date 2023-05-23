@@ -1,4 +1,5 @@
 import warnings
+from copy import deepcopy
 from itertools import product
 
 import torch.nn as nn
@@ -90,7 +91,6 @@ class Trainer:
             self.label_noise, self.image_noise, self.class_rule, self.train_vis, self.base_scene = l_noise, i_noise, rule, visualization, scene
             self.full_ds = get_datasets(self.base_scene, self.raw_trains, self.train_vis, class_rule=rule,
                                         ds_size=self.ds_size, max_car=self.max_car, min_car=self.min_car,
-                                        label_noise=self.label_noise, image_noise=self.image_noise,
                                         ds_path=self.ds_path,
                                         resize=self.resize)
             for t_size in train_size:
@@ -108,7 +108,8 @@ class Trainer:
                             f'training iteration {tr_it + 1}/{tr_it_total} with {t_size // self.batch_size} '
                             f'training batches, already completed: {tr_b}/{tr_b_total} batches. ')
                         self.setup_model(resume=self.resume, path=model_path)
-                        self.setup_ds(tr_idx=tr_idx, val_idx=val_idx)
+                        self.setup_ds(tr_idx=tr_idx, val_idx=val_idx, label_noise=self.label_noise,
+                                      image_noise=self.image_noise)
                         self.train(rtpt_extra=(tr_b_total - tr_b) * self.num_epochs, set_up=False, ex_name=ex_name)
                         del self.model
                     tr_b += t_size // self.batch_size
@@ -118,13 +119,13 @@ class Trainer:
         if self.full_ds is None:
             self.full_ds = get_datasets(self.base_scene, self.raw_trains, self.train_vis, class_rule=self.class_rule,
                                         ds_size=self.ds_size, max_car=self.max_car, min_car=self.min_car,
-                                        label_noise=self.label_noise, image_noise=self.image_noise,
                                         ds_path=self.ds_path, y_val=self.y_val,
                                         resize=self.resize)
         if set_up:
             # self.ds_size = ds_size if ds_size is not None else self.ds_size
             self.setup_model(self.resume)
-            self.setup_ds(train_size=train_size, val_size=val_size)
+            self.setup_ds(train_size=train_size, val_size=val_size, label_noise=self.label_noise,
+                          image_noise=self.image_noise)
         if 'rcnn' in self.model_name:
             if gpu_count > 1:
                 rcnn_parallel.train_parallel(self.out_path, self.model, self.ds, self.optimizer, self.scheduler,
@@ -208,7 +209,8 @@ class Trainer:
             loss_fn = nn.CrossEntropyLoss()
         self.criteria = [loss_fn] * dim_out
         rcnn_labels_per_segment = 4 if self.train_vis == 'SimpleObjects' else 3
-        self.model, self.preprocess = get_model(self.model_name, self.pretrained and not resume, dim_out, class_dim, rcnn_labels_per_segment=rcnn_labels_per_segment)
+        self.model, self.preprocess = get_model(self.model_name, self.pretrained and not resume, dim_out, class_dim,
+                                                rcnn_labels_per_segment=rcnn_labels_per_segment)
 
         if self.checkpoint is not None:
             self.model.load_state_dict(self.checkpoint['model_state_dict'])
@@ -230,7 +232,7 @@ class Trainer:
         # self.scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
         self.scheduler = lr_scheduler.StepLR(self.optimizer, step_size=self.step_size, gamma=self.gamma)
 
-    def setup_ds(self, tr_idx=None, val_idx=None, train_size=None, val_size=None):
+    def setup_ds(self, tr_idx=None, val_idx=None, train_size=None, val_size=None, label_noise=0, image_noise=0):
         if self.full_ds is None:
             self.full_ds = get_datasets(self.base_scene, self.raw_trains, self.train_vis, ds_size=self.ds_size,
                                         ds_path=self.ds_path, y_val=self.y_val, max_car=self.max_car,
@@ -250,9 +252,13 @@ class Trainer:
         if len(tr_idx) > 0:
             set_up_txt = f'split ds into training ds with {len(tr_idx)} images and validation ds with {len(val_idx)} images'
             print(set_up_txt)
-
+        tr_ds = deepcopy(self.full_ds) if label_noise > 0 or image_noise > 0 else self.full_ds
+        if label_noise > 0:
+            tr_ds.apply_label_noise(label_noise)
+        if image_noise > 0:
+            tr_ds.apply_image_noise(image_noise)
         self.ds = {
-            'train': Subset(self.full_ds, tr_idx),
+            'train': Subset(tr_ds, tr_idx),
             'val': Subset(self.full_ds, val_idx)
         }
         if 'rcnn' in self.model_name:
