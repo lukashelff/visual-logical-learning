@@ -80,7 +80,7 @@ def plot(args):
 
         out_path = 'output'
         sample_size = [100, 1000, 10000]
-        sample_size = [1000]
+        # sample_size = [1000]
         for s in sample_size:
             generalization_plot(out_path, tr_samples=s)
 

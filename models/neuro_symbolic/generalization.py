@@ -24,6 +24,7 @@ def neuro_symbolic_generalization_test(ns_pth, device):
 
     ilp_models = sorted(ilp_data['Methods'].unique())
     t_sizes = [1000]
+    t_sizes = [100, 1000, 10000]
 
     data = pd.DataFrame(
         columns=['Methods', 'training samples', 'rule', 'cv iteration', 'label', 'Validation acc', "precision",
