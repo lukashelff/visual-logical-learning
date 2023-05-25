@@ -3,9 +3,10 @@ import os
 import torch
 
 
-def inference(train_vis, device, ds_path, ds_size, class_rules, min_cars, max_cars, sym_models=None, sample_sizes=None):
+def inference(train_vis, device, ds_path, ds_size, class_rules, min_cars, max_cars, sym_models=None, sample_sizes=None, noise=[0,.1,.3]):
     from models.trainer import Trainer
     from ilp.trainer import Ilp_trainer
+    print('NS PIPE')
     base_scene, raw_trains = 'base_scene', 'MichalskiTrains'
     sym_models = ['popper', 'aleph'] if sym_models is None else sym_models
     sample_sizes = [1000] if sample_sizes is None else sample_sizes
@@ -35,7 +36,7 @@ def inference(train_vis, device, ds_path, ds_size, class_rules, min_cars, max_ca
                       min_cars, max_cars, )
 
     trainer = Ilp_trainer()
-    noise = [0]
+    # noise = [0]
     output_dir = 'output/neuro-symbolic'
     pred_dir = f'output/models/multi_label_rcnn/inferred_ds/prediction'
     tag = train_vis + '_'

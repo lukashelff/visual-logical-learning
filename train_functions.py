@@ -36,8 +36,9 @@ def train(args):
     if command == 'ns_crossval':
         from models.neuro_symbolic.ns_pipe import inference
         rules = ['theoryx', 'numerical', 'complex']
-        sample_sizes = [100, 1000, 10000]
-        inference(train_vis, device, ds_path, ds_size, rules, min_cars, max_cars, sample_sizes=sample_sizes)
+        sample_sizes = [100, 1000, 10000][1:2]
+        noise = [0, 0.1, 0.3][1:]
+        inference(train_vis, device, ds_path, ds_size, rules, min_cars, max_cars, sample_sizes=sample_sizes, noise=noise)
 
     if command == 'ilp':
         from ilp.trainer import Ilp_trainer
