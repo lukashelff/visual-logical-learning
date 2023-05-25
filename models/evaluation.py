@@ -1,7 +1,10 @@
+import json
 import os
 from itertools import product
 
+import jsonpickle
 import pandas as pd
+from tqdm import tqdm
 
 from models.trainer import Trainer
 
@@ -73,20 +76,34 @@ def zoom_test(min_cars, max_cars, base_scene, raw_trains, train_vis, device, ds_
 def intervention_test(model_name, device, ds_path):
     from models.trainer import Trainer
     base_scene, raw_trains, train_vis, class_rule = 'base_scene', 'MichalskiTrains', 'Trains', 'theoryx'
-    # model_name = 'resnet18'
-    ds_iv = 'intervention/'
-    ds_iv = ''
-    trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=10000,
-                      setup_model=False, setup_ds=False, resume=True, train_size=0, val_size=10)
-    pth = trainer.get_model_path(prefix=True, im_count=10000, suffix=f'it_0/', model_name=model_name)
-    trainer.setup_model(True, path=pth, y_val='direction')
-    description_pth = f'{ds_path}/dataset_descriptions/theoryx/{ds_iv}MichalskiTrains_len_2-4.txt'
-    with open(description_pth, 'r') as f:
-        descriptions = f.readlines()
-    labels = [description.split(' ')[0] for description in descriptions][:10000]
+    train_type = ['MichalskiTrains', 'RandomTrains'][0]
+    ds_iv = ['intervention/', ''][0]
+    # model_name = 'EfficientNet'
+    # device = 'cpu'
+    tr_size = 1000
+    inference_size = 12000
+    trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path,
+                      setup_model=False, setup_ds=False)
+    model_path = trainer.get_model_path(prefix=True, im_count=tr_size, suffix=f'it_0/', model_name=model_name)
+    trainer.setup_model(True, path=model_path, y_val='direction')
+    path = f'{ds_path}/{ds_iv}{train_vis}_{class_rule}_{train_type}_{base_scene}_len_2-4'
+    scene_path = f'{path}/all_scenes/all_scenes.json'
+    with open(scene_path, 'r') as f:
+        # count number of files in dir
+        n = len(os.listdir(f'{path}/images'))
+        images = [None] * n
+        labels = [None] * n
+        all_scenes = json.load(f)
+        for scene in all_scenes['scenes']:
+            train = scene['m_train']
+            train = jsonpickle.decode(train)
+            labels[scene['image_index']] = train.get_label()
+            images[scene['image_index']] = scene['image_filename']
+
+    images, labels = images[:inference_size], labels[:inference_size]
     TP, FP, TN, FN = 0, 0, 0, 0
-    for i, lab in enumerate(labels):
-        im_path = f'{ds_path}/{ds_iv}Trains_theoryx_MichalskiTrains_base_scene_len_2-4/images/{i}_m_train.png'
+    for image, lab in tqdm(zip(images, labels)):
+        im_path = f'{path}/images/{image}'
         pred = trainer.infer_im(im_path)
         pred = 'west' if pred[0] == 0 else 'east'
         if pred == 'west' and lab == 'west':
@@ -103,7 +120,7 @@ def intervention_test(model_name, device, ds_path):
         elif pred == 'east' and lab == 'west':
             FP += 1
             cat = 'FP'
-        if pred != lab:
+        if pred != lab or len(labels) < 100:
             print(f'{cat} image {os.path.basename(im_path)} (pred: {pred} ,gt: {lab})')
     acc = round((TP + TN) / (TP + TN + FP + FN) * 100, 2)
     precision = round(TP / (TP + FP) * 100, 2)
