@@ -95,10 +95,12 @@ def main():
         # get generalization results for neural symbolic AI
         neuro_symbolic_generalization_test(neural_symbolic_path, device)
 
-    if action == 'split_ds':
-        from ilp.dataset_functions import setup_alpha_ilp_ds
-        for rule in ['theoryx', 'numerical', 'complex']:
-            setup_alpha_ilp_ds(base_scene, raw_trains, train_vis, ds_size, ds_path, rule)
+    if action == 'intervention':
+        from models.evaluation import intervention_test
+
+        intervention_test(model_name, device, ds_path)
+
+
 
 
 if __name__ == '__main__':

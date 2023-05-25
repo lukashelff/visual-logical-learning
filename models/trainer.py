@@ -2,13 +2,16 @@ import warnings
 from copy import deepcopy
 from itertools import product
 
+import cv2
 import torch.nn as nn
 import torch.optim as optim
+from PIL import Image
 from numpy import arange
 from sklearn.model_selection import StratifiedShuffleSplit
 from torch.optim import lr_scheduler
 from torch.utils.data import DataLoader
 from torch.utils.data import Subset
+from torchvision.transforms import transforms
 
 from michalski_trains.dataset import get_datasets
 from models.model import get_model
@@ -26,7 +29,7 @@ class Trainer:
                  resume=False, pretrained=True, resize=False, optimizer_='ADAM', loss='CrossEntropyLoss',
                  train_size=None, val_size=None, ds_size=10000, image_noise=0, label_noise=0,
                  batch_size=50, num_worker=4, lr=0.001, step_size=5, gamma=.8, momentum=0.9,
-                 num_epochs=25, setup_model=True, setup_ds=True, save_model=True, model_tag=''):
+                 num_epochs=25, setup_model=True, setup_ds=True, save_model=True):
 
         # ds_val setup
         self.settings = f'{train_vis}_{class_rule}_{raw_trains}_{base_scene}_len_{min_car}-{max_car}'
@@ -177,7 +180,21 @@ class Trainer:
         self.num_epochs = eps
         return acc, precision, recall
 
-    def setup_model(self, resume=False, path=None):
+    def infer_im(self, im_path):
+        im = Image.open(im_path).convert('RGB')
+        norm = [transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                     std=[0.229, 0.224, 0.225])]
+        if self.resize:
+            norm.append(transforms.Resize((224, 224), interpolation=transforms.InterpolationMode.BICUBIC))
+        norm = transforms.Compose(norm)
+        im = norm(im).unsqueeze(0)
+
+        from models.inference import do_infer_im
+        label = do_infer_im(im, self.model, self.device)
+        return label
+
+    def setup_model(self, resume=False, path=None, y_val=None):
         # set path
         path = self.out_path if path is None else path
         set_up_txt = f'set up foundation model: {self.model_name}' if not resume else \
@@ -199,10 +216,10 @@ class Trainer:
             self.checkpoint = None
 
         print(set_up_txt)
-        # dim_out = get_output_dim(self.y_val)
-        # class_dim = get_class_dim(self.y_val)
-        dim_out = self.full_ds.get_output_dim()
-        class_dim = self.full_ds.get_class_dim()
+        # dim_out = get_output_dim(y_val)
+        # class_dim = get_class_dim(y_val)
+        dim_out = self.full_ds.get_output_dim() if y_val is None else get_output_dim(y_val)
+        class_dim = self.full_ds.get_class_dim() if y_val is None else get_class_dim(y_val)
         if self.loss_name == 'MSELoss':
             loss_fn = nn.MSELoss()
         else:
