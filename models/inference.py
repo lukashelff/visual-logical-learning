@@ -7,6 +7,16 @@ from torch.utils.data import DataLoader
 from michalski_trains.dataset import get_datasets
 from util import *
 
+def do_infer_im(im, model, device):
+    model.eval()
+    model.to(device)
+    with torch.no_grad():
+        im = im.to(device)
+        outputs = model(im)
+        _, preds = torch.max(outputs, 1)
+        preds = preds.cpu().numpy()
+        return preds
+
 
 def infer_symbolic(trainer, use_transfer_trained_model=False, im_counts=None):
     # model_pred1 = 'attr_predictor'
