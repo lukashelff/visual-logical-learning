@@ -3,7 +3,6 @@ import sys
 import torch
 
 
-
 def parse():
     # Instantiate the parser
     parser = argparse.ArgumentParser(description='The Michalski Train Problem')
@@ -24,7 +23,7 @@ def parse():
                         help='dataset Scene: base_scene, desert_scene, sky_scene or fisheye_scene')
     parser.add_argument('--max_train_length', type=int, default=4, help='max number of cars a train can have')
     parser.add_argument('--min_train_length', type=int, default=2, help='min number of cars a train can have')
-
+    parser.add_argument('--noise', type=int, default=0, help='noise in percentage. Apply during training')
     # model settings
     parser.add_argument('--model', type=str, default='resnet18',
                         help='model to use for training: \'resnet18\', \'VisionTransformer\' or \'EfficientNet\'')

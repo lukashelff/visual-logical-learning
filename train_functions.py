@@ -16,6 +16,7 @@ def train(args):
     action = args.action
     max_cars = args.max_train_length
     min_cars = args.min_train_length
+    noise = float(args.noise) / 100
     device = torch.device("cpu" if not torch.cuda.is_available() or args.cuda == -1 else f"cuda:{args.cuda}")
     device = torch.device("cpu" if not torch.cuda.is_available() or args.cuda == -1 else f"cuda")
     y_val = args.y_val
@@ -54,24 +55,26 @@ def train(args):
         batch_size = 25
         lr = 0.001
         rules = ['theoryx', 'numerical', 'complex']
+        rules = [class_rule]
         train_size = [100, 1000, 10000]
-        noises = [0, 0.1, 0.3]
-        noises = [0]
+        # noises = [0, 0.1, 0.3]
+        noises = [noise]
         visualizations = ['Trains', 'SimpleObjects']
         scenes = ['base_scene', 'desert_scene', 'sky_scene', 'fisheye_scene']
-        if model_name == 'EfficientNet':
-            batch_size = 25
-        elif model_name == 'VisionTransformer':
-            resize = True
-            lr = 0.00001
-        trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path, ds_size=ds_size,
-                          setup_model=False, setup_ds=False, batch_size=batch_size, resize=resize, lr=lr)
-        trainer.cross_val_train(train_size=train_size, label_noise=noises, rules=rules, replace=False, save_models=True)
+        for model in ['resnet18', 'EfficientNet', 'VisionTransformer']:
+            if model == 'EfficientNet':
+                batch_size = 25
+            elif model == 'VisionTransformer':
+                resize = True
+                lr = 0.00001
+            trainer = Trainer(base_scene, raw_trains, train_vis, device, model, class_rule, ds_path, ds_size=ds_size,
+                              setup_model=False, setup_ds=False, batch_size=batch_size, resize=resize, lr=lr)
+            trainer.cross_val_train(train_size=train_size, label_noise=noises, rules=rules, replace=False, save_models=False)
         # trainer.plt_cross_val_performance(True, models=['resnet18', 'EfficientNet', 'VisionTransformer'])
 
     if command == 'image_noise':
         from models.trainer import Trainer
-        start_it = 55
+        start_it = 0
         resize = False
         batch_size = 25
         lr = 0.001
