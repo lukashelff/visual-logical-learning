@@ -24,7 +24,7 @@ def label_noise_plot(outpath, training_samples=1000, vis='Trains'):
     alpha_ilp = f'{outpath}/neuro-symbolic/alphailp/stats'
     data, ilp_models, neural_models, neuro_symbolic_models = get_ilp_neural_data(ilp_stats_path, neural_stats_path,
                                                                                  neuro_sym_path, alpha_ilp, vis)
-    models = neural_models + neuro_symbolic_models[2:] + ilp_models
+    models = neural_models + neuro_symbolic_models + ilp_models
 
     data = data.loc[data['training samples'] == training_samples].loc[data['image noise'] == 0].loc[
         data['visualization'] == 'Michalski'].loc[data['Train length'] == '2-4']
@@ -43,7 +43,7 @@ def label_noise_plot(outpath, training_samples=1000, vis='Trains'):
     # make_1_line_im(data, material_category, material_category_name, colors_category, colors_category_name,
     #                fig_path + f'/label_noise_{training_samples}_tr_samples.png', (27, 2))
     make_3_im(data, material_category, material_category_name, colors_category, colors_category_name,
-              fig_path + f'/label_noise_{training_samples}_tr_samples.png', (27, 4), legend_offset=(0.45, 0.21), legend_cols=5)
+              fig_path + f'/label_noise_{training_samples}_tr_samples.png', (27, 4), legend_offset=(0.43, 0.213), legend_cols=4)
 
 
 def label_noise_degradation_plot(outpath, training_samples=1000, vis='Trains'):

@@ -80,10 +80,11 @@ def intervention_test(model_name, device, ds_path):
     ds_iv = ['intervention/', ''][0]
     # model_name = 'EfficientNet'
     # device = 'cpu'
+    resize = True if model_name == 'VisionTransformer' else False
     tr_size = 1000
-    inference_size = 12000
+    inference_size = 2000
     trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path,
-                      setup_model=False, setup_ds=False)
+                      setup_model=False, setup_ds=False, resize=resize)
     model_path = trainer.get_model_path(prefix=True, im_count=tr_size, suffix=f'it_0/', model_name=model_name)
     trainer.setup_model(True, path=model_path, y_val='direction')
     path = f'{ds_path}/{ds_iv}{train_vis}_{class_rule}_{train_type}_{base_scene}_len_2-4'

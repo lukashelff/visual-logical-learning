@@ -28,12 +28,11 @@ class Trainer:
                  X_val='image', y_val='direction', max_car=4, min_car=2,
                  resume=False, pretrained=True, resize=False, optimizer_='ADAM', loss='CrossEntropyLoss',
                  train_size=None, val_size=None, ds_size=10000, image_noise=0, label_noise=0,
-                 batch_size=50, num_worker=4, lr=0.001, step_size=5, gamma=.8, momentum=0.9,
+                 batch_size=50, num_worker=4, lr=None, step_size=5, gamma=.8, momentum=0.9,
                  num_epochs=25, setup_model=True, setup_ds=True, save_model=True):
 
         # ds_val setup
         self.settings = f'{train_vis}_{class_rule}_{raw_trains}_{base_scene}_len_{min_car}-{max_car}'
-
         self.base_scene, self.raw_trains, self.train_vis, self.class_rule = base_scene, raw_trains, train_vis, class_rule
         self.ds_path, self.ds_size = ds_path, ds_size
         self.max_car, self.min_car = max_car, min_car
@@ -47,8 +46,9 @@ class Trainer:
         # preprocessing needed for faster rcnn
         self.preprocess = None
         # training hyper parameter
-        self.batch_size, self.num_worker, self.lr, self.step_size, self.gamma, self.momentum, self.num_epochs = \
-            batch_size, num_worker, lr, step_size, gamma, momentum, num_epochs
+        self.batch_size, self.num_worker,  self.step_size, self.gamma, self.momentum, self.num_epochs = \
+            batch_size, num_worker,  step_size, gamma, momentum, num_epochs
+        self.lr = lr if lr is not None else 0.00001 if model_name == 'VisionTransformer' else 0.001
         self.out_path = self.get_model_path()
         # setup model and dataset
         if setup_model:
