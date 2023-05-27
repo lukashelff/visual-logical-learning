@@ -112,7 +112,8 @@ def rule_complexity_plot(outpath, vis='Trains', im_count=1000):
                 hpack.get_children()[0].set_width(0)
 
     os.makedirs(fig_path, exist_ok=True)
-    plt.savefig(fig_path + f'/rules_{im_count}_sample.png', bbox_inches='tight', dpi=400)
+    pth = fig_path + f'/rule_complexity.png' if im_count == 1000 else fig_path + f'/rule_complexity_{im_count}_sample.png'
+    plt.savefig(pth, bbox_inches='tight', dpi=400)
 
     plt.close()
 

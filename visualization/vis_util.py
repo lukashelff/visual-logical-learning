@@ -125,7 +125,7 @@ def make_1_im_legend(fig, colors_category, colors, colors_category_name, materia
         handles, txt,
         loc='lower center',
         bbox_to_anchor=(.496 + legend_v_offset, -.35 + legend_h_offset),
-        frameon=True,
+        frameon=False,
         handletextpad=.5,
         ncols=ncols, handleheight=1.3, handlelength=2.5, fontsize=fontsize,
     )
@@ -191,7 +191,11 @@ def make_3_im(data, material_category, material_category_name, colors_category, 
             ax.set_ylim([50, 111])
         for x, y, r in zip(x_pos, y_pos, run):
             ax.text(x, y + 10, r, fontsize=labelsize, ha='center')
-    axes[1, 1].set_axis_off()
+    # axes[1, 1].set_axis_off()
+    leg = axes[1, 1]
+    leg.get_xaxis().set_visible(False)
+    leg.get_yaxis().set_visible(False)
+
     make_1_im_legend(fig, colors_category, colors, colors_category_name, material_category, mt, material_category_name,
                      labelsize, legend_h_offset=legend_offset[0], legend_v_offset=legend_offset[1], ncols=legend_cols)
     os.makedirs(os.path.dirname(fig_path), exist_ok=True)
@@ -262,7 +266,10 @@ def make_3_im_deg(data, material_category, material_category_name, colors_catego
             ax.set_ylabel('Degradation (%)', fontsize=labelsize)
         for x, y, r in zip(x_pos, y_pos, run):
             ax.text(x, y + 15, r, fontsize=labelsize, ha='center')
-    axes[1, 1].set_axis_off()
+    # axes[1, 1].set_axis_off()
+    leg = axes[1, 1]
+    leg.get_xaxis().set_visible(False)
+    leg.get_yaxis().set_visible(False)
     make_1_im_legend(fig, colors_category, colors, colors_category_name, material_category, mt, material_category_name,
                      labelsize, legend_h_offset=legend_offset[0], legend_v_offset=legend_offset[1], ncols=legend_cols)
     os.makedirs(os.path.dirname(fig_path), exist_ok=True)

@@ -245,6 +245,7 @@ def read_csv_stats(csv_path, train_length=7, noise=0, symb=True, vis='Michalski'
         data['label noise'] = noise
         data['Validation acc'] = data['Validation acc'].apply(lambda x: x * 100)
         data['Methods'] = data['Methods'].apply(lambda x: x.replace('resnet18', 'ResNet18'))
+        data['Methods'] = data['Methods'].apply(lambda x: x.replace('VisionTransformer', 'ViT'))
         data['Methods'] = data['Methods'].apply(lambda x: x.replace('simpleobjects', 'Block'))
         data['Methods'] = data['Methods'].apply(lambda x: x.replace('trains', 'Michalski'))
         if symb:

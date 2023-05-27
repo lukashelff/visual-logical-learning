@@ -55,7 +55,6 @@ def generalization_plot(outpath, vis='Trains', min_cars=7, max_cars=7, tr_sample
 
     # make_1_line_im(data, material_category, material_category_name, colors_category, colors_category_name,
     #                fig_path + f'/generalization_{tr_samples}_tr_samples.png')
-    make_3_im(data, material_category, material_category_name, colors_category, colors_category_name,
-              fig_path + f'/generalization_{tr_samples}_tr_samples.png', (26, 4), legend_offset=(0.43, 0.213), legend_cols=4)
-
-
+    pth = fig_path + f'/generalization.png' if tr_samples == 1000 else fig_path + f'/generalization_{tr_samples}_tr_samples.png'
+    make_3_im(data, material_category, material_category_name, colors_category, colors_category_name, pth, (26, 4),
+              legend_offset=(0.43, 0.213), legend_cols=4)

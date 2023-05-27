@@ -67,6 +67,7 @@ def image_noise_plot(neural_path, ilp_pth, out_path, training_samples=1000, vis=
     make_3_im_legend(fig, axes, noise, 'Label Noise', models, colors, mt)
 
     os.makedirs(out_path, exist_ok=True)
-    plt.savefig(out_path + f'/image_noise_{training_samples}_tr_samples.png', bbox_inches='tight', dpi=400)
+    pth = out_path + f'/image_noise.png' if training_samples == 1000 else out_path + f'/image_noise_{training_samples}_tr_samples.png'
+    plt.savefig(pth, bbox_inches='tight', dpi=400)
 
     plt.close()

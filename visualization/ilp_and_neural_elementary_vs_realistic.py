@@ -154,7 +154,8 @@ def elementary_vs_realistic_plot_multi_rule(neural_path, ilp_pth, neuro_symbolic
     make_3_im_legend(fig, axes, visualizations, 'Visualizations', models, colors, mt, legend_h_offset=-0.1)
 
     os.makedirs(out_path, exist_ok=True)
-    plt.savefig(out_path + f'/elementary_vs_realistic_{tr_samples}_samples.png', bbox_inches='tight', dpi=400)
+    pth = out_path + f'/elementary_vs_realistic.png' if tr_samples == 1000 else out_path + f'/elementary_vs_realistic_{tr_samples}_samples.png'
+    plt.savefig(pth, bbox_inches='tight', dpi=400)
     print(f'elementary_vs_realistic_{tr_samples}_samples.png saved to {out_path}.')
 
     plt.close()

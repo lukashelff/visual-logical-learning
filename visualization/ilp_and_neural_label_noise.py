@@ -42,8 +42,9 @@ def label_noise_plot(outpath, training_samples=1000, vis='Trains'):
 
     # make_1_line_im(data, material_category, material_category_name, colors_category, colors_category_name,
     #                fig_path + f'/label_noise_{training_samples}_tr_samples.png', (27, 2))
+    pth = fig_path + f'/label_noise.png' if training_samples == 1000 else fig_path + f'/label_noise_{training_samples}_tr_samples.png'
     make_3_im(data, material_category, material_category_name, colors_category, colors_category_name,
-              fig_path + f'/label_noise_{training_samples}_tr_samples.png', (27, 4), legend_offset=(0.43, 0.213),
+              pth, (27, 4), legend_offset=(0.43, 0.213),
               legend_cols=4)
 
 
@@ -89,10 +90,9 @@ def label_noise_degradation_plot(outpath, training_samples=1000, vis='Trains'):
     colors_category_name = 'label noise' if use_materials else 'Models'
     material_category = models if use_materials else noise
     material_category_name = 'Models' if use_materials else 'label noise'
-
-    make_3_im_deg(data, material_category, material_category_name, colors_category, colors_category_name, fig_path +
-                  f'/label_noise_{training_samples}_tr_samples_acc_loss.png', (27, 4), legend_offset=(0.43, 0.213),
-                  legend_cols=4)
+    pth = fig_path + f'/label_noise_degradation.png' if training_samples == 1000 else fig_path + f'/label_noise_degradation_{training_samples}_tr_samples.png'
+    make_3_im_deg(data, material_category, material_category_name, colors_category, colors_category_name, pth, (27, 4),
+                  legend_offset=(0.43, 0.213), legend_cols=4)
 
     # materials_s = ["///", "//", '/', '\\', '\\\\', 'x', '+', 'o', 'O', '.', '*'] if use_materials else ["//", '\\\\',
     #                                                                                                     'x', '+', "///",
