@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 
-def get_cv_data(out_path, y_val, models=['EfficientNet', 'resnet18', 'VisionTransformer']):
+def get_cv_data(out_path, y_val='direction', models=['EfficientNet', 'resnet18', 'VisionTransformer']):
     data = pd.DataFrame(
         columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'cv iteration', 'label', 'epoch',
                  'Validation acc', 'noise', 'noise type'])
@@ -38,6 +38,8 @@ def get_cv_data(out_path, y_val, models=['EfficientNet', 'resnet18', 'VisionTran
             scene = sets[3] + '_' + sets[4]
             path2 = path1 + f'{ds}/'
             noises = os.listdir(path2)
+            # remove all files not containing cv
+            noises = [noise for noise in noises if 'cv' in noise]
             for noise in noises:
                 path3 = path2 + f'{noise}/'
                 ns = 0 if len(noise) == 2 else float(noise.split('_')[1][:3])
@@ -210,6 +212,7 @@ def get_ilp_neural_data(ilp_stats_path, neural_stats_path, neuro_symbolic_stats_
                 neur_data = neur_data.loc[neur_data['visualization'] == vis]
         neur_data = neur_data.rename({'number of images': 'training samples'}, axis='columns')
         neur_data['Methods'] = neur_data['Methods'].apply(lambda x: x.replace('resnet18', 'ResNet18'))
+        neur_data['Methods'] = neur_data['Methods'].apply(lambda x: x.replace('VisionTransformer', 'ViT'))
         neural_models = sorted(neur_data['Methods'].unique())
         # neur_data = neur_data.rename({'noise': 'label noise'}, axis='columns')
         # neur_data = neur_data.rename({'noise type': 'image noise'}, axis='columns')

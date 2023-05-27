@@ -97,7 +97,9 @@ def main():
     if action == 'intervention':
         from models.evaluation import intervention_test
 
-        intervention_test(model_name, device, ds_path)
+        # intervention_test(model_name, device, ds_path)
+        from models.evaluation import intervention_rcnn
+        intervention_rcnn(args)
 
 
 

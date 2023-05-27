@@ -4,6 +4,7 @@ from itertools import product
 
 import jsonpickle
 import pandas as pd
+import torch
 from tqdm import tqdm
 
 from models.trainer import Trainer
@@ -80,11 +81,10 @@ def intervention_test(model_name, device, ds_path):
     ds_iv = ['intervention/', ''][0]
     # model_name = 'EfficientNet'
     # device = 'cpu'
-    resize = True if model_name == 'VisionTransformer' else False
     tr_size = 1000
     inference_size = 2000
     trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path,
-                      setup_model=False, setup_ds=False, resize=resize)
+                      setup_model=False, setup_ds=False)
     model_path = trainer.get_model_path(prefix=True, im_count=tr_size, suffix=f'it_0/', model_name=model_name)
     trainer.setup_model(True, path=model_path, y_val='direction')
     path = f'{ds_path}/{ds_iv}{train_vis}_{class_rule}_{train_type}_{base_scene}_len_2-4'
@@ -128,3 +128,20 @@ def intervention_test(model_name, device, ds_path):
     recall = round(TP / (TP + FN) * 100, 2)
     print(f'TP: {TP}, FP: {FP}, TN: {TN}, FN: {FN}, acc: {acc}%, precision: {precision}%, recall: {recall}%',
           flush=True)
+
+
+def intervention_rcnn(args):
+    from models.trainer import Trainer
+    batch_size = 20
+    device = torch.device("cpu" if not torch.cuda.is_available() or args.cuda == -1 else f"cuda")
+
+    trainer = Trainer(args.background, args.description, args.visualization, device, args.model, args.rule,
+                      args.ds_path + '/intervention', ds_size=12,
+                      y_val=args.y_val, resume=True, batch_size=batch_size, setup_model=False, setup_ds=True,
+                      min_car=args.min_train_length, max_car=args.max_train_length, val_size=12, train_size=None)
+    model_path = 'output/models/multi_label_rcnn/maskv2_classification/Trains_theoryx_RandomTrains_base_scene/imcount_12000_X_val_image_pretrained_lr_0.001_step_10000_gamma0.1/'
+    trainer.setup_model(True, path=model_path, y_val=args.y_val)
+    from models.rcnn.plot_prediction import predict_and_plot
+    from models.rcnn.inference import infer_symbolic
+
+    infer_symbolic(trainer.model, trainer.dl['val'], device, debug=True)

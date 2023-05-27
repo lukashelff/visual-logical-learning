@@ -3,6 +3,7 @@ from itertools import product
 import torch
 
 
+
 def plot(args):
     # michalski train dataset settings
     raw_trains = args.description
@@ -18,9 +19,9 @@ def plot(args):
     device = torch.device("cpu" if not torch.cuda.is_available() or args.cuda == -1 else f"cuda:{args.cuda}")
 
     if command == 'label_noise':
-        ilp_pt = 'output/ilp'
         neural_path = 'output/neural'
-        out_path = 'output/model_comparison'
+        from visualization.data_handler import get_cv_data
+        get_cv_data(neural_path)
         for s in [1000]:
         # for s in [100, 1000, 10000]:
             from visualization.ilp_and_neural_label_noise import label_noise_plot, label_noise_degradation_plot
@@ -30,8 +31,8 @@ def plot(args):
         ilp_pt = 'output/ilp'
         neural_path = 'output/neural'
         out_path = 'output/model_comparison'
-        # for s in [10000]:
-        for s in [100, 1000, 10000]:
+        for s in [1000]:
+        # for s in [100, 1000, 10000]:
             from visualization.ilp_and_neural_label_noise import label_noise_plot, label_noise_degradation_plot
             label_noise_degradation_plot('output', training_samples=s)
 

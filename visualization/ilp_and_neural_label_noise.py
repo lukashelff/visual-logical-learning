@@ -11,7 +11,7 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 
 from visualization.data_handler import get_ilp_neural_data
-from visualization.vis_util import make_3_im_legend, make_1_im_legend, make_1_line_im, make_3_im
+from visualization.vis_util import make_3_im_legend, make_1_im_legend, make_1_line_im, make_3_im, make_3_im_deg
 
 
 def label_noise_plot(outpath, training_samples=1000, vis='Trains'):
@@ -43,11 +43,11 @@ def label_noise_plot(outpath, training_samples=1000, vis='Trains'):
     # make_1_line_im(data, material_category, material_category_name, colors_category, colors_category_name,
     #                fig_path + f'/label_noise_{training_samples}_tr_samples.png', (27, 2))
     make_3_im(data, material_category, material_category_name, colors_category, colors_category_name,
-              fig_path + f'/label_noise_{training_samples}_tr_samples.png', (27, 4), legend_offset=(0.43, 0.213), legend_cols=4)
+              fig_path + f'/label_noise_{training_samples}_tr_samples.png', (27, 4), legend_offset=(0.43, 0.213),
+              legend_cols=4)
 
 
 def label_noise_degradation_plot(outpath, training_samples=1000, vis='Trains'):
-    labelsize, fontsize = 15, 20
     use_materials = False
     ilp_stats_path = f'{outpath}/ilp/stats'
     neural_stats_path = f'{outpath}/neural/label_acc_over_epoch.csv'
@@ -56,7 +56,7 @@ def label_noise_degradation_plot(outpath, training_samples=1000, vis='Trains'):
     fig_path = f'{outpath}/model_comparison/label_noise_degradation'
     data, ilp_models, neural_models, neuro_symbolic_models = get_ilp_neural_data(ilp_stats_path, neural_stats_path,
                                                                                  neuro_sym_path, alpha_ilp, vis)
-    models = neural_models + neuro_symbolic_models[2:] + ilp_models
+    models = neural_models + neuro_symbolic_models + ilp_models
     data = data.loc[data['training samples'] == training_samples].loc[data['image noise'] == 0].loc[
         data['visualization'] == 'Michalski'].loc[data['Train length'] == '2-4']
 
@@ -64,7 +64,8 @@ def label_noise_degradation_plot(outpath, training_samples=1000, vis='Trains'):
     rules = ['theoryx', 'numerical', 'complex']
     scenes = data['scene'].unique()
     iterations = data['cv iteration'].unique()
-    data['Noise Degradation'] = 0
+    # initialize column with nan
+    data['Noise Degradation'] = np.nan
 
     for rule, model, n, cv in product(rules, models, [0.1, 0.3], iterations):
         n_idx = data.loc[data['rule'] == rule].loc[data['label noise'] == n].loc[data['Models'] == model].loc[
@@ -80,84 +81,84 @@ def label_noise_degradation_plot(outpath, training_samples=1000, vis='Trains'):
         else:
             warnings.warn(
                 f'No data for {rule}, {model}, {n} noise, iteration {cv}, {training_samples} training samples')
-    im_count = sorted(data['training samples'].unique())
     data = data.loc[data['label noise'] != 0]
-    data['noise'] = data['label noise'].apply(lambda x: str(int(x * 100)) + '%')
+    data['label noise'] = data['label noise'].apply(lambda x: str(int(x * 100)) + '%')
     noise = sorted(data['label noise'].unique())
 
-    colors_s = sns.color_palette('dark')
     colors_category = noise if use_materials else models
     colors_category_name = 'label noise' if use_materials else 'Models'
-    colors = {noi: colors_s[n] for n, noi in enumerate(colors_category)}
-    rules = ['theoryx', 'numerical', 'complex']
-
-    materials_s = ["///", "//", '/', '\\', '\\\\', 'x', '+', 'o', 'O', '.', '*'] if use_materials else ["//", '\\\\',
-                                                                                                        'x', '+', "///",
-                                                                                                        '/', '\\', 'o',
-                                                                                                        'O', '.', '*']
     material_category = models if use_materials else noise
     material_category_name = 'Models' if use_materials else 'label noise'
-    mt = {model: materials_s[n] for n, model in enumerate(material_category)}
 
-    sns.set_theme(style="whitegrid")
-    fig = plt.figure(figsize=(27, 2))
-    gs = fig.add_gridspec(1, 3, wspace=.05, hspace=.15)
-    axes = gs.subplots(sharex=True, sharey=True, )
-    axes = axes if isinstance(axes, np.ndarray) else [axes]
+    make_3_im_deg(data, material_category, material_category_name, colors_category, colors_category_name, fig_path +
+                  f'/label_noise_{training_samples}_tr_samples_acc_loss.png', (27, 4), legend_offset=(0.43, 0.213),
+                  legend_cols=4)
 
-    for col, rule in enumerate(rules):
-        ax = axes[col]
-        ax.grid(axis='x')
-        ax.set_title(rule.title(), fontsize=fontsize)
-        ax.tick_params(bottom=False, left=False, labelsize=labelsize)
-        for spine in ax.spines.values():
-            spine.set_edgecolor('gray')
-        data_t = data.loc[data['rule'] == rule]
-        if data_t.empty:
-            continue
-        # for model in models:
-        #     data_temp = data_t.loc[data['Methods'] == model]
-        #     if len(data_temp) > 0:
-        #         sns.barplot(x='Methods', y='Noise Degradation', hue='noise', data=data_temp,
-        #                     palette="dark", alpha=.7, ax=ax, orient='v', hatch=mt[model], order=models
-        #                     )
-        for c, m in product(colors_category, material_category):
-            data_temp = data_t.loc[data[colors_category_name] == c].loc[data[material_category_name] == m]
-            try:
-                sns.barplot(x=colors_category_name, order=colors_category, y='Noise Degradation',
-                            hue=material_category_name, hue_order=material_category, data=data_temp,
-                            palette={m: col for m, col in zip(material_category, ['gray' for _ in material_category])},
-                            alpha=.7, ax=ax, orient='v', hatch=mt[m])
-            except:
-                warnings.warn(f'No data for {c}, {m}, {rule}')
-        # for c, m in product(colors_category, material_category):
-        #     data_temp = data_t.loc[data[colors_category_name] == c].loc[data[material_category_name] == m]
-        #     try:
-        #         sns.barplot(x=material_category_name, order=material_category, y='Noise Degradation',
-        #                     hue=colors_category_name,
-        #                     hue_order=colors_category, data=data_temp, palette="dark", alpha=.7, ax=ax, orient='v',
-        #                     hatch=mt[m])
-        #     except:
-        #         warnings.warn(f'No data for {c}, {m}, {rule}')
-
-        for bar_group, desaturate_value in zip(ax.containers, [1] * len(ax.containers)):
-            ax.bar_label(bar_group, fmt='%1.f', label_type='edge', fontsize=labelsize, padding=3)
-            for c_bar, bar in enumerate(bar_group):
-                color = colors_s[c_bar]
-                # bar.set_color(sns.desaturate(color, desaturate_value))
-                bar.set_facecolor(sns.desaturate(color, desaturate_value))
-                bar.set_edgecolor('black')
-        ax.get_legend().remove()
-        ax.set_ylim([0, 111])
-        ax.get_xaxis().set_visible(False)
-        if col != 0:
-            ax.set_ylabel('')
-        else:
-            ax.set_ylabel('Degradation (%)', fontsize=labelsize)
-
-    make_1_im_legend(fig, colors_category, colors, colors_category_name, material_category, mt, material_category_name,
-                     labelsize, legend_h_offset=-0.18, legend_v_offset=0.)
-    os.makedirs(fig_path, exist_ok=True)
-    plt.savefig(fig_path + f'/label_noise_{training_samples}_tr_samples_acc_loss.png', bbox_inches='tight', dpi=400)
-
-    plt.close()
+    # materials_s = ["///", "//", '/', '\\', '\\\\', 'x', '+', 'o', 'O', '.', '*'] if use_materials else ["//", '\\\\',
+    #                                                                                                     'x', '+', "///",
+    #                                                                                                     '/', '\\', 'o',
+    #                                                                                                     'O', '.', '*']
+    # mt = {model: materials_s[n] for n, model in enumerate(material_category)}
+    #
+    # sns.set_theme(style="whitegrid")
+    # fig = plt.figure(figsize=(27, 2))
+    # gs = fig.add_gridspec(1, 3, wspace=.05, hspace=.15)
+    # axes = gs.subplots(sharex=True, sharey=True, )
+    # axes = axes if isinstance(axes, np.ndarray) else [axes]
+    #
+    # for col, rule in enumerate(rules):
+    #     ax = axes[col]
+    #     ax.grid(axis='x')
+    #     ax.set_title(rule.title(), fontsize=fontsize)
+    #     ax.tick_params(bottom=False, left=False, labelsize=labelsize)
+    #     for spine in ax.spines.values():
+    #         spine.set_edgecolor('gray')
+    #     data_t = data.loc[data['rule'] == rule]
+    #     if data_t.empty:
+    #         continue
+    #     # for model in models:
+    #     #     data_temp = data_t.loc[data['Methods'] == model]
+    #     #     if len(data_temp) > 0:
+    #     #         sns.barplot(x='Methods', y='Noise Degradation', hue='noise', data=data_temp,
+    #     #                     palette="dark", alpha=.7, ax=ax, orient='v', hatch=mt[model], order=models
+    #     #                     )
+    #     for c, m in product(colors_category, material_category):
+    #         data_temp = data_t.loc[data[colors_category_name] == c].loc[data[material_category_name] == m]
+    #         try:
+    #             sns.barplot(x=colors_category_name, order=colors_category, y='Noise Degradation',
+    #                         hue=material_category_name, hue_order=material_category, data=data_temp,
+    #                         palette={m: col for m, col in zip(material_category, ['gray' for _ in material_category])},
+    #                         alpha=.7, ax=ax, orient='v', hatch=mt[m])
+    #         except:
+    #             warnings.warn(f'No data for {c}, {m}, {rule}')
+    #     # for c, m in product(colors_category, material_category):
+    #     #     data_temp = data_t.loc[data[colors_category_name] == c].loc[data[material_category_name] == m]
+    #     #     try:
+    #     #         sns.barplot(x=material_category_name, order=material_category, y='Noise Degradation',
+    #     #                     hue=colors_category_name,
+    #     #                     hue_order=colors_category, data=data_temp, palette="dark", alpha=.7, ax=ax, orient='v',
+    #     #                     hatch=mt[m])
+    #     #     except:
+    #     #         warnings.warn(f'No data for {c}, {m}, {rule}')
+    #
+    #     for bar_group, desaturate_value in zip(ax.containers, [1] * len(ax.containers)):
+    #         ax.bar_label(bar_group, fmt='%1.f', label_type='edge', fontsize=labelsize, padding=3)
+    #         for c_bar, bar in enumerate(bar_group):
+    #             color = colors_s[c_bar]
+    #             # bar.set_color(sns.desaturate(color, desaturate_value))
+    #             bar.set_facecolor(sns.desaturate(color, desaturate_value))
+    #             bar.set_edgecolor('black')
+    #     ax.get_legend().remove()
+    #     ax.set_ylim([0, 111])
+    #     ax.get_xaxis().set_visible(False)
+    #     if col != 0:
+    #         ax.set_ylabel('')
+    #     else:
+    #         ax.set_ylabel('Degradation (%)', fontsize=labelsize)
+    #
+    # make_1_im_legend(fig, colors_category, colors, colors_category_name, material_category, mt, material_category_name,
+    #                  labelsize, legend_h_offset=-0.18, legend_v_offset=0.)
+    # os.makedirs(fig_path, exist_ok=True)
+    # plt.savefig(fig_path + f'/label_noise_{training_samples}_tr_samples_acc_loss.png', bbox_inches='tight', dpi=400)
+    #
+    # plt.close()

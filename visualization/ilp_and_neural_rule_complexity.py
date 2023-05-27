@@ -9,6 +9,7 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 
 from visualization.data_handler import get_ilp_neural_data
+from visualization.vis_util import make_1_line_im, make_1_im_legend
 
 
 def rule_complexity_plot(outpath, vis='Trains', im_count=1000):
@@ -32,7 +33,7 @@ def rule_complexity_plot(outpath, vis='Trains', im_count=1000):
     materials_s = ["///", "//", '/', '\\', '\\\\', 'x', '.', 'o', '+', 'O', '*'] if use_materials else \
         ["//", '\\\\', 'x', '+', "///", '/', '\\', 'o', 'O', '.', '*']
     mt = {model: materials_s[n] for n, model in enumerate(models)}
-    colors_s = sns.color_palette()[:len(models)]
+    colors_s = sns.color_palette('dark')[:len(models)]
     colors = {m: colors_s[n] for n, m in enumerate(models)}
 
     sns.set_theme(style="whitegrid")
@@ -50,8 +51,11 @@ def rule_complexity_plot(outpath, vis='Trains', im_count=1000):
         for spine in ax.spines.values():
             spine.set_edgecolor('gray')
         data_t = data.loc[data['rule'] == rule]
+        run, y_pos = [], []
         for model in models:
             data_temp = data_t.loc[data['Models'] == model]
+            run += ['*'] if len(data_temp) < 5 else ['']
+            y_pos += [40 if np.isnan(data_temp['Validation acc'].mean()) else data_temp['Validation acc'].mean()]
             if data_temp.empty:
                 continue
             if use_materials:
@@ -70,6 +74,10 @@ def rule_complexity_plot(outpath, vis='Trains', im_count=1000):
             ax.set_ylabel('')
         else:
             ax.set_ylabel('Accuracy', fontsize=labelsize)
+        x_pos = sorted(list(set([p.get_x() + p.get_width() / 2 for p in ax.patches])))
+        for x, y, r in zip(x_pos, y_pos, run):
+            ax.text(x, y + 10, r, fontsize=labelsize, ha='center')
+
 
     white = [mlines.Line2D([], [], color='white', marker='X', linestyle='None', markersize=0)]
     plt.rcParams.update({'hatch.color': 'black'})
@@ -78,12 +86,20 @@ def rule_complexity_plot(outpath, vis='Trains', im_count=1000):
     color_markers = [mlines.Line2D([], [], color=colors[c], marker='d', linestyle='None', markersize=10) for c in
                      models]
     handels = color_markers if not use_materials else patch_markers
+    txt = ['Models:'] + [m for m in models]
+    txt[5:5] = ['']
+    handels = white + handels
+    handels[5:5] = white
+
+    txt = np.array(txt).reshape(2, (5))
+    handles = np.array(handels).reshape(2, (5))
+    handles = handles.T.flatten().tolist()
+    txt = txt.T.flatten().tolist()
     leg = fig.legend(
-        white +
-        handels,
-        ['Models:'] + [m for m in models],
+        handles,
+        txt,
         loc='lower left',
-        bbox_to_anchor=(0.095, -.37),
+        bbox_to_anchor=(0.12, -.37),
         frameon=True,
         handletextpad=0,
         fontsize=labelsize,

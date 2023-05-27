@@ -26,7 +26,7 @@ from visualization.vis_model_comparison import model_scene_imcount_comparison, c
 class Trainer:
     def __init__(self, base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path,
                  X_val='image', y_val='direction', max_car=4, min_car=2,
-                 resume=False, pretrained=True, resize=False, optimizer_='ADAM', loss='CrossEntropyLoss',
+                 resume=False, pretrained=True, resize=None, optimizer_='ADAM', loss='CrossEntropyLoss',
                  train_size=None, val_size=None, ds_size=10000, image_noise=0, label_noise=0,
                  batch_size=50, num_worker=4, lr=None, step_size=5, gamma=.8, momentum=0.9,
                  num_epochs=25, setup_model=True, setup_ds=True, save_model=True):
@@ -40,6 +40,9 @@ class Trainer:
         self.X_val, self.y_val = X_val, y_val
         self.pretrained, self.resume, self.save_model = pretrained, resume, save_model
         self.resize, self.image_noise, self.label_noise = resize, image_noise, label_noise
+        if self.resize is not None:
+            self.resize = True if model_name == 'VisionTransformer' else False
+
         # model setup
         self.model_name = model_name
         self.optimizer_name, self.loss_name = optimizer_, loss
@@ -368,6 +371,7 @@ def get_class_dim(y_val):
         'direction': len(label_classes),
         'attributes': len(attribute_classes),
         'mask': len(attribute_classes),
+        'maskv2': len(attribute_classes),
     }
     return output[y_val]
 
@@ -394,6 +398,7 @@ def get_class_names(y_val):
         'direction': label_classes,
         'attributes': attribute_classes,
         'mask': attribute_classes,
+        'maskv2': attribute_classes,
     }
     return output[y_val]
 
@@ -420,6 +425,7 @@ def get_output_dim(y_val):
         'direction': len(labels),
         'attributes': len(attributes),
         'mask': len(attributes),
+        'maskv2': len(attributes),
     }
     return output[y_val]
 
