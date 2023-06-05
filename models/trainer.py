@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.optim as optim
 from PIL import Image
 from numpy import arange
-from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.model_selection import StratifiedShuffleSplit, train_test_split, ShuffleSplit
 from torch.optim import lr_scheduler
 from torch.utils.data import DataLoader
 from torch.utils.data import Subset
@@ -40,7 +40,7 @@ class Trainer:
         self.X_val, self.y_val = X_val, y_val
         self.pretrained, self.resume, self.save_model = pretrained, resume, save_model
         self.resize, self.image_noise, self.label_noise = resize, image_noise, label_noise
-        if self.resize is not None:
+        if self.resize is None:
             self.resize = True if model_name == 'VisionTransformer' else False
 
         # model setup
@@ -49,8 +49,8 @@ class Trainer:
         # preprocessing needed for faster rcnn
         self.preprocess = None
         # training hyper parameter
-        self.batch_size, self.num_worker,  self.step_size, self.gamma, self.momentum, self.num_epochs = \
-            batch_size, num_worker,  step_size, gamma, momentum, num_epochs
+        self.batch_size, self.num_worker, self.step_size, self.gamma, self.momentum, self.num_epochs = \
+            batch_size, num_worker, step_size, gamma, momentum, num_epochs
         self.lr = lr if lr is not None else 0.00001 if model_name == 'VisionTransformer' else 0.001
         self.out_path = self.get_model_path()
         # setup model and dataset
@@ -267,8 +267,10 @@ class Trainer:
                 train_size = 0
             elif val_size is None:
                 val_size = int(0.2 * self.ds_size)
-            tr_idx = arange(train_size)
-            val_idx = arange(train_size, train_size + val_size)
+            # tr_idx = arange(train_size)
+            # val_idx = arange(train_size, train_size + val_size)
+            tr_idx, val_idx, y_train, y_test = train_test_split(range(self.ds_size), train_size=train_size,
+                                                                test_size=val_size, stratify=self.full_ds.y)
         if len(tr_idx) > 0:
             set_up_txt = f'split ds into training ds with {len(tr_idx)} images and validation ds with {len(val_idx)} images'
             print(set_up_txt)

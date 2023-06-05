@@ -85,6 +85,11 @@ def plot(args):
         for s in sample_size:
             generalization_plot(out_path, tr_samples=s)
 
+    if command == 'ood':
+        from visualization.ilp_and_neural_ood import ood_plot
+        out_path = 'output'
+        ood_plot(out_path)
+
     if command == 'rule_complexity':
         neural_path = 'output/neural'
         out_path = 'output'
