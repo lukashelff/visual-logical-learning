@@ -2,7 +2,6 @@ import argparse
 import sys
 import torch
 
-
 def parse():
     # Instantiate the parser
     parser = argparse.ArgumentParser(description='The Michalski Train Problem')
@@ -97,10 +96,13 @@ def main():
     if action == 'intervention':
         from models.evaluation import intervention_test
 
-        # intervention_test(model_name, device, ds_path)
+        intervention_test(model_name, device, ds_path)
         from models.evaluation import intervention_rcnn
-        intervention_rcnn(args)
+        # intervention_rcnn(args)
 
+    if action == 'ood':
+        from models.evaluation import ood
+        ood(device, ds_path)
 
 
 

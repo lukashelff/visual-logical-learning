@@ -1,6 +1,7 @@
 import json
 import os
 from itertools import product
+from random import sample
 
 import jsonpickle
 import pandas as pd
@@ -145,3 +146,70 @@ def intervention_rcnn(args):
     from models.rcnn.inference import infer_symbolic
 
     infer_symbolic(trainer.model, trainer.dl['val'], device, debug=True)
+
+
+def ood(device, ds_path):
+    from models.trainer import Trainer
+    base_scene, raw_trains, train_vis = 'base_scene', 'MichalskiTrains', 'Trains'
+    train_type = ['MichalskiTrains', 'RandomTrains'][1]
+    # device = 'cpu'
+    rules = ['theoryx', 'numerical', 'complex'][:1]
+    inference_size = 2000
+    val_ids = sample(range(12000), inference_size)
+    neur_data = pd.DataFrame(
+        columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'cv iteration', 'image noise',
+                 'label noise', 'Validation acc', 'Validation precision', 'Validation recall'])
+
+    for class_rule, model_name, tr_size, cv in product(rules, ['resnet18', 'EfficientNet', 'VisionTransformer'],
+                                                       [100, 1000, 10000], range(5)):
+        trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path,
+                          setup_model=False, setup_ds=False)
+        model_path = trainer.get_model_path(prefix=True, im_count=tr_size, suffix=f'it_{cv}/', model_name=model_name)
+        trainer.setup_model(True, path=model_path, y_val='direction')
+        path = f'{ds_path}/{train_vis}_{class_rule}_{train_type}_{base_scene}_len_2-4'
+        scene_path = f'{path}/all_scenes/all_scenes.json'
+        with open(scene_path, 'r') as f:
+            # count number of files in dir
+            n = len(os.listdir(f'{path}/images'))
+            images = [None] * n
+            labels = [None] * n
+            all_scenes = json.load(f)
+            for scene in all_scenes['scenes']:
+                train = scene['m_train']
+                train = jsonpickle.decode(train)
+                labels[scene['image_index']] = train.get_label()
+                images[scene['image_index']] = scene['image_filename']
+
+        TP, FP, TN, FN = 0, 0, 0, 0
+        for idx in tqdm(val_ids):
+            image, lab = images[idx], labels[idx]
+            im_path = f'{path}/images/{image}'
+            pred = trainer.infer_im(im_path)
+            pred = 'west' if pred[0] == 0 else 'east'
+            if pred == 'west' and lab == 'west':
+                TN += 1
+                cat = 'TN'
+            elif pred == 'east' and lab == 'east':
+                TP += 1
+                cat = 'TP'
+            elif pred == 'west' and lab == 'east':
+                FN += 1
+                cat = 'FN'
+
+            elif pred == 'east' and lab == 'west':
+                FP += 1
+                cat = 'FP'
+
+        acc = round((TP + TN) / (TP + TN + FP + FN) * 100, 2)
+        precision = round(TP / (TP + FP) * 100, 2)
+        recall = round(TP / (TP + FN) * 100, 2)
+        df = pd.DataFrame(
+            [[model_name, tr_size, class_rule, train_vis, base_scene, cv, 0, 0, acc, precision, recall]],
+            columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'cv iteration', 'image noise',
+                     'label noise', 'Validation acc', 'Validation precision', 'Validation recall'])
+        neur_data = neur_data.append(df)
+        print(
+            f'model: {model_name}, class_rule: {class_rule}, training samples {tr_size}, cv: {cv}, TP: {TP}, FP: {FP}, TN: {TN}, FN: {FN},'
+            f' acc: {acc}%, precision: {precision}%, recall: {recall}%', flush=True)
+    os.makedirs('output/ood', exist_ok=True)
+    neur_data.to_csv(f'output/ood/ood_{train_vis}_{train_type}_{base_scene}_len_2-4.csv')
