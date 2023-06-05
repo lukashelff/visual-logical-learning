@@ -155,7 +155,7 @@ def ood(device, ds_path):
     train_type = ['MichalskiTrains', 'RandomTrains'][1]
     # device = 'cpu'
     rules = ['theoryx', 'numerical', 'complex'][:1]
-    tr_sizes = [100, 1000, 10000][::-2]
+    tr_sizes = [100, 1000, 10000]
     models = ['resnet18', 'EfficientNet', 'VisionTransformer']
     inference_size = 2000
     val_ids = sample(range(12000), inference_size)
