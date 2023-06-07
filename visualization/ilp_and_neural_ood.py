@@ -21,6 +21,7 @@ def ood_plot(outpath, vis='Trains'):
     train_vis = 'Trains'
     train_type = 'RandomTrains'
     base_scene = 'base_scene'
+    rule = 'theoryx'
 
     ood_data = read_csv_stats(outpath + f'/neural/ood/ood_{train_vis}_{train_type}_{base_scene}_len_2-4.csv',
                               train_length='2-4', noise=0, symb=False)
@@ -29,7 +30,7 @@ def ood_plot(outpath, vis='Trains'):
 
     data, ilp_models, neural_models, neuro_symbolic_models = get_ilp_neural_data(None, neural_stats_path,
                                                                                  None, None, vis)
-    data = data.loc[data['image noise'] == 0].loc[data['label noise'] == 0].loc[data['visualization'] == 'Michalski']
+    data = data.loc[data['image noise'] == 0].loc[data['label noise'] == 0].loc[data['visualization'] == 'Michalski'].loc[data['rule'] == rule]
     data['Distribution'] = 'Michalski'
     data = pd.concat([data, ood_data], ignore_index=True)
     scenes = data['scene'].unique()

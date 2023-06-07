@@ -220,5 +220,5 @@ def ood(device, ds_path):
             f' acc: {acc}%, precision: {precision}%, recall: {recall}%', flush=True)
         del trainer
         rtpt.step()
-    os.makedirs('output/ood', exist_ok=True)
+    os.makedirs('output/neural/ood', exist_ok=True)
     neur_data.to_csv(f'output/neural/ood/ood_{train_vis}_{train_type}_{base_scene}_len_2-4.csv')
