@@ -105,11 +105,12 @@ def make_1_im_legend(fig, colors_category, colors, colors_category_name, materia
     color_rows = math.ceil((len(colors_category)) / (ncols - 1))
     mt_rows = math.ceil((len(material_category)) / (ncols - 1))
     nrows = color_rows + mt_rows
-
-    colors_category += [''] * (color_rows * (ncols - 1) - len(colors_category))
-    material_category += [''] * (mt_rows * (ncols - 1) - len(material_category))
-    color_markers += white * (color_rows * (ncols - 1) - len(color_markers))
-    mt_markers += white * (mt_rows * (ncols - 1) - len(mt_markers))
+    if (color_rows * (ncols - 1) - len(colors_category)) > 0:
+        colors_category += [''] * (color_rows * (ncols - 1) - len(colors_category))
+        color_markers += white * (color_rows * (ncols - 1) - len(color_markers))
+    if (mt_rows * (ncols - 1) - len(material_category)) > 0:
+        material_category += [''] * (mt_rows * (ncols - 1) - len(material_category))
+        mt_markers += white * (mt_rows * (ncols - 1) - len(mt_markers))
 
     first_col_txt = [f'{colors_category_name.title()}:'] + [''] * (color_rows - 1) + [
         f'{material_category_name.title()}:'] + [''] * (mt_rows - 1)
