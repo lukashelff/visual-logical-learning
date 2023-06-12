@@ -11,7 +11,7 @@ import seaborn as sns
 
 
 def make_1_line_im(data, material_category, material_category_name, colors_category, colors_category_name, fig_path,
-                   figsize=(20, 2), rules=None):
+                   figsize=(20, 2), rules=None, ncol=4, ):
     labelsize, fontsize = 15, 20
     materials_s = ["//", '\\\\', 'x', "///", '/', '\\', '.', 'o', '+', 'O', '*']
     mt = {model: materials_s[n] for n, model in enumerate(material_category)}
@@ -58,8 +58,10 @@ def make_1_line_im(data, material_category, material_category_name, colors_categ
         else:
             ax.set_ylabel('Accuracy', fontsize=labelsize)
 
+    # make_1_im_legend(fig, colors_category, colors, colors_category_name, material_category, mt, material_category_name,
+    #                  labelsize, legend_h_offset=-0.18, legend_v_offset=0.0)
     make_1_im_legend(fig, colors_category, colors, colors_category_name, material_category, mt, material_category_name,
-                     labelsize, legend_h_offset=-0.18, legend_v_offset=0.0)
+                     labelsize, legend_h_offset=-3.18, legend_v_offset=0.0, ncols=ncol)
     os.makedirs(os.path.dirname(fig_path), exist_ok=True)
     plt.savefig(fig_path, bbox_inches='tight', dpi=400)
 
@@ -110,8 +112,7 @@ def make_1_im_legend(fig, colors_category, colors, colors_category_name, materia
     mt_markers += white * (mt_rows * (ncols - 1) - len(mt_markers))
 
     first_col_txt = [f'{colors_category_name.title()}:'] + [''] * (color_rows - 1) + [
-        f'{material_category_name.title()}:'] + [''] * (
-                            mt_rows - 1)
+        f'{material_category_name.title()}:'] + [''] * (mt_rows - 1)
     first_col_handles = (color_rows + mt_rows) * white
 
     txt = np.array(colors_category + material_category).reshape(nrows, (ncols - 1))

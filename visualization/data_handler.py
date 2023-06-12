@@ -228,7 +228,7 @@ def get_ilp_neural_data(ilp_stats_path, neural_stats_path, neuro_symbolic_stats_
     # replace 'simpleobjects' with 'block' in visualization column of data
     # replace 'trains' with 'michalski' in visualization column of data
     data['visualization'] = data['visualization'].apply(lambda x: x.replace('SimpleObjects', 'Block'))
-    data['visualization'] = data['visualization'].apply(lambda x: x.replace('Trains', 'Michalski'))
+    data['visualization'] = data['visualization'].apply(lambda x: x.replace('Trains', 'Train'))
     data.rename(columns={'Methods': 'Models'}, inplace=True)
     # data.rename({'visualization': 'Visualization'}, axis='columns', inplace=True)
     data.drop(['noise', 'noise type', 'epoch', 'label'], axis=1, inplace=True)

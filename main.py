@@ -27,15 +27,17 @@ def parse():
     # model settings
     parser.add_argument('--model', type=str, default='resnet18',
                         help='model to use for training: \'resnet18\', \'VisionTransformer\' or \'EfficientNet\'')
+    parser.add_argument('--y_val', type=str, default='direction',
+                        help='y value to predict: \'direction\', \'mask\', \'attribute\'')
 
+    # general settings
     parser.add_argument('--cuda', type=int, default=0, help='Which cuda device to use or cpu if -1')
     parser.add_argument('--action', type=str, default='train',
                         help='command ot execute: \'plot\',\'train\'')
     parser.add_argument('--command', type=str, default='train',
                         help='specific command to execute: \'train\', \'eval\', \'ilp\', \'ilp_crossval\', \'split_ds\','
                              ' \'eval_generalization\' or \'ct\'')
-    parser.add_argument('--y_val', type=str, default='direction',
-                        help='y value to predict: \'direction\', \'mask\', \'attribute\'')
+
 
     args = parser.parse_args()
 
