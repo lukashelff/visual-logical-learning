@@ -33,7 +33,7 @@ def parse():
     parser.add_argument('--cuda', type=int, default=0, help='Which cuda device to use or cpu if -1')
     parser.add_argument('--action', type=str, default='train',
                         help='command ot execute: \'plot\',\'train\'')
-    parser.add_argument('--command', type=str, default='train',
+    parser.add_argument('--command', type=str, default='cnn',
                         help='specific command to execute: \'train\', \'eval\', \'ilp\', \'ilp_crossval\', \'split_ds\','
                              ' \'eval_generalization\' or \'ct\'')
 

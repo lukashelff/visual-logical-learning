@@ -39,7 +39,8 @@ def train(args):
         rules = ['theoryx', 'numerical', 'complex']
         sample_sizes = [100, 1000, 10000][1:2]
         noise = [0, 0.1, 0.3][1:]
-        inference(train_vis, device, ds_path, ds_size, rules, min_cars, max_cars, sample_sizes=sample_sizes, noise=noise)
+        inference(train_vis, device, ds_path, ds_size, rules, min_cars, max_cars, sample_sizes=sample_sizes,
+                  noise=noise)
 
     if command == 'ilp':
         from ilp.trainer import Ilp_trainer
@@ -69,7 +70,8 @@ def train(args):
                 lr = 0.00001
             trainer = Trainer(base_scene, raw_trains, train_vis, device, model, class_rule, ds_path, ds_size=ds_size,
                               setup_model=False, setup_ds=False, batch_size=batch_size, resize=resize, lr=lr)
-            trainer.cross_val_train(train_size=train_size, label_noise=noises, rules=rules, replace=False, save_models=False)
+            trainer.cross_val_train(train_size=train_size, label_noise=noises, rules=rules, replace=False,
+                                    save_models=False)
         # trainer.plt_cross_val_performance(True, models=['resnet18', 'EfficientNet', 'VisionTransformer'])
 
     if command == 'image_noise':
