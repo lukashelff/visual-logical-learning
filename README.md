@@ -28,12 +28,12 @@ We recommend using this repository as a wrapper for the V-Lol-Train dataset gene
 follow the installation below.
 Alternatively, you can also download the dataset from the [official website](https://sites.google.com/view/v-lol).
 In that case you need to adjust the dataset path `ds_path` in the script parameters and add the dataloader files 
-to the following directory `Neuro-Symbolic-Relational-Learner/TrainGenerator/michalski_trains`.
+to the following directory `visual-logical-learning/TrainGenerator/michalski_trains`.
 The dataset files can also be found on the [official website](https://sites.google.com/view/v-lol).
 
 ```bash
-git clone https://github.com/lukashelff/Neuro-Symbolic-Relational-Learner.git
-cd Neuro-Symbolic-Relational-Learner
+git clone https://github.com/lukashelff/visual-logical-learning.git
+cd visual-logical-learning
 git clone https://github.com/ml-research/vlol-dataset-gen.git
 cd ..
 docker build -t v-lol-train .
