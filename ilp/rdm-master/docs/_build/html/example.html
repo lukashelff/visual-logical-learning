@@ -1,0 +1,278 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Example use case &mdash; Python-RDM 0.1 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="ClowdFlows" href="clowdflows.html" />
+    <link rel="prev" title="Getting started" href="getting_started.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> Python-RDM
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1.2
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting started</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Example use case</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clowdflows.html">ClowdFlows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="licences.html">Licences of included approaches</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Python-RDM</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>Example use case</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/example.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="example-use-case">
+<h1>Example use case<a class="headerlink" href="#example-use-case" title="Permalink to this headline">¶</a></h1>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">Orange</span>
+
+<span class="kn">from</span> <span class="nn">rdm.db</span> <span class="kn">import</span> <span class="n">DBVendor</span><span class="p">,</span> <span class="n">DBConnection</span><span class="p">,</span> <span class="n">DBContext</span><span class="p">,</span> <span class="n">RSDConverter</span><span class="p">,</span> <span class="n">mapper</span>
+<span class="kn">from</span> <span class="nn">rdm.wrappers</span> <span class="kn">import</span> <span class="n">RSD</span>
+<span class="kn">from</span> <span class="nn">rdm.validation</span> <span class="kn">import</span> <span class="n">cv_split</span>
+<span class="kn">from</span> <span class="nn">rdm.helpers</span> <span class="kn">import</span> <span class="n">arff_to_orange_table</span>
+
+<span class="c1"># Provide connection information</span>
+<span class="n">connection</span> <span class="o">=</span> <span class="n">DBConnection</span><span class="p">(</span>
+    <span class="s1">&#39;ilp&#39;</span><span class="p">,</span>  <span class="c1"># User</span>
+    <span class="s1">&#39;ilp123&#39;</span><span class="p">,</span>  <span class="c1"># Password</span>
+    <span class="s1">&#39;workflow.ijs.si&#39;</span><span class="p">,</span>  <span class="c1"># Host</span>
+    <span class="s1">&#39;imdb_top&#39;</span><span class="p">,</span>  <span class="c1"># Database</span>
+    <span class="n">vendor</span><span class="o">=</span><span class="n">DBVendor</span><span class="o">.</span><span class="n">MySQL</span>
+<span class="p">)</span>
+
+<span class="c1"># Define learning context</span>
+<span class="n">context</span> <span class="o">=</span> <span class="n">DBContext</span><span class="p">(</span><span class="n">connection</span><span class="p">,</span> <span class="n">target_table</span><span class="o">=</span><span class="s1">&#39;movies&#39;</span><span class="p">,</span> <span class="n">target_att</span><span class="o">=</span><span class="s1">&#39;quality&#39;</span><span class="p">)</span>
+
+<span class="c1"># Cross-validation loop</span>
+<span class="n">predictions</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">folds</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="k">for</span> <span class="n">train_context</span><span class="p">,</span> <span class="n">test_context</span> <span class="ow">in</span> <span class="n">cv_split</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">folds</span><span class="o">=</span><span class="n">folds</span><span class="p">,</span> <span class="n">random_seed</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">stratified</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="c1"># Find features on the train set</span>
+    <span class="n">conv</span> <span class="o">=</span> <span class="n">RSDConverter</span><span class="p">(</span><span class="n">train_context</span><span class="p">)</span>
+    <span class="n">rsd</span> <span class="o">=</span> <span class="n">RSD</span><span class="p">()</span>
+    <span class="n">features</span><span class="p">,</span> <span class="n">train_arff</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">rsd</span><span class="o">.</span><span class="n">induce</span><span class="p">(</span>
+        <span class="n">conv</span><span class="o">.</span><span class="n">background_knowledge</span><span class="p">(),</span>   <span class="c1"># Background knowledge</span>
+        <span class="n">examples</span><span class="o">=</span><span class="n">conv</span><span class="o">.</span><span class="n">all_examples</span><span class="p">(),</span>  <span class="c1"># Training examples</span>
+        <span class="n">cn2sd</span><span class="o">=</span><span class="kc">False</span>                    <span class="c1"># Disable built-in subgroup discovery</span>
+    <span class="p">)</span>
+
+    <span class="n">a</span> <span class="o">=</span> <span class="n">conv</span><span class="o">.</span><span class="n">background_knowledge</span><span class="p">()</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">conv</span><span class="o">.</span><span class="n">all_examples</span><span class="p">()</span>
+
+    <span class="c1"># Train the classifier on the *train set*</span>
+    <span class="n">train_data</span> <span class="o">=</span> <span class="n">arff_to_orange_table</span><span class="p">(</span><span class="n">train_arff</span><span class="p">)</span>
+    <span class="n">tree_learner</span> <span class="o">=</span> <span class="n">Orange</span><span class="o">.</span><span class="n">classification</span><span class="o">.</span><span class="n">TreeLearner</span><span class="p">(</span><span class="n">max_depth</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+    <span class="n">tree_classifier</span> <span class="o">=</span> <span class="n">tree_learner</span><span class="p">(</span><span class="n">train_data</span><span class="p">)</span>
+
+    <span class="c1"># Map the *test set* using the features from the train set</span>
+    <span class="n">test_arff</span> <span class="o">=</span> <span class="n">mapper</span><span class="o">.</span><span class="n">domain_map</span><span class="p">(</span><span class="n">features</span><span class="p">,</span> <span class="s1">&#39;rsd&#39;</span><span class="p">,</span> <span class="n">train_context</span><span class="p">,</span> <span class="n">test_context</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;arff&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Classify the test set</span>
+    <span class="n">test_data</span> <span class="o">=</span> <span class="n">arff_to_orange_table</span><span class="p">(</span><span class="n">test_arff</span><span class="p">)</span>
+    <span class="n">fold_predictions</span> <span class="o">=</span> <span class="p">[(</span><span class="n">ex</span><span class="o">.</span><span class="n">get_class</span><span class="p">(),</span> <span class="n">tree_classifier</span><span class="p">(</span><span class="n">ex</span><span class="p">))</span> <span class="k">for</span> <span class="n">ex</span> <span class="ow">in</span> <span class="n">test_data</span><span class="p">]</span>
+    <span class="n">predictions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fold_predictions</span><span class="p">)</span>
+
+<span class="n">acc</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="k">for</span> <span class="n">fold_predictions</span> <span class="ow">in</span> <span class="n">predictions</span><span class="p">:</span>
+    <span class="n">acc</span> <span class="o">+=</span> <span class="nb">sum</span><span class="p">([</span><span class="mf">1.0</span> <span class="k">for</span> <span class="n">actual</span><span class="p">,</span> <span class="n">predicted</span> <span class="ow">in</span> <span class="n">fold_predictions</span> <span class="k">if</span> <span class="n">actual</span> <span class="o">==</span> <span class="n">predicted</span><span class="p">])</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">fold_predictions</span><span class="p">)</span>
+<span class="n">acc</span> <span class="o">=</span> <span class="mi">100</span> <span class="o">*</span> <span class="n">acc</span> <span class="o">/</span> <span class="n">folds</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Estimated predictive accuracy: </span><span class="si">{0:.2f}</span><span class="s1">%&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">acc</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="clowdflows.html" class="btn btn-neutral float-right" title="ClowdFlows" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="getting_started.html" class="btn btn-neutral float-left" title="Getting started" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2016, Anze Vavpetic, Matic Perovsek
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

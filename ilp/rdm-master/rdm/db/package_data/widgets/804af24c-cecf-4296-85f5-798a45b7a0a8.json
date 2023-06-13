@@ -1,0 +1,125 @@
+[
+  {
+    "model": "workflows.abstractwidget",
+    "fields": {
+      "name": "Map examples to domain (Aleph features)",
+      "action": "ilp_map_aleph",
+      "wsdl": "",
+      "wsdl_method": "",
+      "description": "",
+      "category": "b349a089-0af7-4d86-838b-e8c93d9d6ca5",
+      "visualization_view": "",
+      "streaming_visualization_view": "",
+      "interactive": false,
+      "interaction_view": "",
+      "post_interact_action": "",
+      "image": "",
+      "treeview_image": "",
+      "static_image": "database.png",
+      "has_progress_bar": false,
+      "is_streaming": false,
+      "order": 1,
+      "uid": "804af24c-cecf-4296-85f5-798a45b7a0a8",
+      "package": "rdm.db",
+      "always_save_results": false,
+      "windows_queue": false
+    }
+  },
+  {
+    "model": "workflows.abstractinput",
+    "fields": {
+      "name": "format",
+      "short_name": "fmt",
+      "description": "output format",
+      "variable": "output_format",
+      "widget": "804af24c-cecf-4296-85f5-798a45b7a0a8",
+      "required": true,
+      "parameter": true,
+      "multi": false,
+      "default": "arff",
+      "parameter_type": "select",
+      "order": 2,
+      "uid": "5765110e-ead7-463b-8af4-c710dd0e56f4"
+    }
+  },
+  {
+    "model": "workflows.abstractinput",
+    "fields": {
+      "name": "features",
+      "short_name": "frs",
+      "description": "domain features",
+      "variable": "features",
+      "widget": "804af24c-cecf-4296-85f5-798a45b7a0a8",
+      "required": true,
+      "parameter": false,
+      "multi": false,
+      "default": "",
+      "parameter_type": null,
+      "order": 4,
+      "uid": "9c245a66-c419-44aa-a077-d133c8b2e5f5"
+    }
+  },
+  {
+    "model": "workflows.abstractinput",
+    "fields": {
+      "name": "positive class",
+      "short_name": "pos",
+      "description": "positive class",
+      "variable": "positive_class",
+      "widget": "804af24c-cecf-4296-85f5-798a45b7a0a8",
+      "required": true,
+      "parameter": false,
+      "multi": false,
+      "default": "",
+      "parameter_type": null,
+      "order": 1,
+      "uid": "bdba04d8-e4cc-4590-b807-dc2581bd9e42"
+    }
+  },
+  {
+    "model": "workflows.abstractinput",
+    "fields": {
+      "name": "test data (context)",
+      "short_name": "tst",
+      "description": "new examples' context",
+      "variable": "test_ctx",
+      "widget": "804af24c-cecf-4296-85f5-798a45b7a0a8",
+      "required": true,
+      "parameter": false,
+      "multi": false,
+      "default": "",
+      "parameter_type": null,
+      "order": 3,
+      "uid": "cb5e9036-e0a0-4de8-9d41-d4f7e418e415"
+    }
+  },
+  {
+    "model": "workflows.abstractinput",
+    "fields": {
+      "name": "training data (context)",
+      "short_name": "trn",
+      "description": "training context",
+      "variable": "train_ctx",
+      "widget": "804af24c-cecf-4296-85f5-798a45b7a0a8",
+      "required": false,
+      "parameter": false,
+      "multi": false,
+      "default": "",
+      "parameter_type": null,
+      "order": 1,
+      "uid": "e13530d2-96a1-4e8e-a5aa-12ad686f7384"
+    }
+  },
+  {
+    "model": "workflows.abstractoutput",
+    "fields": {
+      "name": "evaluations",
+      "short_name": "evs",
+      "description": "features evaluated on the test data",
+      "variable": "evaluations",
+      "widget": "804af24c-cecf-4296-85f5-798a45b7a0a8",
+      "order": 1,
+      "uid": "90f445ab-f8a2-4960-8d4a-e98edbdb9f39"
+    }
+  }
+]

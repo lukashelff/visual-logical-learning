@@ -1,0 +1,74 @@
+[
+  {
+    "model": "workflows.abstractwidget",
+    "fields": {
+      "name": "Database Context",
+      "action": "database_db_context",
+      "wsdl": "",
+      "wsdl_method": "",
+      "description": "",
+      "category": "b66b71b1-99d6-4efc-b264-a914a3e42911",
+      "visualization_view": "",
+      "streaming_visualization_view": "",
+      "interactive": true,
+      "interaction_view": "database_db_context",
+      "post_interact_action": "database_db_context_finished",
+      "image": "",
+      "treeview_image": "",
+      "static_image": "database.png",
+      "has_progress_bar": false,
+      "is_streaming": false,
+      "order": 2,
+      "uid": "649015ac-ca53-43bc-a36a-c603b52f8775",
+      "package": "rdm.db",
+      "always_save_results": true,
+      "windows_queue": false
+    }
+  },
+  {
+    "model": "workflows.abstractinput",
+    "fields": {
+      "name": "connection",
+      "short_name": "con",
+      "description": "",
+      "variable": "connection",
+      "widget": "649015ac-ca53-43bc-a36a-c603b52f8775",
+      "required": true,
+      "parameter": false,
+      "multi": false,
+      "default": "",
+      "parameter_type": null,
+      "order": 1,
+      "uid": "6c23b4a2-a18e-498e-a22c-4de86932da3e"
+    }
+  },
+  {
+    "model": "workflows.abstractinput",
+    "fields": {
+      "name": "Table connection from names",
+      "short_name": "tbc",
+      "description": "Tries to detect connections between tables solely by looking at the attribute names.",
+      "variable": "find_connections",
+      "widget": "649015ac-ca53-43bc-a36a-c603b52f8775",
+      "required": true,
+      "parameter": true,
+      "multi": false,
+      "default": "false",
+      "parameter_type": "checkbox",
+      "order": 2,
+      "uid": "be3718eb-062e-48f2-af2a-8c31e66524fe"
+    }
+  },
+  {
+    "model": "workflows.abstractoutput",
+    "fields": {
+      "name": "context",
+      "short_name": "cxt",
+      "description": "",
+      "variable": "context",
+      "widget": "649015ac-ca53-43bc-a36a-c603b52f8775",
+      "order": 1,
+      "uid": "171aa481-0f93-4315-a476-ed3b0aa8c9e4"
+    }
+  }
+]

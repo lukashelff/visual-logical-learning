@@ -1,0 +1,143 @@
+[
+  {
+    "model": "workflows.abstractwidget",
+    "fields": {
+      "name": "Database Connect",
+      "action": "database_connect",
+      "wsdl": "",
+      "wsdl_method": "",
+      "description": "",
+      "category": "b66b71b1-99d6-4efc-b264-a914a3e42911",
+      "visualization_view": "",
+      "streaming_visualization_view": "",
+      "interactive": false,
+      "interaction_view": "",
+      "post_interact_action": "",
+      "image": "",
+      "treeview_image": "",
+      "static_image": "database.png",
+      "has_progress_bar": false,
+      "is_streaming": false,
+      "order": 1,
+      "uid": "41978deb-c245-4e1f-95a2-ceadcfe6898a",
+      "package": "rdm.db",
+      "always_save_results": true,
+      "windows_queue": false
+    }
+  },
+  {
+    "model": "workflows.abstractinput",
+    "fields": {
+      "name": "user",
+      "short_name": "usr",
+      "description": "",
+      "variable": "user",
+      "widget": "41978deb-c245-4e1f-95a2-ceadcfe6898a",
+      "required": true,
+      "parameter": true,
+      "multi": false,
+      "default": "",
+      "parameter_type": "text",
+      "order": 1,
+      "uid": "0f36f10b-066f-4ad3-9fa8-39205440076a"
+    }
+  },
+  {
+    "model": "workflows.abstractinput",
+    "fields": {
+      "name": "vendor",
+      "short_name": "vdr",
+      "description": "",
+      "variable": "vendor",
+      "widget": "41978deb-c245-4e1f-95a2-ceadcfe6898a",
+      "required": true,
+      "parameter": true,
+      "multi": false,
+      "default": "",
+      "parameter_type": "select",
+      "order": 5,
+      "uid": "5b2354a6-ec5a-47b1-9af7-42664943c93e"
+    }
+  },
+  {
+    "model": "workflows.abstractinput",
+    "fields": {
+      "name": "password",
+      "short_name": "pwd",
+      "description": "",
+      "variable": "password",
+      "widget": "41978deb-c245-4e1f-95a2-ceadcfe6898a",
+      "required": false,
+      "parameter": true,
+      "multi": false,
+      "default": "",
+      "parameter_type": "password",
+      "order": 2,
+      "uid": "8ead911a-3d1b-4e50-b56a-64873b85d3cf"
+    }
+  },
+  {
+    "model": "workflows.abstractinput",
+    "fields": {
+      "name": "host",
+      "short_name": "hst",
+      "description": "",
+      "variable": "host",
+      "widget": "41978deb-c245-4e1f-95a2-ceadcfe6898a",
+      "required": true,
+      "parameter": true,
+      "multi": false,
+      "default": "",
+      "parameter_type": "text",
+      "order": 3,
+      "uid": "9812cc11-b21e-4444-8dfe-bc0c68fe79e8"
+    }
+  },
+  {
+    "model": "workflows.abstractinput",
+    "fields": {
+      "name": "database",
+      "short_name": "db",
+      "description": "",
+      "variable": "database",
+      "widget": "41978deb-c245-4e1f-95a2-ceadcfe6898a",
+      "required": true,
+      "parameter": true,
+      "multi": false,
+      "default": "",
+      "parameter_type": "text",
+      "order": 4,
+      "uid": "d132adce-c3ec-411a-8ee7-906be4a99f61"
+    }
+  },
+  {
+    "model": "workflows.abstractoutput",
+    "fields": {
+      "name": "connection",
+      "short_name": "con",
+      "description": "",
+      "variable": "connection",
+      "widget": "41978deb-c245-4e1f-95a2-ceadcfe6898a",
+      "order": 1,
+      "uid": "4858c86c-c53e-4722-9747-635af56bd4dd"
+    }
+  },
+  {
+    "model": "workflows.abstractoption",
+    "fields": {
+      "abstract_input": "5b2354a6-ec5a-47b1-9af7-42664943c93e",
+      "name": "PostgreSQL",
+      "value": "postgresql",
+      "uid": "39cc138f-ff10-4e80-997d-f8fa3a30deb0"
+    }
+  },
+  {
+    "model": "workflows.abstractoption",
+    "fields": {
+      "abstract_input": "5b2354a6-ec5a-47b1-9af7-42664943c93e",
+      "name": "MySQL",
+      "value": "mysql",
+      "uid": "df2eacd2-095d-4226-8abf-0f7ca4fde229"
+    }
+  }
+]
