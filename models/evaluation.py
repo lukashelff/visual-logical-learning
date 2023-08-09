@@ -81,7 +81,7 @@ def intervention_test(model_name, device, ds_path):
     from models.trainer import Trainer
     base_scene, raw_trains, train_vis, class_rule = 'base_scene', 'MichalskiTrains', 'Trains', 'theoryx'
     train_type = ['MichalskiTrains', 'RandomTrains'][0]
-    ds_iv = ['intervention/', 'intervention1/', 'intervention1b/', 'intervention2', 'intervention2b', ''][3:5]
+    ds_iv = ['intervention1', 'intervention1b', 'intervention2', 'intervention2b']
     # model_name = 'EfficientNet'
     # device = 'cpu'
     tr_size = 1000
@@ -141,14 +141,14 @@ def intervention_test(model_name, device, ds_path):
                 # if pred != lab or len(labels) < 100:
                 #     print(f'{cat} image {os.path.basename(im_path)} (pred: {pred} ,gt: {lab})')
             acc = round((TP + TN) / (TP + TN + FP + FN) * 100, 2)
-            precision = round(TP / (TP + FP) * 100, 2)
-            recall = round(TP / (TP + FN) * 100, 2)
-            stats = pd.concat([stats, pd.DataFrame([[model_name, tr_size, class_rule, train_vis, base_scene, cv_it,
-                                                     'direction', intervention, acc, precision, recall]],
-                                                   columns=['Methods', 'number of images', 'rule', 'visualization',
-                                                            'scene', 'cv iteration', 'label', 'intervention',
-                                                            'Validation acc', "precision", "recall"])],
-                              ignore_index=True)
+            precision = 0 if TP + FP == 0 else round(TP / (TP + FP) * 100, 2)
+            recall = 0 if TP + FN == 0 else round(TP / (TP + FN) * 100, 2)
+            stats = pd.concat([stats,
+                               pd.DataFrame([[model_name, tr_size, class_rule, train_vis, base_scene, cv_it,
+                                              'direction', intervention, acc, precision, recall]],
+                                            columns=['Methods', 'number of images', 'rule', 'visualization',
+                                                     'scene', 'cv iteration', 'label', 'intervention', 'Validation acc',
+                                                     "precision", "recall"])], ignore_index=True)
 
             print(f'model: {model_name}, CVit: {cv_it}, intervention: {intervention},'
                   f' TP: {TP}, FP: {FP}, TN: {TN}, FN: {FN},'

@@ -100,8 +100,11 @@ def main():
         # intervention_test(model_name, device, ds_path)
         # print_stats(train_vis, class_rule, raw_trains, base_scene)
 
-        from models.evaluation import intervention_rcnn
-        intervention_rcnn(args)
+        # from models.evaluation import intervention_rcnn
+        # intervention_rcnn(args)
+        from ilp.evaluation import intervention_symbolic_ilp
+        ilp_pth = 'output/ilp'
+        intervention_symbolic_ilp(ilp_pth)
 
     if action == 'ood':
         from models.evaluation import ood
