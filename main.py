@@ -2,6 +2,7 @@ import argparse
 import sys
 import torch
 
+
 def parse():
     # Instantiate the parser
     parser = argparse.ArgumentParser(description='The Michalski Train Problem')
@@ -36,7 +37,6 @@ def parse():
     parser.add_argument('--command', type=str, default='cnn',
                         help='specific command to execute: \'train\', \'eval\', \'ilp\', \'ilp_crossval\', \'split_ds\','
                              ' \'eval_generalization\' or \'ct\'')
-
 
     args = parser.parse_args()
 
@@ -96,16 +96,35 @@ def main():
         neuro_symbolic_generalization_test(neural_symbolic_path, device)
 
     if action == 'intervention':
-        from models.evaluation import intervention_test
+        from models.evaluation import intervention_test, print_stats
+        # intervention_test(model_name, device, ds_path)
+        # print_stats(train_vis, class_rule, raw_trains, base_scene)
 
-        intervention_test(model_name, device, ds_path)
         from models.evaluation import intervention_rcnn
-        # intervention_rcnn(args)
+        intervention_rcnn(args)
 
     if action == 'ood':
         from models.evaluation import ood
         ood(device, ds_path)
 
+    if action == 'update_ds':
+
+        import glob
+        paths = glob.glob('TrainGenerator/output/image_generator/*/all_scenes/all_scenes.json')
+        for path in paths:
+            with open(path, 'r') as org:
+                import json
+                data = json.load(org)
+                scenes = data['scenes']
+                for scene in scenes:
+                    train = scene['m_train']
+                    from michalski_trains.m_train import MichalskiTrain
+                    train = MichalskiTrain.fromJSON(train)
+                    scene['train'] = train.to_txt()
+                    scene.pop('m_train')
+                data['scenes'] = scenes
+                with open(path, 'w+') as f:
+                    json.dump(data, f, indent=2)
 
 
 if __name__ == '__main__':

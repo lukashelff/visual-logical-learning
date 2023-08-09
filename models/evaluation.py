@@ -9,6 +9,7 @@ import torch
 from rtpt import RTPT
 from tqdm import tqdm
 
+from michalski_trains.m_train import MichalskiTrain
 from models.trainer import Trainer
 
 
@@ -80,56 +81,94 @@ def intervention_test(model_name, device, ds_path):
     from models.trainer import Trainer
     base_scene, raw_trains, train_vis, class_rule = 'base_scene', 'MichalskiTrains', 'Trains', 'theoryx'
     train_type = ['MichalskiTrains', 'RandomTrains'][0]
-    ds_iv = ['intervention/', ''][0]
+    ds_iv = ['intervention/', 'intervention1/', 'intervention1b/', 'intervention2', 'intervention2b', ''][3:5]
     # model_name = 'EfficientNet'
     # device = 'cpu'
     tr_size = 1000
     inference_size = 2000
-    trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path,
-                      setup_model=False, setup_ds=False)
-    model_path = trainer.get_model_path(prefix=True, im_count=tr_size, suffix=f'it_0/', model_name=model_name)
-    trainer.setup_model(True, path=model_path, y_val='direction')
-    path = f'{ds_path}/{ds_iv}{train_vis}_{class_rule}_{train_type}_{base_scene}_len_2-4'
-    scene_path = f'{path}/all_scenes/all_scenes.json'
-    with open(scene_path, 'r') as f:
-        # count number of files in dir
-        n = len(os.listdir(f'{path}/images'))
-        images = [None] * n
-        labels = [None] * n
-        all_scenes = json.load(f)
-        for scene in all_scenes['scenes']:
-            train = scene['m_train']
-            train = jsonpickle.decode(train)
-            labels[scene['image_index']] = train.get_label()
-            images[scene['image_index']] = scene['image_filename']
+    cv_iterations = 5
+    stats = pd.DataFrame(columns=['Methods', 'number of images', 'rule', 'visualization', 'scene', 'cv iteration',
+                                  'label', 'intervention', 'Validation acc', "precision", "recall"])
+    models = ['resnet18', 'EfficientNet', 'VisionTransformer']
+    output_path = f'output/model_comparison/interventions/'
+    os.makedirs(output_path, exist_ok=True)
+    rtpt = RTPT(name_initials='LH', experiment_name="intervention_test",
+                max_iterations=cv_iterations * len(models) * len(ds_iv))
+    rtpt.start()
+    for model_name in models:
+        trainer = Trainer(base_scene, raw_trains, train_vis, device, model_name, class_rule, ds_path,
+                          setup_model=False, setup_ds=False)
+        for intervention, cv_it in product(ds_iv, range(cv_iterations)):
+            model_path = trainer.get_model_path(prefix=True, im_count=tr_size, suffix=f'it_{cv_it}/',
+                                                model_name=model_name)
+            trainer.setup_model(True, path=model_path, y_val='direction')
+            # path = f'{ds_path}/{ds_iv}{train_vis}_{class_rule}_{train_type}_{base_scene}_len_2-4'
+            path = f'{ds_path}/{train_vis}_{intervention}_{train_type}_{base_scene}_len_2-4'
+            scene_path = f'{path}/all_scenes/all_scenes.json'
+            with open(scene_path, 'r') as f:
+                # count number of files in dir
+                n = len(os.listdir(f'{path}/images'))
+                images = [None] * n
+                labels = [None] * n
+                all_scenes = json.load(f)
+                for scene in all_scenes['scenes']:
+                    train = scene['train']
+                    train = MichalskiTrain.from_text(train, visualization=train_vis)
+                    # train = jsonpickle.decode(train)
+                    labels[scene['image_index']] = train.get_label()
+                    images[scene['image_index']] = scene['image_filename']
 
-    images, labels = images[:inference_size], labels[:inference_size]
-    TP, FP, TN, FN = 0, 0, 0, 0
-    for image, lab in tqdm(zip(images, labels)):
-        im_path = f'{path}/images/{image}'
-        pred = trainer.infer_im(im_path)
-        pred = 'west' if pred[0] == 0 else 'east'
-        if pred == 'west' and lab == 'west':
-            TN += 1
-            cat = 'TN'
-        elif pred == 'east' and lab == 'east':
-            TP += 1
-            cat = 'TP'
-        elif pred == 'west' and lab == 'east':
-            FN += 1
-            cat = 'FN'
-            # print(f'{cat} image {os.path.basename(im_path)} (pred: {pred} ,gt: {lab})')
+            images, labels = images[:inference_size], labels[:inference_size]
+            TP, FP, TN, FN = 0, 0, 0, 0
+            for image, lab in tqdm(zip(images, labels)):
+                im_path = f'{path}/images/{image}'
+                pred = trainer.infer_im(im_path)
+                pred = 'west' if pred[0] == 0 else 'east'
+                if pred == 'west' and lab == 'west':
+                    TN += 1
+                    cat = 'TN'
+                elif pred == 'east' and lab == 'east':
+                    TP += 1
+                    cat = 'TP'
+                elif pred == 'west' and lab == 'east':
+                    FN += 1
+                    cat = 'FN'
+                    # print(f'{cat} image {os.path.basename(im_path)} (pred: {pred} ,gt: {lab})')
 
-        elif pred == 'east' and lab == 'west':
-            FP += 1
-            cat = 'FP'
-        if pred != lab or len(labels) < 100:
-            print(f'{cat} image {os.path.basename(im_path)} (pred: {pred} ,gt: {lab})')
-    acc = round((TP + TN) / (TP + TN + FP + FN) * 100, 2)
-    precision = round(TP / (TP + FP) * 100, 2)
-    recall = round(TP / (TP + FN) * 100, 2)
-    print(f'TP: {TP}, FP: {FP}, TN: {TN}, FN: {FN}, acc: {acc}%, precision: {precision}%, recall: {recall}%',
-          flush=True)
+                elif pred == 'east' and lab == 'west':
+                    FP += 1
+                    cat = 'FP'
+                # if pred != lab or len(labels) < 100:
+                #     print(f'{cat} image {os.path.basename(im_path)} (pred: {pred} ,gt: {lab})')
+            acc = round((TP + TN) / (TP + TN + FP + FN) * 100, 2)
+            precision = round(TP / (TP + FP) * 100, 2)
+            recall = round(TP / (TP + FN) * 100, 2)
+            stats = pd.concat([stats, pd.DataFrame([[model_name, tr_size, class_rule, train_vis, base_scene, cv_it,
+                                                     'direction', intervention, acc, precision, recall]],
+                                                   columns=['Methods', 'number of images', 'rule', 'visualization',
+                                                            'scene', 'cv iteration', 'label', 'intervention',
+                                                            'Validation acc', "precision", "recall"])],
+                              ignore_index=True)
+
+            print(f'model: {model_name}, CVit: {cv_it}, intervention: {intervention},'
+                  f' TP: {TP}, FP: {FP}, TN: {TN}, FN: {FN},'
+                  f' acc: {acc}%, precision: {precision}%, recall: {recall}%',
+                  flush=True)
+            rtpt.step()
+    stats.to_csv(f'{output_path}/intervention_{train_vis}_{class_rule}_{train_type}_{base_scene}_len_2-4.csv')
+
+
+def print_stats(train_vis, class_rule, train_type, base_scene):
+    stats = pd.read_csv(
+        f'output/model_comparison/interventions/intervention_{train_vis}_{class_rule}_{train_type}_{base_scene}_len_2-4.csv')
+    models = stats['Methods'].unique()
+    interventions = stats['intervention'].unique()
+    for model, intervention in product(models, interventions):
+        model_stats = stats[(stats['Methods'] == model) & (stats['intervention'] == intervention)]
+        # print mean and std of acc
+        mean_acc = round(model_stats['Validation acc'].mean(), 2)
+        std_acc = round(model_stats['Validation acc'].std(), 2)
+        print(f'{model} {intervention} acc: {mean_acc} +- {std_acc}')
 
 
 def intervention_rcnn(args):
@@ -137,10 +176,14 @@ def intervention_rcnn(args):
     batch_size = 20
     device = torch.device("cpu" if not torch.cuda.is_available() or args.cuda == -1 else f"cuda")
 
-    trainer = Trainer(args.background, args.description, args.visualization, device, args.model, args.rule,
-                      args.ds_path + '/intervention', ds_size=12,
-                      y_val=args.y_val, resume=True, batch_size=batch_size, setup_model=False, setup_ds=True,
-                      min_car=args.min_train_length, max_car=args.max_train_length, val_size=12, train_size=None)
+    # trainer = Trainer(args.background, args.description, args.visualization, device, args.model, args.rule,
+    #                   args.ds_path + '/intervention', ds_size=12,
+    #                   y_val=args.y_val, resume=True, batch_size=batch_size, setup_model=False, setup_ds=True,
+    #                   min_car=args.min_train_length, max_car=args.max_train_length, val_size=12, train_size=None)
+    trainer = Trainer(args.background, args.description, args.visualization, device, args.model, 'intervention2',
+                      args.ds_path, ds_size=2000, y_val=args.y_val, resume=True, batch_size=batch_size,
+                      setup_model=False, setup_ds=True, min_car=args.min_train_length, max_car=args.max_train_length,
+                      val_size=12, train_size=None)
     model_path = 'output/models/multi_label_rcnn/maskv2_classification/Trains_theoryx_RandomTrains_base_scene/imcount_12000_X_val_image_pretrained_lr_0.001_step_10000_gamma0.1/'
     trainer.setup_model(True, path=model_path, y_val=args.y_val)
     from models.rcnn.plot_prediction import predict_and_plot

@@ -57,7 +57,7 @@ def train(args):
         lr = 0.001
         rules = ['theoryx', 'numerical', 'complex']
         rules = [class_rule]
-        train_size = [100, 1000, 10000]
+        train_size = [100, 1000, 10000][2:]
         # noises = [0, 0.1, 0.3]
         noises = [noise]
         visualizations = ['Trains', 'SimpleObjects']
@@ -70,7 +70,7 @@ def train(args):
                 lr = 0.00001
             trainer = Trainer(base_scene, raw_trains, train_vis, device, model, class_rule, ds_path, ds_size=ds_size,
                               setup_model=False, setup_ds=False, batch_size=batch_size, resize=resize, lr=lr)
-            trainer.cross_val_train(train_size=train_size, label_noise=noises, rules=rules, replace=False,
+            trainer.cross_val_train(train_size=train_size, label_noise=noises, rules=rules, replace=True,
                                     save_models=False)
         # trainer.plt_cross_val_performance(True, models=['resnet18', 'EfficientNet', 'VisionTransformer'])
 
