@@ -106,6 +106,9 @@ def main():
         ilp_pth = 'output/ilp'
         intervention_symbolic_ilp(ilp_pth)
 
+        from models.neuro_symbolic.intervention import intervention_neuro_symbolic
+        intervention_neuro_symbolic('output/neuro-symbolic', device)
+
     if action == 'ood':
         from models.evaluation import ood
         ood(device, ds_path)

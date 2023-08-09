@@ -12,7 +12,7 @@ def intervention_neuro_symbolic(ns_pth, device):
     ns_stats_path = f'{ns_pth}/stats'
     interventions = ['intervention1', 'intervention1b', 'intervention2', 'intervention2b']
     ilps = ['popper', 'aleph']
-    dirs = glob.glob(ns_stats_path + '/*.csv')
+    dirs = glob.glob(ns_stats_path + '/Trains*.csv')
     ilp_data = []
     for dir in dirs:
         if 'Trains' in dir:
@@ -59,6 +59,21 @@ def intervention_neuro_symbolic(ns_pth, device):
     o_path = f'output/model_comparison/interventions/neuro_symbolic_intervention.csv'
     os.makedirs(os.path.dirname(o_path), exist_ok=True)
     stats.to_csv(o_path)
+    stats = stats.loc[stats['number of images'] == 1000]
+    for intervention in interventions:
+        # evaluate ground truth rule
+        rule_pth = 'TrainGenerator/example_rules/theoryx_rule.pl'
+        val_path = f'TrainGenerator/output/image_generator/dataset_descriptions/{intervention}/MichalskiTrains_len_{min_car}-{max_car}.txt'
+        TP, FN, TN, FP, TP_train, FN_train, TN_train, FP_train = eval_rule(theory=rule_pth, ds_val=val_path,
+                                                                           ds_train=None, dir='TrainGenerator/',
+                                                                           print_stats=False, )
+        acc = round((TP + TN) / (TP + TN + FP + FN) * 100, 2)
+        for model in ilps:
+            model_stats = stats[(stats['Methods'] == model) & (stats['intervention'] == intervention)]
+            # print mean and std of acc
+            mean_acc = round(model_stats['Validation acc'].mean(), 2)
+            std_acc = round(model_stats['Validation acc'].std(), 2)
+            print(f'{model} {intervention} acc: {mean_acc} +/- {std_acc} (ground truth: {acc})')
 
 
 def infer_ds(intervention, base_scene, raw_trains, train_vis, device, ds_path, ds_size, class_rule, min_cars, max_cars):
