@@ -53,6 +53,7 @@ class Trainer:
             batch_size, num_worker, step_size, gamma, momentum, num_epochs
         self.lr = lr if lr is not None else 0.00001 if model_name == 'VisionTransformer' else 0.001
         self.out_path = self.get_model_path()
+        self.ds, self.dl = None, None
         # setup model and dataset
         if setup_model:
             self.setup_model(resume=resume)
@@ -269,7 +270,7 @@ class Trainer:
                 val_size = int(0.2 * self.ds_size)
             # tr_idx = arange(train_size)
             # val_idx = arange(train_size, train_size + val_size)
-            tr_idx, val_idx, y_train, y_test = train_test_split(range(self.ds_size), train_size=train_size,
+            tr_idx, val_idx, y_train, y_test = train_test_split(range(self.ds_size), range(self.ds_size), train_size=train_size,
                                                                 test_size=val_size, stratify=self.full_ds.y)
         if len(tr_idx) > 0:
             set_up_txt = f'split ds into training ds with {len(tr_idx)} images and validation ds with {len(val_idx)} images'
@@ -291,6 +292,7 @@ class Trainer:
         else:
             self.dl = {'train': DataLoader(self.ds['train'], batch_size=self.batch_size, num_workers=self.num_worker),
                        'val': DataLoader(self.ds['val'], batch_size=self.batch_size, num_workers=self.num_worker)}
+
 
     def plt_accuracy(self):
         visualize_statistics(self.raw_trains, self.base_scene, self.y_val, self.ds, self.out_path, self.model_name)

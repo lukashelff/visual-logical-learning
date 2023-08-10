@@ -231,7 +231,10 @@ def get_ilp_neural_data(ilp_stats_path, neural_stats_path, neuro_symbolic_stats_
     data['visualization'] = data['visualization'].apply(lambda x: x.replace('Trains', 'Train'))
     data.rename(columns={'Methods': 'Models'}, inplace=True)
     # data.rename({'visualization': 'Visualization'}, axis='columns', inplace=True)
-    data.drop(['noise', 'noise type', 'epoch', 'label'], axis=1, inplace=True)
+    for col in ['noise', 'noise type', 'epoch', 'label']:
+        if col in data.columns:
+            data.drop(col, axis=1, inplace=True)
+    # data.drop(['noise', 'noise type', 'epoch', 'label'], axis=1, inplace=True)
     data.reset_index(drop=True, inplace=True)
     return data, ilp_models, neural_models, neuro_symbolic_models
 

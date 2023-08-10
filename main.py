@@ -63,6 +63,7 @@ def main():
     sys.path.insert(0, 'ilp/rdm-master/')
     sys.path.insert(0, 'TrainGenerator/')
 
+
     if action == 'plot':
         from plotter import plot
         plot(args)
@@ -96,18 +97,18 @@ def main():
         neuro_symbolic_generalization_test(neural_symbolic_path, device)
 
     if action == 'intervention':
-        from models.evaluation import intervention_test, print_stats
+        # from models.evaluation import intervention_test, print_stats
         # intervention_test(model_name, device, ds_path)
         # print_stats(train_vis, class_rule, raw_trains, base_scene)
 
         # from models.evaluation import intervention_rcnn
         # intervention_rcnn(args)
-        from ilp.evaluation import intervention_symbolic_ilp
-        ilp_pth = 'output/ilp'
-        intervention_symbolic_ilp(ilp_pth)
+        # from ilp.evaluation import intervention_symbolic_ilp
+        # ilp_pth = 'output/ilp'
+        # intervention_symbolic_ilp(ilp_pth)
 
         from models.neuro_symbolic.intervention import intervention_neuro_symbolic
-        intervention_neuro_symbolic('output/neuro-symbolic', device)
+        intervention_neuro_symbolic('output', device)
 
     if action == 'ood':
         from models.evaluation import ood
