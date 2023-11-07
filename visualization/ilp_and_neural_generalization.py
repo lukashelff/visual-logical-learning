@@ -35,11 +35,14 @@ def generalization_plot(outpath, vis='Trains', min_cars=7, max_cars=7, tr_sample
 
     data, ilp_models, neural_models, neuro_symbolic_models = get_ilp_neural_data(ilp_stats_path, neural_stats_path,
                                                                                  neuro_sym_path, alpha_ilp, vis)
+    print(data['Train length'].unique())
 
     data = pd.concat([data, data_gen_ilp, data_gen_cnn, data_gen_neuro_symbolic], ignore_index=True)
+
     # data = pd.concat([data, data_gen_ilp, data_gen_cnn], ignore_index=True)
     data = data.loc[data['training samples'] == tr_samples].loc[data['image noise'] == 0].loc[
         data['label noise'] == 0].loc[data['visualization'] == 'Michalski']
+    print(data['Train length'].unique())
 
     scenes = data['scene'].unique()
     im_count = sorted(data['training samples'].unique())

@@ -85,14 +85,15 @@ def rule_complexity_plot(outpath, vis='Trains', im_count=1000):
     patch_markers = [mpatches.Patch(facecolor='grey', hatch=mt[m]) for m in models]
     color_markers = [mlines.Line2D([], [], color=colors[c], marker='d', linestyle='None', markersize=10) for c in
                      models]
-    handels = color_markers if not use_materials else patch_markers
+    handles = color_markers if not use_materials else patch_markers
     txt = ['Models:'] + [m for m in models]
+    handles = white + handles
+    handles[5:5] = white
     txt[5:5] = ['']
-    handels = white + handels
-    handels[5:5] = white
 
-    txt = np.array(txt).reshape(2, (5))
-    handles = np.array(handels).reshape(2, (5))
+
+    txt = np.array(txt).reshape(2, -1)
+    handles = np.array(handles).reshape(2, -1)
     handles = handles.T.flatten().tolist()
     txt = txt.T.flatten().tolist()
     leg = fig.legend(

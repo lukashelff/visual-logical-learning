@@ -21,7 +21,7 @@ def plot(args):
     if command == 'label_noise':
         neural_path = 'output/neural'
         from visualization.data_handler import get_cv_data
-        get_cv_data(neural_path)
+        # get_cv_data(neural_path)
         for s in [1000]:
         # for s in [100, 1000, 10000]:
             from visualization.ilp_and_neural_label_noise import label_noise_plot, label_noise_degradation_plot

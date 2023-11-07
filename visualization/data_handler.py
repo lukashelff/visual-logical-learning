@@ -144,7 +144,7 @@ def get_ilp_neural_data(ilp_stats_path, neural_stats_path, neuro_symbolic_stats_
         # ilp_data.loc[ilp_data['noise'] == 0, 'noise type'] = 'no noise'
         ilp_data = ilp_data.rename({'noise': 'label noise'}, axis='columns')
         ilp_data['image noise'] = 0
-        ilp_data['Methods'] = ilp_data['Methods'].apply(lambda x: x.title() + ' (Symb)')
+        ilp_data['Methods'] = ilp_data['Methods'].apply(lambda x: x.title() + ' (GT)')
         ilp_models = sorted(ilp_data['Methods'].unique())
         ilp_data['Train length'] = '2-4'
 
@@ -228,7 +228,7 @@ def get_ilp_neural_data(ilp_stats_path, neural_stats_path, neuro_symbolic_stats_
     # replace 'simpleobjects' with 'block' in visualization column of data
     # replace 'trains' with 'michalski' in visualization column of data
     data['visualization'] = data['visualization'].apply(lambda x: x.replace('SimpleObjects', 'Block'))
-    data['visualization'] = data['visualization'].apply(lambda x: x.replace('Trains', 'Train'))
+    data['visualization'] = data['visualization'].apply(lambda x: x.replace('Trains', 'Michalski'))
     data.rename(columns={'Methods': 'Models'}, inplace=True)
     # data.rename({'visualization': 'Visualization'}, axis='columns', inplace=True)
     for col in ['noise', 'noise type', 'epoch', 'label']:
@@ -252,8 +252,8 @@ def read_csv_stats(csv_path, train_length=7, noise=0, symb=True, vis='Michalski'
         data['Methods'] = data['Methods'].apply(lambda x: x.replace('simpleobjects', 'Block'))
         data['Methods'] = data['Methods'].apply(lambda x: x.replace('trains', 'Michalski'))
         if symb:
-            data['Methods'] = data['Methods'].apply(lambda x: x.replace('popper', 'Popper (Symb)'))
-            data['Methods'] = data['Methods'].apply(lambda x: x.replace('aleph', 'Aleph (Symb)'))
+            data['Methods'] = data['Methods'].apply(lambda x: x.replace('popper', 'Popper (GT)'))
+            data['Methods'] = data['Methods'].apply(lambda x: x.replace('aleph', 'Aleph (GT)'))
         else:
             data['Methods'] = data['Methods'].apply(lambda x: x.replace('popper', 'RCNN-Popper (NeSy)'))
             data['Methods'] = data['Methods'].apply(lambda x: x.replace('aleph', 'RCNN-Aleph (NeSy)'))

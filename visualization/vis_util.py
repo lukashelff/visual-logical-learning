@@ -61,7 +61,7 @@ def make_1_line_im(data, material_category, material_category_name, colors_categ
     # make_1_im_legend(fig, colors_category, colors, colors_category_name, material_category, mt, material_category_name,
     #                  labelsize, legend_h_offset=-0.18, legend_v_offset=0.0)
     make_1_im_legend(fig, colors_category, colors, colors_category_name, material_category, mt, material_category_name,
-                     labelsize, legend_h_offset=-3.18, legend_v_offset=0.0, ncols=ncol)
+                     labelsize, legend_h_offset=-.18, legend_v_offset=0.0, ncols=ncol)
     os.makedirs(os.path.dirname(fig_path), exist_ok=True)
     plt.savefig(fig_path, bbox_inches='tight', dpi=400)
 
@@ -94,13 +94,14 @@ def make_3_im_legend(fig, axes, category, category_name, models, colors, mt, leg
 
 def make_1_im_legend(fig, colors_category, colors, colors_category_name, material_category, materials,
                      material_category_name='Models',
-                     fontsize=15, legend_h_offset=0, legend_v_offset=0, ncols=5):
+                     fontsize=15, legend_h_offset=0, legend_v_offset=0, ncols=5, frameon=True):
     dif = max(0, len(material_category) - len(colors_category))
     white = [mlines.Line2D([], [], color='white', marker='X', linestyle='None', markersize=0)]
     color_markers = [mlines.Line2D([], [], color=colors[c], marker='d', linestyle='None', markersize=10) for c in
                      colors_category]
     plt.rcParams.update({'hatch.color': 'black'})
     mt_markers = [mpatches.Patch(facecolor='white', hatch=materials[m], edgecolor='black') for m in material_category]
+    print(ncols)
 
     color_rows = math.ceil((len(colors_category)) / (ncols - 1))
     mt_rows = math.ceil((len(material_category)) / (ncols - 1))
@@ -127,7 +128,7 @@ def make_1_im_legend(fig, colors_category, colors, colors_category_name, materia
         handles, txt,
         loc='lower center',
         bbox_to_anchor=(.496 + legend_v_offset, -.35 + legend_h_offset),
-        frameon=False,
+        frameon=frameon,
         handletextpad=.5,
         ncols=ncols, handleheight=1.3, handlelength=2.5, fontsize=fontsize,
     )
@@ -199,7 +200,7 @@ def make_3_im(data, material_category, material_category_name, colors_category, 
     leg.get_yaxis().set_visible(False)
 
     make_1_im_legend(fig, colors_category, colors, colors_category_name, material_category, mt, material_category_name,
-                     labelsize, legend_h_offset=legend_offset[0], legend_v_offset=legend_offset[1], ncols=legend_cols)
+                     labelsize, legend_h_offset=legend_offset[0], legend_v_offset=legend_offset[1], ncols=legend_cols, frameon=False)
     os.makedirs(os.path.dirname(fig_path), exist_ok=True)
     plt.savefig(fig_path, bbox_inches='tight', dpi=400)
     # save completed runs
