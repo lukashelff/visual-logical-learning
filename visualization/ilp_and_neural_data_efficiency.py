@@ -33,4 +33,4 @@ def data_efficiency_plot(outpath, vis='Trains'):
     # make_1_line_im(data, material_category, material_category_name, colors_category, colors_category_name,
     #                fig_path + f'/data_efficiency.png', (27, 2))
     make_3_im(data, material_category, material_category_name, colors_category, colors_category_name,
-              fig_path + f'/data_efficiency.png', (27, 4), legend_offset=(0.43, 0.213), legend_cols=4)
+              fig_path + f'/data_efficiency.png', (30, 8), legend_offset=(0.13, 0), legend_cols=5)

@@ -53,7 +53,7 @@ def elementary_vs_realistic_plot(outpath, rule='theoryx', tr_samples=1000):
 
     make_1_line_im(data, material_category, material_category_name, colors_category, colors_category_name,
                    out_dir + f'/elementary_vs_realistic_{tr_samples}_samples_{rule}.png',
-                   figsize=(16, 2), rules=[rule], ncol=5)
+                   figsize=(26, 4), rules=[rule], ncol=5)
     # mt = {model: materials_s[n] for n, model in enumerate(material_category)}
     # sns.set_theme(style="whitegrid")
     # fig = plt.figure(figsize=(16, 2))

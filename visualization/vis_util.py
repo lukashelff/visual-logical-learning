@@ -11,8 +11,8 @@ import seaborn as sns
 
 
 def make_1_line_im(data, material_category, material_category_name, colors_category, colors_category_name, fig_path,
-                   figsize=(20, 2), rules=None, ncol=4, ):
-    labelsize, fontsize = 15, 20
+                   figsize=(24, 4), rules=None, ncol=4, ):
+    labelsize, fontsize = 30, 35
     materials_s = ["//", '\\\\', 'x', "///", '/', '\\', '.', 'o', '+', 'O', '*']
     mt = {model: materials_s[n] for n, model in enumerate(material_category)}
 
@@ -31,6 +31,7 @@ def make_1_line_im(data, material_category, material_category_name, colors_categ
         ax.grid(axis='x')
         ax.set_title(rule.title(), fontsize=fontsize)
         ax.tick_params(bottom=False, left=False, labelsize=labelsize)
+        ax.axvline(x=5.5, color='black', linestyle='--', linewidth=2)
         for spine in ax.spines.values():
             spine.set_edgecolor('gray')
         data_t = data.loc[data['rule'] == rule]
@@ -70,7 +71,7 @@ def make_1_line_im(data, material_category, material_category_name, colors_categ
 
 # vertical legend
 def make_3_im_legend(fig, axes, category, category_name, models, colors, mt, legend_h_offset=0):
-    axes[1, 1].set_axis_off()
+    # axes[1, 1].set_axis_off()
     dif = max(0, len(models) - len(category))
     white = [mlines.Line2D([], [], color='white', marker='X', linestyle='None', markersize=0)]
     color_markers = [mlines.Line2D([], [], color=colors[c], marker='d', linestyle='None', markersize=5) for c in
@@ -97,7 +98,7 @@ def make_1_im_legend(fig, colors_category, colors, colors_category_name, materia
                      fontsize=15, legend_h_offset=0, legend_v_offset=0, ncols=5, frameon=True):
     dif = max(0, len(material_category) - len(colors_category))
     white = [mlines.Line2D([], [], color='white', marker='X', linestyle='None', markersize=0)]
-    color_markers = [mlines.Line2D([], [], color=colors[c], marker='d', linestyle='None', markersize=10) for c in
+    color_markers = [mlines.Line2D([], [], color=colors[c], marker='d', linestyle='None', markersize=20) for c in
                      colors_category]
     plt.rcParams.update({'hatch.color': 'black'})
     mt_markers = [mpatches.Patch(facecolor='white', hatch=materials[m], edgecolor='black') for m in material_category]
@@ -140,7 +141,7 @@ def make_1_im_legend(fig, colors_category, colors, colors_category_name, materia
 
 def make_3_im(data, material_category, material_category_name, colors_category, colors_category_name, fig_path,
               figsize=(20, 4), rules=None, legend_offset=(0.14, 0.0), legend_cols=5, ):
-    labelsize, fontsize = 15, 20
+    labelsize, fontsize = 30, 35
     materials_s = ["//", '\\\\', 'x', "///", '/', '\\', '.', 'o', '+', 'O', '*']
     mt = {model: materials_s[n] for n, model in enumerate(material_category)}
 
@@ -150,13 +151,16 @@ def make_3_im(data, material_category, material_category_name, colors_category, 
 
     sns.set_theme(style="whitegrid")
     fig = plt.figure(figsize=figsize)
-    gs = fig.add_gridspec(2, 2, wspace=.05, hspace=.3)
+    # gs = fig.add_gridspec(2, 2, wspace=.05, hspace=.3)
+    gs = fig.add_gridspec(3, 1, wspace=.05, hspace=.3)
     axes = gs.subplots(sharex=True, sharey=True, )
     axes = axes if isinstance(axes, np.ndarray) else [axes]
     completed_runs = []
     for col, rule in enumerate(rules):
-        ax = axes[col // 2, col % 2]
+        # ax = axes[col // 2, col % 2]
+        ax = axes[col]
         ax.grid(axis='x')
+        ax.axvline(x=5.5, color='black', linestyle='--', linewidth=2)
         ax.set_title(rule.title(), fontsize=fontsize)
         ax.tick_params(bottom=False, left=False, labelsize=labelsize)
         for spine in ax.spines.values():
@@ -188,19 +192,20 @@ def make_3_im(data, material_category, material_category_name, colors_category, 
         ax.set_xlabel('')
         x_pos = sorted(list(set([p.get_x() + p.get_width() / 2 for p in ax.patches])))
         if col % 2:
-            ax.set_ylabel('')
-        else:
             ax.set_ylabel('Accuracy', fontsize=labelsize)
-            ax.set_ylim([50, 111])
+            ax.set_ylim([50, 120])
+        else:
+            ax.set_ylabel('')
         for x, y, r in zip(x_pos, y_pos, run):
             ax.text(x, y + 10, r, fontsize=labelsize, ha='center')
     # axes[1, 1].set_axis_off()
-    leg = axes[1, 1]
-    leg.get_xaxis().set_visible(False)
-    leg.get_yaxis().set_visible(False)
+    # leg = axes[1, 1]
+    # leg.get_xaxis().set_visible(False)
+    # leg.get_yaxis().set_visible(False)
+    # make_3_im_legend(fig, axes, material_category, material_category_name, colors_category_name, colors, mt, legend_offset[0])
 
     make_1_im_legend(fig, colors_category, colors, colors_category_name, material_category, mt, material_category_name,
-                     labelsize, legend_h_offset=legend_offset[0], legend_v_offset=legend_offset[1], ncols=legend_cols, frameon=False)
+                     labelsize, legend_h_offset=legend_offset[0], legend_v_offset=legend_offset[1], ncols=legend_cols, frameon=True)
     os.makedirs(os.path.dirname(fig_path), exist_ok=True)
     plt.savefig(fig_path, bbox_inches='tight', dpi=400)
     # save completed runs

@@ -13,7 +13,7 @@ from visualization.vis_util import make_1_line_im, make_1_im_legend
 
 
 def rule_complexity_plot(outpath, vis='Trains', im_count=1000):
-    labelsize, fontsize = 15, 20
+    labelsize, fontsize = 30, 35
     use_materials = False
     ilp_stats_path = f'{outpath}/ilp/stats'
     neuro_symbolic_stats_path = f'{outpath}/neuro-symbolic/stats'
@@ -37,7 +37,7 @@ def rule_complexity_plot(outpath, vis='Trains', im_count=1000):
     colors = {m: colors_s[n] for n, m in enumerate(models)}
 
     sns.set_theme(style="whitegrid")
-    fig = plt.figure(figsize=(16, 2))
+    fig = plt.figure(figsize=(26, 3))
     gs = fig.add_gridspec(1, 3, wspace=.05, hspace=.15)
     axes = gs.subplots(sharex=True, sharey=True, )
     axes = axes if isinstance(axes, np.ndarray) else [axes]
@@ -48,6 +48,8 @@ def rule_complexity_plot(outpath, vis='Trains', im_count=1000):
         ax.grid(axis='x')
         ax.set_title(rule.title(), fontsize=fontsize)
         ax.tick_params(bottom=False, left=False, labelsize=labelsize)
+        ax.axvline(x=5.5, color='black', linestyle='--', linewidth=2)
+
         for spine in ax.spines.values():
             spine.set_edgecolor('gray')
         data_t = data.loc[data['rule'] == rule]
@@ -68,7 +70,7 @@ def rule_complexity_plot(outpath, vis='Trains', im_count=1000):
             ax.bar_label(container, fmt='%1.f', label_type='edge', fontsize=labelsize, padding=3)
         if use_materials:
             ax.get_legend().remove()
-        ax.set_ylim([50, 111])
+        ax.set_ylim([50, 120])
         ax.get_xaxis().set_visible(False)
         if col != 0:
             ax.set_ylabel('')
@@ -83,7 +85,7 @@ def rule_complexity_plot(outpath, vis='Trains', im_count=1000):
     plt.rcParams.update({'hatch.color': 'black'})
 
     patch_markers = [mpatches.Patch(facecolor='grey', hatch=mt[m]) for m in models]
-    color_markers = [mlines.Line2D([], [], color=colors[c], marker='d', linestyle='None', markersize=10) for c in
+    color_markers = [mlines.Line2D([], [], color=colors[c], marker='d', linestyle='None', markersize=20) for c in
                      models]
     handles = color_markers if not use_materials else patch_markers
     txt = ['Models:'] + [m for m in models]
@@ -100,12 +102,13 @@ def rule_complexity_plot(outpath, vis='Trains', im_count=1000):
         handles,
         txt,
         loc='lower left',
-        bbox_to_anchor=(0.12, -.37),
+        bbox_to_anchor=(0.075, -.55),
         frameon=True,
         handletextpad=0,
         fontsize=labelsize,
         ncol=5, handleheight=1.3, handlelength=2.5
     )
+
     for vpack in leg._legend_handle_box.get_children()[:1]:
         for idx, hpack in enumerate(vpack.get_children()):
             print(f'{idx} {hpack}')

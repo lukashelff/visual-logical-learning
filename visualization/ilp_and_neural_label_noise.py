@@ -44,8 +44,9 @@ def label_noise_plot(outpath, training_samples=1000, vis='Trains'):
     #                fig_path + f'/label_noise_{training_samples}_tr_samples.png', (27, 2))
     pth = fig_path + f'/label_noise.png' if training_samples == 1000 else fig_path + f'/label_noise_{training_samples}_tr_samples.png'
     make_3_im(data, material_category, material_category_name, colors_category, colors_category_name,
-              pth, (27, 4), legend_offset=(0.43, 0.213),
-              legend_cols=4)
+              pth,
+              (30, 8), legend_offset=(0.13, 0), legend_cols=5)
+    # (27, 4), legend_offset=(0.43, 0.213), legend_cols=4)
 
 
 def label_noise_degradation_plot(outpath, training_samples=1000, vis='Trains'):
