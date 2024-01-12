@@ -144,7 +144,7 @@ def get_ilp_neural_data(ilp_stats_path, neural_stats_path, neuro_symbolic_stats_
         # ilp_data.loc[ilp_data['noise'] == 0, 'noise type'] = 'no noise'
         ilp_data = ilp_data.rename({'noise': 'label noise'}, axis='columns')
         ilp_data['image noise'] = 0
-        ilp_data['Methods'] = ilp_data['Methods'].apply(lambda x: x.title() + ' (GT)')
+        ilp_data['Methods'] = ilp_data['Methods'].apply(lambda x: x.title() + ' (w/ GT)')
         ilp_models = sorted(ilp_data['Methods'].unique())
         ilp_data['Train length'] = '2-4'
 
@@ -174,7 +174,8 @@ def get_ilp_neural_data(ilp_stats_path, neural_stats_path, neuro_symbolic_stats_
         # neuro_symbolic_data.loc[neuro_symbolic_data['noise'] == 0, 'noise type'] = 'no noise'
         neuro_symbolic_data = neuro_symbolic_data.rename({'noise': 'label noise'}, axis='columns')
         neuro_symbolic_data['image noise'] = 0
-        neuro_symbolic_data['Methods'] = neuro_symbolic_data['Methods'].apply(lambda x: 'RCNN-' + x.title() + ' (NeSy)')
+        neuro_symbolic_data['Methods'] = neuro_symbolic_data['Methods'].apply(lambda x: 'RCNN-' + x.title() + '')
+
         neuro_symbolic_models = sorted(neuro_symbolic_data['Methods'].unique())
         neuro_symbolic_data['Train length'] = '2-4'
 
@@ -189,8 +190,9 @@ def get_ilp_neural_data(ilp_stats_path, neural_stats_path, neuro_symbolic_stats_
             with open(dir, 'r') as f:
                 data.append(pd.read_csv(f))
         alpha_ilp_data = pd.concat(data, ignore_index=True)
-        neuro_symbolic_models.append('αILP')
-        alpha_ilp_data['Methods'] = 'αILP'
+        alpha_ilp_name = 'αILP'
+        neuro_symbolic_models.append(alpha_ilp_name)
+        alpha_ilp_data['Methods'] = alpha_ilp_name
         alpha_ilp_data.drop(
             ['Validation rec', 'Train rec', 'Generalization rec', 'Validation th', 'Train th', 'Generalization th'],
             axis=1, inplace=True)
@@ -213,6 +215,7 @@ def get_ilp_neural_data(ilp_stats_path, neural_stats_path, neuro_symbolic_stats_
         neur_data = neur_data.rename({'number of images': 'training samples'}, axis='columns')
         neur_data['Methods'] = neur_data['Methods'].apply(lambda x: x.replace('resnet18', 'ResNet18'))
         neur_data['Methods'] = neur_data['Methods'].apply(lambda x: x.replace('VisionTransformer', 'ViT'))
+        neur_data['Methods'] = neur_data['Methods'].apply(lambda x: x.replace('EfficientNet', 'EfficientNet'))
         neural_models = sorted(neur_data['Methods'].unique())
         # neur_data = neur_data.rename({'noise': 'label noise'}, axis='columns')
         # neur_data = neur_data.rename({'noise type': 'image noise'}, axis='columns')

@@ -16,7 +16,11 @@ def make_1_line_im(data, material_category, material_category_name, colors_categ
     materials_s = ["//", '\\\\', 'x', "///", '/', '\\', '.', 'o', '+', 'O', '*']
     mt = {model: materials_s[n] for n, model in enumerate(material_category)}
 
-    colors_s = sns.color_palette('dark')
+    # colors_s = sns.color_palette('dark')
+    colors_s = list(map(sns.color_palette('Blues').__getitem__, [1, 3, 5]))
+    colors_s += list(map(sns.color_palette('Reds').__getitem__, [1, 3, 5]))
+    colors_s += list(map(sns.color_palette('Greens').__getitem__, [1, 5]))
+
     colors = {vis: colors_s[n] for n, vis in enumerate(colors_category)}
     rules = ['theoryx', 'numerical', 'complex'] if rules is None else rules
 
@@ -59,10 +63,10 @@ def make_1_line_im(data, material_category, material_category_name, colors_categ
         else:
             ax.set_ylabel('Accuracy', fontsize=labelsize)
 
-    # make_1_im_legend(fig, colors_category, colors, colors_category_name, material_category, mt, material_category_name,
-    #                  labelsize, legend_h_offset=-0.18, legend_v_offset=0.0)
     make_1_im_legend(fig, colors_category, colors, colors_category_name, material_category, mt, material_category_name,
-                     labelsize, legend_h_offset=-.18, legend_v_offset=0.0, ncols=ncol)
+                     labelsize, legend_h_offset=-.35, legend_v_offset=0, ncols=ncol)
+    # make_new_legend(fig, colors_category, colors, colors_category_name, material_category, mt, material_category_name,
+    #                  labelsize, legend_h_offset=-.18, legend_v_offset=0.0, ncols=4)
     os.makedirs(os.path.dirname(fig_path), exist_ok=True)
     plt.savefig(fig_path, bbox_inches='tight', dpi=400)
 
@@ -139,6 +143,71 @@ def make_1_im_legend(fig, colors_category, colors, colors_category_name, materia
             hpack.get_children()[0].set_width(0)
 
 
+def make_new_legend(fig, colors_category, colors, colors_category_name, material_category, materials,
+                    material_category_name='Models',
+                    fontsize=15, legend_h_offset=0, legend_v_offset=0, ncols=5, frameon=True):
+    white = [mlines.Line2D([], [], color='white', marker='X', linestyle='None', markersize=0)]
+    color_markers = [mlines.Line2D([], [], color=colors[c], marker='d', linestyle='None', markersize=20) for c in
+                     colors_category]
+    plt.rcParams.update({'hatch.color': 'black'})
+    mt_markers = [mpatches.Patch(facecolor='white', hatch=materials[m], edgecolor='black') for m in material_category]
+    print(ncols)
+
+    color_rows = 3
+    mt_rows = 1
+    nrows = color_rows + mt_rows
+    colors_category += [''] * (color_rows * (ncols - 1) - len(colors_category))
+    color_markers += white * (color_rows * (ncols - 1) - len(color_markers))
+    material_category += [''] * (mt_rows * (ncols - 1) - len(material_category))
+    mt_markers += white * (mt_rows * (ncols - 1) - len(mt_markers))
+
+    first_col_txt = ['Neural Models:', 'Neuro-Symbolic Models:', 'Symbolic Models:', material_category_name.title()]
+    first_col_handles = (color_rows + mt_rows) * white
+
+    txt = np.array(colors_category + material_category).reshape(nrows, (ncols - 1))
+    txt = np.concatenate((np.array(first_col_txt).reshape(nrows, 1), txt), axis=1)
+    handles = np.array(color_markers + mt_markers).reshape(nrows, (ncols - 1))
+    handles = np.concatenate((np.array(first_col_handles).reshape(nrows, 1), handles), axis=1)
+    handles = handles.T.flatten().tolist()
+    txt = txt.T.flatten().tolist()
+
+    leg = fig.legend(
+        handles, txt,
+        loc='lower center',
+        bbox_to_anchor=(.496 + legend_v_offset, -.55 + legend_h_offset),
+        frameon=frameon,
+        handletextpad=.5,
+        ncols=ncols, handleheight=1.3, handlelength=2.5, fontsize=fontsize,
+    )
+
+    for vpack in leg._legend_handle_box.get_children()[:1]:
+        for hpack in vpack.get_children():
+            hpack.get_children()[0].set_width(0)
+
+
+def make_3_im_legend(fig, axes, category, category_name, models, colors, mt, legend_h_offset=0):
+    # axes[1, 1].set_axis_off()
+    dif = max(0, len(models) - len(category))
+    white = [mlines.Line2D([], [], color='white', marker='X', linestyle='None', markersize=0)]
+    color_markers = [mlines.Line2D([], [], color=colors[c], marker='d', linestyle='None', markersize=5) for c in
+                     category] + white * (dif + 1)
+    plt.rcParams.update({'hatch.color': 'black'})
+    category += [''] * dif
+    handels = [mpatches.Patch(facecolor='grey', hatch=mt[m]) for m in models]
+    leg = fig.legend(
+        white + color_markers + handels,
+        [f'{category_name}:'] + category + ['Models:'] + [m.title() for m in models],
+        loc='lower left',
+        bbox_to_anchor=(.515, 0.248 + legend_h_offset),
+        frameon=True,
+        handletextpad=.5,
+        ncol=2, handleheight=1.2, handlelength=2.5
+    )
+    for vpack in leg._legend_handle_box.get_children():
+        for hpack in vpack.get_children()[:1]:
+            hpack.get_children()[0].set_width(0)
+
+
 def make_3_im(data, material_category, material_category_name, colors_category, colors_category_name, fig_path,
               figsize=(20, 4), rules=None, legend_offset=(0.14, 0.0), legend_cols=5, ):
     labelsize, fontsize = 30, 35
@@ -205,7 +274,8 @@ def make_3_im(data, material_category, material_category_name, colors_category, 
     # make_3_im_legend(fig, axes, material_category, material_category_name, colors_category_name, colors, mt, legend_offset[0])
 
     make_1_im_legend(fig, colors_category, colors, colors_category_name, material_category, mt, material_category_name,
-                     labelsize, legend_h_offset=legend_offset[0], legend_v_offset=legend_offset[1], ncols=legend_cols, frameon=True)
+                     labelsize, legend_h_offset=legend_offset[0], legend_v_offset=legend_offset[1], ncols=legend_cols,
+                     frameon=True)
     os.makedirs(os.path.dirname(fig_path), exist_ok=True)
     plt.savefig(fig_path, bbox_inches='tight', dpi=400)
     # save completed runs
