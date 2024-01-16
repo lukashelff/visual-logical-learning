@@ -118,8 +118,9 @@ def make_1_im_legend(fig, colors_category, colors, colors_category_name, materia
         material_category += [''] * (mt_rows * (ncols - 1) - len(material_category))
         mt_markers += white * (mt_rows * (ncols - 1) - len(mt_markers))
 
-    first_col_txt = [f'{colors_category_name.title()}:'] + [''] * (color_rows - 1) + [
-        f'{material_category_name.title()}:'] + [''] * (mt_rows - 1)
+    first_col_txt = [f'{colors_category_name.title()}:'] + [''] * (color_rows - 1)
+    if material_category_name is not None:
+        first_col_txt += [f'{material_category_name.title()}:'] + [''] * (mt_rows - 1)
     first_col_handles = (color_rows + mt_rows) * white
 
     txt = np.array(colors_category + material_category).reshape(nrows, (ncols - 1))
@@ -209,12 +210,14 @@ def make_3_im_legend(fig, axes, category, category_name, models, colors, mt, leg
 
 
 def make_3_im(data, material_category, material_category_name, colors_category, colors_category_name, fig_path,
-              figsize=(20, 4), rules=None, legend_offset=(0.14, 0.0), legend_cols=5, ):
+              figsize=(20, 4), rules=None, legend_offset=(0.14, 0.0), legend_cols=4, ):
     labelsize, fontsize = 30, 35
     materials_s = ["//", '\\\\', 'x', "///", '/', '\\', '.', 'o', '+', 'O', '*']
     mt = {model: materials_s[n] for n, model in enumerate(material_category)}
 
-    colors_s = sns.color_palette('dark')
+    colors_s = list(map(sns.color_palette('Blues').__getitem__, [1, 3, 5]))
+    colors_s += list(map(sns.color_palette('Reds').__getitem__, [1, 3, 5]))
+    colors_s += list(map(sns.color_palette('Greens').__getitem__, [1, 5]))
     colors = {vis: colors_s[n] for n, vis in enumerate(colors_category)}
     rules = ['theoryx', 'numerical', 'complex'] if rules is None else rules
 
@@ -276,7 +279,10 @@ def make_3_im(data, material_category, material_category_name, colors_category, 
     make_1_im_legend(fig, colors_category, colors, colors_category_name, material_category, mt, material_category_name,
                      labelsize, legend_h_offset=legend_offset[0], legend_v_offset=legend_offset[1], ncols=legend_cols,
                      frameon=True)
-    os.makedirs(os.path.dirname(fig_path), exist_ok=True)
+    # make_new_legend(fig, colors_category, colors, colors_category_name, material_category, mt, material_category_name,
+    #                  labelsize, legend_h_offset=legend_offset[0], legend_v_offset=legend_offset[1], ncols=legend_cols,
+    #                  frameon=True)
+    # os.makedirs(os.path.dirname(fig_path), exist_ok=True)
     plt.savefig(fig_path, bbox_inches='tight', dpi=400)
     # save completed runs
     with open(fig_path.replace('.png', '_completed_runs.txt'), 'w') as f:

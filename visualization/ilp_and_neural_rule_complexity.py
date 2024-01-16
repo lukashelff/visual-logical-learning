@@ -33,7 +33,10 @@ def rule_complexity_plot(outpath, vis='Trains', im_count=1000):
     materials_s = ["///", "//", '/', '\\', '\\\\', 'x', '.', 'o', '+', 'O', '*'] if use_materials else \
         ["//", '\\\\', 'x', '+', "///", '/', '\\', 'o', 'O', '.', '*']
     mt = {model: materials_s[n] for n, model in enumerate(models)}
-    colors_s = sns.color_palette('dark')[:len(models)]
+    # colors_s = sns.color_palette('dark')[:len(models)]
+    colors_s = list(map(sns.color_palette('Blues').__getitem__, [1, 3, 5]))
+    colors_s += list(map(sns.color_palette('Reds').__getitem__, [1, 3, 5]))
+    colors_s += list(map(sns.color_palette('Greens').__getitem__, [1, 5]))
     colors = {m: colors_s[n] for n, m in enumerate(models)}
 
     sns.set_theme(style="whitegrid")
@@ -65,7 +68,8 @@ def rule_complexity_plot(outpath, vis='Trains', im_count=1000):
                             palette="dark", alpha=.7, ax=ax, orient='v', hatch=mt[model], order=models)
             else:
                 sns.barplot(x='Models', y='Validation acc', data=data_temp, color=colors[model], edgecolor='black',
-                            palette="dark", alpha=.7, ax=ax, orient='v', order=models)
+                            # palette="dark",
+                            alpha=.7, ax=ax, orient='v', order=models)
         for container in ax.containers:
             ax.bar_label(container, fmt='%1.f', label_type='edge', fontsize=labelsize, padding=3)
         if use_materials:
@@ -80,40 +84,8 @@ def rule_complexity_plot(outpath, vis='Trains', im_count=1000):
         for x, y, r in zip(x_pos, y_pos, run):
             ax.text(x, y + 10, r, fontsize=labelsize, ha='center')
 
-
-    white = [mlines.Line2D([], [], color='white', marker='X', linestyle='None', markersize=0)]
-    plt.rcParams.update({'hatch.color': 'black'})
-
-    patch_markers = [mpatches.Patch(facecolor='grey', hatch=mt[m]) for m in models]
-    color_markers = [mlines.Line2D([], [], color=colors[c], marker='d', linestyle='None', markersize=20) for c in
-                     models]
-    handles = color_markers if not use_materials else patch_markers
-    txt = ['Models:'] + [m for m in models]
-    handles = white + handles
-    handles[5:5] = white
-    txt[5:5] = ['']
-
-
-    txt = np.array(txt).reshape(2, -1)
-    handles = np.array(handles).reshape(2, -1)
-    handles = handles.T.flatten().tolist()
-    txt = txt.T.flatten().tolist()
-    leg = fig.legend(
-        handles,
-        txt,
-        loc='lower left',
-        bbox_to_anchor=(0.075, -.55),
-        frameon=True,
-        handletextpad=0,
-        fontsize=labelsize,
-        ncol=5, handleheight=1.3, handlelength=2.5
-    )
-
-    for vpack in leg._legend_handle_box.get_children()[:1]:
-        for idx, hpack in enumerate(vpack.get_children()):
-            print(f'{idx} {hpack}')
-            if idx == 0:
-                hpack.get_children()[0].set_width(0)
+    make_1_im_legend(fig, models, colors, 'Models', [], mt, None,
+                     labelsize, legend_h_offset=-.35, legend_v_offset=0, ncols=4)
 
     os.makedirs(fig_path, exist_ok=True)
     pth = fig_path + f'/rule_complexity.png' if im_count == 1000 else fig_path + f'/rule_complexity_{im_count}_sample.png'

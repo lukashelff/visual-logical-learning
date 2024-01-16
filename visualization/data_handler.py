@@ -144,10 +144,9 @@ def get_ilp_neural_data(ilp_stats_path, neural_stats_path, neuro_symbolic_stats_
         # ilp_data.loc[ilp_data['noise'] == 0, 'noise type'] = 'no noise'
         ilp_data = ilp_data.rename({'noise': 'label noise'}, axis='columns')
         ilp_data['image noise'] = 0
-        ilp_data['Methods'] = ilp_data['Methods'].apply(lambda x: x.title() + ' (w/ GT)')
+        ilp_data['Methods'] = ilp_data['Methods'].apply(lambda x: x.title() + ' (Sym w/ GT)')
         ilp_models = sorted(ilp_data['Methods'].unique())
         ilp_data['Train length'] = '2-4'
-
 
     if neuro_symbolic_stats_path is not None:
         dirs = glob.glob(neuro_symbolic_stats_path + '/*.csv')
@@ -174,11 +173,11 @@ def get_ilp_neural_data(ilp_stats_path, neural_stats_path, neuro_symbolic_stats_
         # neuro_symbolic_data.loc[neuro_symbolic_data['noise'] == 0, 'noise type'] = 'no noise'
         neuro_symbolic_data = neuro_symbolic_data.rename({'noise': 'label noise'}, axis='columns')
         neuro_symbolic_data['image noise'] = 0
-        neuro_symbolic_data['Methods'] = neuro_symbolic_data['Methods'].apply(lambda x: 'RCNN-' + x.title() + '')
+        neuro_symbolic_data['Methods'] = neuro_symbolic_data['Methods'].apply(lambda x: 'RCNN-' + x.title())
+        neuro_symbolic_data['Methods'] = neuro_symbolic_data['Methods'].apply(lambda x: x + ' (NeSy)')
 
         neuro_symbolic_models = sorted(neuro_symbolic_data['Methods'].unique())
         neuro_symbolic_data['Train length'] = '2-4'
-
 
     # alpha ilp data: ,Methods,training samples,rule,visualization,scene,cv iteration,label noise,image noise,theory,
     # Validation acc,Train acc,Generalization acc,Validation rec,Train rec,Generalization rec,Validation th,
@@ -190,7 +189,8 @@ def get_ilp_neural_data(ilp_stats_path, neural_stats_path, neuro_symbolic_stats_
             with open(dir, 'r') as f:
                 data.append(pd.read_csv(f))
         alpha_ilp_data = pd.concat(data, ignore_index=True)
-        alpha_ilp_name = 'αILP'
+        alpha_ilp_name = 'αILP (NeSy)'
+        # alpha_ilp_name = 'αILP'
         neuro_symbolic_models.append(alpha_ilp_name)
         alpha_ilp_data['Methods'] = alpha_ilp_name
         alpha_ilp_data.drop(
@@ -205,7 +205,6 @@ def get_ilp_neural_data(ilp_stats_path, neural_stats_path, neuro_symbolic_stats_
 
         # if generalization acc is not 0
 
-
     if neural_stats_path is not None:
         with open(neural_stats_path, 'r') as f:
             neur_data = pd.read_csv(f)
@@ -216,6 +215,7 @@ def get_ilp_neural_data(ilp_stats_path, neural_stats_path, neuro_symbolic_stats_
         neur_data['Methods'] = neur_data['Methods'].apply(lambda x: x.replace('resnet18', 'ResNet18'))
         neur_data['Methods'] = neur_data['Methods'].apply(lambda x: x.replace('VisionTransformer', 'ViT'))
         neur_data['Methods'] = neur_data['Methods'].apply(lambda x: x.replace('EfficientNet', 'EfficientNet'))
+        neur_data['Methods'] = neur_data['Methods'].apply(lambda x: x + ' (Neural)')
         neural_models = sorted(neur_data['Methods'].unique())
         # neur_data = neur_data.rename({'noise': 'label noise'}, axis='columns')
         # neur_data = neur_data.rename({'noise type': 'image noise'}, axis='columns')
@@ -250,13 +250,14 @@ def read_csv_stats(csv_path, train_length=7, noise=0, symb=True, vis='Michalski'
         data['image noise'] = noise
         data['label noise'] = noise
         data['Validation acc'] = data['Validation acc'].apply(lambda x: x * 100)
-        data['Methods'] = data['Methods'].apply(lambda x: x.replace('resnet18', 'ResNet18'))
-        data['Methods'] = data['Methods'].apply(lambda x: x.replace('VisionTransformer', 'ViT'))
-        data['Methods'] = data['Methods'].apply(lambda x: x.replace('simpleobjects', 'Block'))
+        data['Methods'] = data['Methods'].apply(lambda x: x.replace('resnet18', 'ResNet18 (Neural)'))
+        data['Methods'] = data['Methods'].apply(lambda x: x.replace('VisionTransformer', 'ViT (Neural)'))
+        data['Methods'] = data['Methods'].apply(lambda x: x.replace('EfficientNet', 'EfficientNet (Neural)'))
+        data['Methods'] = data['Methods'].apply(lambda x: x.replace('simpleobjects', 'Block (Neural)'))
         data['Methods'] = data['Methods'].apply(lambda x: x.replace('trains', 'Michalski'))
         if symb:
-            data['Methods'] = data['Methods'].apply(lambda x: x.replace('popper', 'Popper (GT)'))
-            data['Methods'] = data['Methods'].apply(lambda x: x.replace('aleph', 'Aleph (GT)'))
+            data['Methods'] = data['Methods'].apply(lambda x: x.replace('popper', 'Popper (Sym w/ GT)'))
+            data['Methods'] = data['Methods'].apply(lambda x: x.replace('aleph', 'Aleph (Sym w/ GT)'))
         else:
             data['Methods'] = data['Methods'].apply(lambda x: x.replace('popper', 'RCNN-Popper (NeSy)'))
             data['Methods'] = data['Methods'].apply(lambda x: x.replace('aleph', 'RCNN-Aleph (NeSy)'))
