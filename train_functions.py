@@ -246,7 +246,7 @@ def train(args):
 
     if command == 'track_system_stats':
         from ilp.trainer import Ilp_trainer
-        # from memory_profiler import memory_usage
+        from memory_profiler import memory_usage
         import os
         trainer = Ilp_trainer()
         # noise = [0]
@@ -265,17 +265,29 @@ def train(args):
                 for f in range(folds):
                     interval, timeout = 5, 60 * 60 * 24 * 7
                     p = f'{ds_path}/{r}/{visualization}_{raw_trains}{t_c}_{noise}noise/cv_{f}'
+                    name = f'{visualization}_aleph_{r}_{t_c}smpl_{noise}noise_{f}'
+                    out_p = f'{sys_stats_path}/{name}.json'
+                    os.makedirs(os.path.dirname(out_p), exist_ok=True)
+                    out_mem_p = f'{sys_stats_path}/memory/{name}.txt'
+                    os.makedirs(os.path.dirname(out_mem_p), exist_ok=True)
+                    mem_file = open(out_mem_p, 'w+', encoding='utf-8')
+
                     # mem_usage = memory_usage(-1, interval=5, timeout=60*60*24*7)
                     print(f'aleph training on {p}')
-                    theory, stats = trainer.aleph_train(path=p, print_stats=print_stats)
-                    # memory_usage((trainer.aleph_train, p, {'print_stats': print_stats}),
-                    #              interval=interval, timeout=timeout)
-
+                    # theory, stats = trainer.aleph_train(path=p, print_stats=print_stats)
+                    returns = memory_usage(proc=(trainer.aleph_train, [p]), interval=interval, timeout=timeout,
+                                           retval=True, timestamps=False, include_children=True,
+                                           # multiprocess=True,
+                                           # stream=out_mem_p
+                                           )
+                    print(returns)
+                    mem_usage, (theory, stats) = returns
                     TP, FN, TN, FP, TP_train, FN_train, TN_train, FP_train = stats
                     sys_stats = {
-                        # 'memory_usage': mem_usage,
+                        'memory_usage': mem_usage,
                         'theory': theory,
                         'stats': {
+                            'ACC': (TP + TN) / (TP + TN + FP + FN),
                             'TP': TP,
                             'FN': FN,
                             'TN': TN,
@@ -284,10 +296,16 @@ def train(args):
                             'FN_train': FN_train,
                             'TN_train': TN_train,
                             'FP_train': FP_train
-                        }
-                        # 'time': interval * len(mem_usage)
+                        },
+                        'time': interval * len(mem_usage)
                     }
-                    out_p = f'{sys_stats_path}/{visualization}_aleph_{r}_{t_c}smpl_{noise}noise_{f}.json'
+                    days = sys_stats['time'] // (60 * 60 * 24)
+                    hours = sys_stats['time'] % (60 * 60 * 24) // (60 * 60)
+                    minutes = sys_stats['time'] % (60 * 60 * 24) % (60 * 60) // 60
+                    seconds = sys_stats['time'] % (60 * 60 * 24) % (60 * 60) % 60
+                    print(
+                        f'ACC {sys_stats["stats"]["ACC"]}, Required time: {days} days, {hours} hours, {minutes} minutes, {seconds} seconds')
+                    print(f'Memory usage: {sys_stats["memory_usage"]}')
                     # save as json
                     import json
                     with open(out_p, 'w+') as f:

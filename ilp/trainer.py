@@ -163,7 +163,7 @@ class Ilp_trainer():
             return None, None
         return theory, stats
 
-    @profile
+    # @profile
     def aleph_train(self, path, noisy_samples=0, print_stats=False):
         aleph_path = f"{path}/aleph"
         train_path = f'{path}/train_samples.txt'
