@@ -30,7 +30,7 @@ def train(args):
         train_count = [100, 1000, 10000]
         # train_count = [1000]
         noise = [0, 0.1, 0.3]
-        # noise = [0]
+
         trainer.cross_val(raw_trains, folds=5, rules=rules, models=models, train_count=train_count, noise=noise,
                           log=False, complete_run=True)
 
@@ -243,3 +243,52 @@ def train(args):
 
         print('detectron 2 inferring symbolic representations of the trains')
         detectron_infer_symbolic(cfg)
+
+    if command == 'track_system_stats':
+        from ilp.trainer import Ilp_trainer
+        # from memory_profiler import memory_usage
+        import os
+        trainer = Ilp_trainer()
+        # noise = [0]
+        folds = 1
+        rules = ['custom']
+        train_count = [100, 1000, 10000]
+        model = 'aleph'
+        ds_path = f'output/neuro-symbolic/datasets'
+        sys_stats_path = f'output/neuro-symbolic/system_stats'
+        os.makedirs(sys_stats_path, exist_ok=True)
+        print_stats = False
+        noise = 0
+        visualization = ['Trains', 'SimpleObjects'][0]
+        for t_c in train_count:
+            for r in rules:
+                for f in range(folds):
+                    interval, timeout = 5, 60 * 60 * 24 * 7
+                    p = f'{ds_path}/{r}/{visualization}_{raw_trains}{t_c}_{noise}noise/cv_{f}'
+                    # mem_usage = memory_usage(-1, interval=5, timeout=60*60*24*7)
+                    print(f'aleph training on {p}')
+                    theory, stats = trainer.aleph_train(path=p, print_stats=print_stats)
+                    # memory_usage((trainer.aleph_train, p, {'print_stats': print_stats}),
+                    #              interval=interval, timeout=timeout)
+
+                    TP, FN, TN, FP, TP_train, FN_train, TN_train, FP_train = stats
+                    sys_stats = {
+                        # 'memory_usage': mem_usage,
+                        'theory': theory,
+                        'stats': {
+                            'TP': TP,
+                            'FN': FN,
+                            'TN': TN,
+                            'FP': FP,
+                            'TP_train': TP_train,
+                            'FN_train': FN_train,
+                            'TN_train': TN_train,
+                            'FP_train': FP_train
+                        }
+                        # 'time': interval * len(mem_usage)
+                    }
+                    out_p = f'{sys_stats_path}/{visualization}_aleph_{r}_{t_c}smpl_{noise}noise_{f}.json'
+                    # save as json
+                    import json
+                    with open(out_p, 'w+') as f:
+                        json.dump(sys_stats, f, indent=4)

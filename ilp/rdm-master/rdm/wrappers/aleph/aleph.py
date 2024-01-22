@@ -112,6 +112,7 @@ class Aleph(object):
         self.postGoal = goal
         self.postScript = script
 
+
     def induce(self, mode, pos, neg, b, filestem='default', printOutput=False):
         """
         Induce a theory or features in 'mode'.

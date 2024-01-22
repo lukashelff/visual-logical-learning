@@ -14,6 +14,7 @@ from ilp import visualization
 from ilp.dataset_functions import create_bk, create_cv_datasets
 from raw.concept_tester import eval_rule
 from rdm.wrappers import Aleph
+from memory_profiler import profile
 
 
 class Ilp_trainer():
@@ -162,6 +163,7 @@ class Ilp_trainer():
             return None, None
         return theory, stats
 
+    @profile
     def aleph_train(self, path, noisy_samples=0, print_stats=False):
         aleph_path = f"{path}/aleph"
         train_path = f'{path}/train_samples.txt'
