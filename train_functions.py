@@ -247,66 +247,67 @@ def train(args):
     if command == 'track_system_stats':
         from ilp.trainer import Ilp_trainer
         from memory_profiler import memory_usage
+        from itertools import product
         import os
+        import json
+
         trainer = Ilp_trainer()
         # noise = [0]
         folds = 1
         rules = ['custom']
-        train_count = [100, 1000, 10000]
+        train_count = [100, 1000, 10000][1:2]
         model = 'aleph'
         ds_path = f'output/neuro-symbolic/datasets'
         sys_stats_path = f'output/neuro-symbolic/system_stats'
         os.makedirs(sys_stats_path, exist_ok=True)
         print_stats = False
-        noise = 0
+        noises = [0, 0.1, 0.3]
         visualization = ['Trains', 'SimpleObjects'][0]
-        for t_c in train_count:
-            for r in rules:
-                for f in range(folds):
-                    interval, timeout = 5, 60 * 60 * 24 * 7
-                    p = f'{ds_path}/{r}/{visualization}_{raw_trains}{t_c}_{noise}noise/cv_{f}'
-                    name = f'{visualization}_aleph_{r}_{t_c}smpl_{noise}noise_{f}'
-                    out_p = f'{sys_stats_path}/{name}.json'
-                    os.makedirs(os.path.dirname(out_p), exist_ok=True)
-                    out_mem_p = f'{sys_stats_path}/memory/{name}.txt'
-                    os.makedirs(os.path.dirname(out_mem_p), exist_ok=True)
-                    mem_file = open(out_mem_p, 'w+', encoding='utf-8')
-
-                    # mem_usage = memory_usage(-1, interval=5, timeout=60*60*24*7)
-                    print(f'aleph training on {p}')
-                    # theory, stats = trainer.aleph_train(path=p, print_stats=print_stats)
-                    returns = memory_usage(proc=(trainer.aleph_train, [p]), interval=interval, timeout=timeout,
-                                           retval=True, timestamps=False, include_children=True,
-                                           # multiprocess=True,
-                                           # stream=out_mem_p
-                                           )
-                    print(returns)
-                    mem_usage, (theory, stats) = returns
-                    TP, FN, TN, FP, TP_train, FN_train, TN_train, FP_train = stats
-                    sys_stats = {
-                        'memory_usage': mem_usage,
-                        'theory': theory,
-                        'stats': {
-                            'ACC': (TP + TN) / (TP + TN + FP + FN),
-                            'TP': TP,
-                            'FN': FN,
-                            'TN': TN,
-                            'FP': FP,
-                            'TP_train': TP_train,
-                            'FN_train': FN_train,
-                            'TN_train': TN_train,
-                            'FP_train': FP_train
-                        },
-                        'time': interval * len(mem_usage)
-                    }
-                    days = sys_stats['time'] // (60 * 60 * 24)
-                    hours = sys_stats['time'] % (60 * 60 * 24) // (60 * 60)
-                    minutes = sys_stats['time'] % (60 * 60 * 24) % (60 * 60) // 60
-                    seconds = sys_stats['time'] % (60 * 60 * 24) % (60 * 60) % 60
-                    print(
-                        f'ACC {sys_stats["stats"]["ACC"]}, Required time: {days} days, {hours} hours, {minutes} minutes, {seconds} seconds')
-                    print(f'Memory usage: {sys_stats["memory_usage"]}')
-                    # save as json
-                    import json
-                    with open(out_p, 'w+') as f:
-                        json.dump(sys_stats, f, indent=4)
+        for t_c, r, f, n in product(train_count, rules, range(folds), noises):
+            interval, timeout = 5, 60 * 60 * 24 * 7
+            p = f'{ds_path}/{r}/{visualization}_{raw_trains}{t_c}_{n}noise/cv_{f}'
+            name = f'{visualization}_aleph_{r}_{t_c}smpl_{n}noise_{f}'
+            out_p = f'{sys_stats_path}/{name}.json'
+            out_mem_p = f'{sys_stats_path}/memory/{name}.txt'
+            os.makedirs(os.path.dirname(out_p), exist_ok=True)
+            os.makedirs(os.path.dirname(out_mem_p), exist_ok=True)
+            if os.path.exists(out_p):
+                print(f'{out_p} already exists. Skipping...')
+                continue
+            # mem_file = open(out_mem_p, 'w+', encoding='utf-8')
+            print(f'aleph training on {p}')
+            # theory, stats = trainer.aleph_train(path=p, print_stats=print_stats)
+            returns = memory_usage(proc=(trainer.aleph_train, [p]), interval=interval, timeout=timeout,
+                                   retval=True, timestamps=False, include_children=True,
+                                   # multiprocess=True,
+                                   # stream=out_mem_p
+                                   )
+            # print(returns)
+            mem_usage, (theory, stats) = returns
+            TP, FN, TN, FP, TP_train, FN_train, TN_train, FP_train = stats
+            sys_stats = {
+                'memory_usage': mem_usage,
+                'max_memory_usage': max(mem_usage),
+                'theory': theory,
+                'stats': {
+                    'ACC': (TP + TN) / (TP + TN + FP + FN),
+                    'TP': TP,
+                    'FN': FN,
+                    'TN': TN,
+                    'FP': FP,
+                    'TP_train': TP_train,
+                    'FN_train': FN_train,
+                    'TN_train': TN_train,
+                    'FP_train': FP_train
+                },
+                'time': interval * len(mem_usage)
+            }
+            with open(out_p, 'w+') as f:
+                json.dump(sys_stats, f, indent=4)
+            days = sys_stats['time_in_seconds'] // (60 * 60 * 24)
+            hours = sys_stats['time_in_seconds'] % (60 * 60 * 24) // (60 * 60)
+            minutes = sys_stats['time_in_seconds'] % (60 * 60 * 24) % (60 * 60) // 60
+            seconds = sys_stats['time_in_seconds'] % (60 * 60 * 24) % (60 * 60) % 60
+            print(
+                f'ACC {sys_stats["stats"]["ACC"]}, Max Memory usage: {round(max(sys_stats["memory_usage"]) / 1024, 1)}GB, '
+                f'Required time: {days} days, {hours} hours, {minutes} minutes, {seconds} seconds')

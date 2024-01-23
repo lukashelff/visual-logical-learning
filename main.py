@@ -133,6 +133,10 @@ def main():
                 with open(path, 'w+') as f:
                     json.dump(data, f, indent=2)
 
+    if action == 'plt_sys_stats':
+        from visualization.stats import plot_aleph_sys_stats
+        plot_aleph_sys_stats()
+
 
 if __name__ == '__main__':
     main()
