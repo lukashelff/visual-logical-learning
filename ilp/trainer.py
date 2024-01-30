@@ -84,8 +84,8 @@ class Ilp_trainer():
                     raise ValueError(f'model: {model} not supported')
                 results = self.to_df(out)
                 if results.empty:
-                    warnings.warn(f'{model} exited with no results ({csv}). Empty stats saved.')
                     failed_csv = csv.replace('.csv', '_failed.csv')
+                    warnings.warn(f'{model} exited with no results. Empty stats saved to {failed_csv}.')
                     results.to_csv(failed_csv)
                 else:
                     results.to_csv(csv)
