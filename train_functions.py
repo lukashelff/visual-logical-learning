@@ -1,5 +1,4 @@
 import logging
-
 import torch
 
 
@@ -28,19 +27,22 @@ def train(args):
         rules = ['theoryx', 'numerical', 'complex']
         models = [model_name] if model_name == 'popper' or model_name == 'aleph' else ['popper', 'aleph']
         train_count = [100, 1000, 10000]
-        # train_count = [1000]
+        train_count = [10000]
         noise = [0, 0.1, 0.3]
-
+        noise = [0.1, 0.3]
+        per_run_timeout = 60 * 60 * 12
         trainer.cross_val(raw_trains, folds=5, rules=rules, models=models, train_count=train_count, noise=noise,
-                          log=False, complete_run=True)
+                          log=False, complete_run=True, per_run_timeout=per_run_timeout)
 
     if command == 'ns_crossval':
         from models.neuro_symbolic.ns_pipe import inference
         rules = ['theoryx', 'numerical', 'complex']
-        sample_sizes = [100, 1000, 10000][1:2]
+        sample_sizes = [100, 1000, 10000][2:]
         noise = [0, 0.1, 0.3][1:]
+        sym_models = ['popper', 'aleph']
+        ilp_timeout = 60 * 60 * 12
         inference(train_vis, device, ds_path, ds_size, rules, min_cars, max_cars, sample_sizes=sample_sizes,
-                  noise=noise)
+                  noise=noise, sym_models=sym_models, ilp_timeout=ilp_timeout)
 
     if command == 'ilp':
         from ilp.trainer import Ilp_trainer

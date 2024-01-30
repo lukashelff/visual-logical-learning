@@ -113,7 +113,7 @@ class Aleph(object):
         self.postScript = script
 
 
-    def induce(self, mode, pos, neg, b, filestem='default', printOutput=False):
+    def induce(self, mode, pos, neg, b, filestem='default', printOutput=False, timeout=60 * 60 * 24):
         """
         Induce a theory or features in 'mode'.
 
@@ -143,8 +143,10 @@ class Aleph(object):
         p = SafePopen(['yap', '-s50000', '-h200000', '-L', Aleph.SCRIPT],
                       cwd=self.tmpdir,
                       stdout=dumpFile,
-                      stderr=dumpFile
+                      stderr=dumpFile,
+                      timeout=timeout
                       ).safe_run()
+
         stdout_str, stderr_str = p.communicate()
 
         logger.info("Done.")

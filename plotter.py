@@ -22,8 +22,8 @@ def plot(args):
         neural_path = 'output/neural'
         from visualization.data_handler import get_cv_data
         # get_cv_data(neural_path)
-        for s in [1000]:
-        # for s in [100, 1000, 10000]:
+        # for s in [1000]:
+        for s in [100, 1000, 10000]:
             from visualization.ilp_and_neural_label_noise import label_noise_plot, label_noise_degradation_plot
             label_noise_plot('output', training_samples=s)
 
@@ -104,6 +104,10 @@ def plot(args):
         from visualization.ilp_and_neural_data_efficiency import data_efficiency_plot
         data_efficiency_plot(out_path)
 
+    if command == 'plt_sys_stats':
+        from visualization.stats import plot_aleph_sys_stats
+        plot_aleph_sys_stats()
+
     ##############################
     # old code
     if command == 'single_rule':
@@ -141,3 +145,5 @@ def plot(args):
         full_ds = get_datasets(base_scene, raw_trains, train_vis, ds_size=10, class_rule=class_rule, ds_path=ds_path)
         from visualization.vis_image import show_masked_im
         show_masked_im(full_ds)
+
+

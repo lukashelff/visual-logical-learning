@@ -3,7 +3,7 @@ import os
 import torch
 
 
-def inference(train_vis, device, ds_path, ds_size, class_rules, min_cars, max_cars, sym_models=None, sample_sizes=None, noise=[0,.1,.3]):
+def inference(train_vis, device, ds_path, ds_size, class_rules, min_cars, max_cars, sym_models=None, sample_sizes=None, noise=[0,.1,.3], ilp_timeout=60*60*24):
     from models.trainer import Trainer
     from ilp.trainer import Ilp_trainer
     print('NS PIPE')
@@ -20,10 +20,13 @@ def inference(train_vis, device, ds_path, ds_size, class_rules, min_cars, max_ca
     gamma = 0.1
     v2 = 'v2'
     y_val = f'mask{v2}'
+    print('neural inference')
     for rule in class_rules:
         p = f'output/models/multi_label_rcnn/inferred_ds/prediction/{rule}/{train_vis}_MichalskiTrains_len_{min_cars}-{max_cars}.txt'
         if os.path.exists(p):
+            print(f'Prediction already exists. skipping inference for {p}')
             continue
+        print(f'Inference for {p}')
         trainer = Trainer(base_scene, raw_trains, train_vis, device, 'multi_label_rcnn', rule, ds_path, ds_size=ds_size,
                           lr=lr, step_size=step_size, gamma=gamma, min_car=min_cars, max_car=max_cars,
                           y_val=y_val, resume=True, batch_size=batch_size, setup_model=False, setup_ds=False)
@@ -40,5 +43,7 @@ def inference(train_vis, device, ds_path, ds_size, class_rules, min_cars, max_ca
     output_dir = 'output/neuro-symbolic'
     pred_dir = f'output/models/multi_label_rcnn/inferred_ds/prediction'
     tag = train_vis + '_'
+    print('ilp cross-validation')
     trainer.cross_val(raw_trains, folds=5, rules=class_rules, models=sym_models, train_count=sample_sizes, noise=noise,
-                      log=False, complete_run=True, output_dir=output_dir, symbolic_ds_path=pred_dir, tag=tag)
+                      log=False, complete_run=True, output_dir=output_dir, symbolic_ds_path=pred_dir, tag=tag,
+                      per_run_timeout=ilp_timeout)

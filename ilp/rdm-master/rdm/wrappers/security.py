@@ -64,7 +64,7 @@ class SafePopen(threading.Thread):
         if self.is_alive():
             self.p.terminate()
             self.join()
-            raise Exception('Your computation has exceeded the maximum available time of %.2f minutes.' % (self.timeout / 60.))
+            raise TimeoutError('Your computation has exceeded the maximum available time of %.2f minutes.' % (self.timeout / 60.))
         return self.p
 
 def check_input(prolog_file):
